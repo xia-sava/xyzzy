@@ -17,8 +17,8 @@
 (or (boundp 'fill-prefix)
     (setq fill-prefix nil))
 
-(defvar-local paragraph-start "^[ \t\f\n@]")
-(defvar-local paragraph-separate "^[ \t\f@]*$")
+(defvar-local paragraph-start "^[ \t\f\nã€€]")
+(defvar-local paragraph-separate "^[ \t\fã€€]*$")
 
 (defun forward-paragraph (&optional (arg 1))
   (interactive "p")
@@ -29,7 +29,7 @@
 	 (paragraph-separate (compile-regexp (if fill-prefix-regexp
 						 (concat paragraph-separate
 							 "\\|^"
-							 fill-prefix-regexp "[ \t@]*$")
+							 fill-prefix-regexp "[ \tã€€]*$")
 					       paragraph-separate))))
     (or (zerop arg)
 	(goto-bol))

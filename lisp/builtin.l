@@ -485,6 +485,7 @@
 (si::defun-builtin *copy-into-seq (result-sequence &rest sequences))
 (si::defun-builtin *make-string-output-stream-from-string (string))
 (si::defun-builtin *get-string-input-stream-index (stream))
+(si::defun-builtin *detect-stream-encoding (stream))
 (si::defun-builtin *package-internal (package))
 (si::defun-builtin *package-external (package))
 (si::defun-builtin *package-summary (package))

@@ -118,7 +118,7 @@
   (let* ((s (buffer-substring from to))
 	 (r (lookup-dictionary *edict-dictionary-path* "xyzzydic" dic s)))
     (unless r
-      (plain-error "“o˜^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ: ~A" s))
+      (plain-error "ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã›ã‚“: ~A" s))
     (let ((buffer (selected-buffer)))
       (with-output-to-temp-buffer ("*dictionary*" t)
 	(long-operation
@@ -155,7 +155,7 @@
 	(push (cons string r) rl))
       (setq rl (edict-analogize-conjugation-1 string rl))
       (unless rl
-	(plain-error "“o˜^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ: ~A" string))
+	(plain-error "ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã›ã‚“: ~A" string))
       (let ((buffer (selected-buffer)))
 	(with-output-to-temp-buffer ("*dictionary*" t)
 	  (dolist (x (nreverse rl))
@@ -229,7 +229,7 @@
 					     (format so "~A:~%~%  ~{~A~^, ~}~@[~%~%~]"
 						     (caar x) (cdar x) (cdr x))))
 					 beg)
-			 (popup-string "Œ©‚Â‚©‚è‚Ü‚Ö‚ñ" beg)))
+			 (popup-string "è¦‹ã¤ã‹ã‚Šã¾ã¸ã‚“" beg)))
 		   (popup-string (format nil "~A:~%~%~{~A~^, ~}" s r) beg)))))))))
 
 (defun edict-mouse-lookup-conjugation ()

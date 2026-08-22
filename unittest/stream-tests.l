@@ -15,7 +15,7 @@
   !! type-error)
 
 (deftest write-debug-output-stream ()
-  ;; ƒƒbƒZ[ƒW‚ÌŠm”F‚ª‚Å‚«‚È‚¢‚Ì‚Åo—Í‚·‚é‚¾‚¯
+  ;; ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã®ç¢ºèªãŒã§ããªã„ã®ã§å‡ºåŠ›ã™ã‚‹ã ã‘
   (si:output-debug-string "write-debug-output-stream")
   (si:output-debug-string "a")
   (si:output-debug-string "")

@@ -842,6 +842,7 @@ static symbols sys[] =
   /* stream.cc */
   SI_DEFUN3 (*make-string-output-stream-from-string, 1, 0, 0),
   SI_DEFUN3 (*get-string-input-stream-index, 1, 0, 0),
+  SI_DEFUN3 (*detect-stream-encoding, 1, 0, 0),
 
   /* package.cc */
   SI_DEFUN3 (*package-internal, 1, 0, 0),
