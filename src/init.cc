@@ -825,7 +825,7 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 
   POINT point;
   SIZE size;
-  int cmdshow = environ::load_geometry (passed_cmdshow, &point, &size);
+  int cmdshow = WindowGeometry::load_geometry (passed_cmdshow, &point, &size);
   int restore_maximized = 0;
   if (sw_minimized_p (passed_cmdshow))
     {
@@ -837,11 +837,11 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 
   int show_normal = !sw_minimized_p (cmdshow) && !sw_maximized_p (cmdshow);
 
-  xsymbol_value (Vsave_window_size) = boole (environ::save_window_size);
-  xsymbol_value (Vsave_window_snap_size) = boole (environ::save_window_snap_size);
-  xsymbol_value (Vsave_window_position) = boole (environ::save_window_position);
-  xsymbol_value (Vrestore_window_size) = boole (environ::restore_window_size);
-  xsymbol_value (Vrestore_window_position) = boole (environ::restore_window_position);
+  xsymbol_value (Vsave_window_size) = boole (WindowGeometry::save_window_size);
+  xsymbol_value (Vsave_window_snap_size) = boole (WindowGeometry::save_window_snap_size);
+  xsymbol_value (Vsave_window_position) = boole (WindowGeometry::save_window_position);
+  xsymbol_value (Vrestore_window_size) = boole (WindowGeometry::restore_window_size);
+  xsymbol_value (Vrestore_window_position) = boole (WindowGeometry::restore_window_position);
 
   ole_initialized = SUCCEEDED (OleInitialize (0));
 
