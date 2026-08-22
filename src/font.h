@@ -64,6 +64,13 @@ public:
 #define FONT_GEORGIAN       8
 #define FONT_MAX            9
 
+// 半角の升目に並べている文字を、フォントが全角の字形しか持たないときにどう扱うか
+enum
+{
+  AMBIGUOUS_WIDTH_AUTO,   // フォントに合わせて二桁にする
+  AMBIGUOUS_WIDTH_HALF    // 一桁のまま、字形をフォント側で押し込む
+};
+
 struct FontSetParam
 {
   LOGFONT fs_logfont[FONT_MAX];
@@ -71,6 +78,7 @@ struct FontSetParam
   int fs_line_spacing;
   int fs_recommend_size;
   int fs_size_pixel;
+  int fs_ambiguous_width;
 };
 
 class FontSet
@@ -87,6 +95,7 @@ protected:
   void paint_fold_bitmap (HDC);
   void save_params (const FontSetParam &);
   void load_params (FontSetParam &);
+  void update_char_columns () const;
 
   static const UINT fs_lang_id[];
   static const lisp *const fs_lang_key[];
@@ -126,6 +135,7 @@ protected:
   int fs_line_width;
   int fs_recommend_size;
   int fs_size_pixel;
+  int fs_ambiguous_width;
 
 public:
   FontSet () : fs_hbm (0) {}
@@ -143,6 +153,7 @@ public:
   int line_spacing () const {return fs_line_spacing;}
   int recommend_size_p () const {return fs_recommend_size;}
   int size_pixel_p () const {return fs_size_pixel;}
+  int ambiguous_width () const {return fs_ambiguous_width;}
 
   static const char *regent (int n) {return fs_regent[n];}
   static const char *default_face (int n, int print)

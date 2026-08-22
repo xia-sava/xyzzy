@@ -372,20 +372,23 @@ mule_b2g (int &ccs, int &c1, int &c2)
   c2 = tem % (0xff - 0xa1) + 0x21;
 }
 
-// 内部コードが半角の区画と全角の区画のどちらにあるか。符号変換のように
-// 画面の見た目に左右されてはならない処理が使う
+#define CHAR_WIDTH_TABLE_SIZE (65536 / 8)
+
+// 内部コードが半角の区画と全角の区画のどちらにあるか
+extern u_char char_width_table[CHAR_WIDTH_TABLE_SIZE];
+// 画面で占める桁数。担当するフォントの実測に合わせて書き換わる
+extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
+
+// 符号変換のように、画面の見た目に左右されてはならない処理が使う
 static inline int
 charset_width (Char cc)
 {
-  extern u_char char_width_table[];
   return char_width_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
 }
 
-// 画面で占める桁数
 static inline int
 char_width (Char cc)
 {
-  extern u_char char_columns_table[];
   return char_columns_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
 }
 

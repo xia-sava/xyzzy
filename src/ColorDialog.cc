@@ -678,6 +678,7 @@ ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
   cfp_param.fs_use_backsl = app.text_font.use_backsl_p ();
   cfp_param.fs_recommend_size = app.text_font.recommend_size_p ();
   cfp_param.fs_size_pixel = app.text_font.size_pixel_p ();
+  cfp_param.fs_ambiguous_width = app.text_font.ambiguous_width ();
   cfp_font.cf_param = cfp_param;
   cfp_font.cf_fg = Window::default_xcolors[WCOLOR_TEXT];
   cfp_font.cf_bg = Window::default_xcolors[WCOLOR_BACK];

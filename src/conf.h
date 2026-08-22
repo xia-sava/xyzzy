@@ -52,6 +52,7 @@ DECLARE_CONF (cfgModeLineBg, "modeLineBg");
 DECLARE_CONF (cfgModeLineFg, "modeLineFg");
 DECLARE_CONF (cfgRecommendSize, "recommendSize");
 DECLARE_CONF (cfgSizePixel, "sizePixel");
+DECLARE_CONF (cfgAmbiguousWidth, "ambiguousWidth");
 DECLARE_CONF (cfgShowProportional, "showProportional");
 DECLARE_CONF (cfgUseBitmap, "useBitmap");
 DECLARE_CONF (cfgRestoreWindowPosition, "restoreWindowPosition");

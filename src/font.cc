@@ -432,6 +432,7 @@ FontSet::create (const FontSetParam &param)
   fs_use_backsl = param.fs_use_backsl;
   fs_recommend_size = param.fs_recommend_size;
   fs_size_pixel = param.fs_size_pixel;
+  fs_ambiguous_width = param.fs_ambiguous_width;
 
   if (!fs_recommend_size)
     {
@@ -485,9 +486,39 @@ FontSet::create (const FontSetParam &param)
   for (int i = 0; i < FONT_MAX; i++)
     fs_font[i].calc_offset (fs_size);
 
+  update_char_columns ();
   create_bitmap ();
   save_params (param);
   return 1;
+}
+
+// 半角の升目に並べているが、フォントによっては全角の字形しか持たない文字体系。
+// ラテン・キリル・ギリシャ・グルジアは、日本語のフォントでは全角に作られている
+static int
+ambiguous_width_slot_p (int slot)
+{
+  return (slot == FONT_LATIN || slot == FONT_CYRILLIC
+          || slot == FONT_GREEK || slot == FONT_GEORGIAN);
+}
+
+// 半角として並べている文字を、担当のフォントが全角で描くなら二桁として扱う。
+// 一桁の升目に押し込むと字形の右半分が切れて読めなくなる
+void
+FontSet::update_char_columns () const
+{
+  memcpy (char_columns_table, char_width_table, sizeof char_width_table);
+  if (fs_ambiguous_width != AMBIGUOUS_WIDTH_AUTO)
+    return;
+
+  for (int i = 0; i <= 0xffff; i++)
+    {
+      Char cc = Char (i);
+      int slot = font_slot_of (cc);
+      if (charset_width (cc) == 1
+          && ambiguous_width_slot_p (slot)
+          && fs_font[slot].columns () == 2)
+        char_columns_table[i >> 3] |= 1 << (i & 7);
+    }
 }
 
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに
@@ -534,6 +565,7 @@ FontSet::save_params (const FontSetParam &param)
   write_conf (cfgFont, cfgBackslash, param.fs_use_backsl);
   write_conf (cfgFont, cfgRecommendSize, param.fs_recommend_size);
   write_conf (cfgFont, cfgSizePixel, param.fs_size_pixel);
+  write_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width);
   flush_conf ();
 }
 
@@ -567,6 +599,8 @@ FontSet::load_params (FontSetParam &param)
     param.fs_recommend_size = 0;
   if (!read_conf (cfgFont, cfgSizePixel, param.fs_size_pixel))
     param.fs_size_pixel = 0;
+  if (!read_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width))
+    param.fs_ambiguous_width = AMBIGUOUS_WIDTH_AUTO;
   for (int i = 0; i < FONT_MAX; i++)
     if (!read_font_conf (regent (i), param.fs_logfont[i]))
       *param.fs_logfont[i].lfFaceName = 0;
@@ -631,6 +665,7 @@ FontSet::update (FontSetParam &param, const lisp lfontset) const
   param.fs_line_spacing = line_spacing ();
   param.fs_recommend_size = recommend_size_p ();
   param.fs_size_pixel = size_pixel_p ();
+  param.fs_ambiguous_width = ambiguous_width ();
   for (int i = 0; i < FONT_MAX; i++)
     param.fs_logfont[i] = font (i).logfont ();
 

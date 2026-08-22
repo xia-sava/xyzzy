@@ -4,9 +4,7 @@
 #include "ucs2tab.h"
 #include "char-width.h"
 
-// 画面で占める桁数。フォントの実測に合わせて書き換わるので、文字集合の属性である
-// char_width_table とは別に持つ
-u_char char_columns_table[sizeof char_width_table];
+u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
 
 wc2int_hash wc2int_iso8859_1_hash;
 wc2int_hash wc2int_iso8859_2_hash;
