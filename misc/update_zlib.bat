@@ -14,7 +14,9 @@ curl http://zlib.net/%ZLIBZIP% -o %ZLIBZIP%
 
 cd %ZLIBVER%
 
-call "%VS120COMNTOOLS%\vsvars32.bat"
+set VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -property installationPath`) do set VSINSTALL=%%i
+call "%VSINSTALL%\VC\Auxiliary\Build\vcvars32.bat" || exit /b 1
 
 nmake -f win32/Makefile.msc LOC=-MT
 copy zlib.lib %ZLIBDIST%\Release
