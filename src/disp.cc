@@ -491,6 +491,19 @@ paint_half_width_chars (HDC hdc, int x, int y, int flags, const RECT &r,
   SelectObject (hdc, of);
 }
 
+// 一桁の文字は升目ごとに一バイト、二桁の文字は全角と同じく上位と下位の
+// 二バイトで一文字を表す。BASE はその区画の先頭の内部コード
+static inline void
+paint_1byte_chars (HDC hdc, int x, int y, int flags, const RECT &r,
+                   const char *string, int len, const INT *padding,
+                   int base, const FontObject &f)
+{
+  if (char_width (Char (base)) == 2)
+    paint_full_width_chars (hdc, x, y, flags, r, string, len, f);
+  else
+    paint_half_width_chars (hdc, x, y, flags, r, string, len, padding, base, f);
+}
+
 static inline void
 paint_jisx0212_half_width_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                                  const char *string, int len, const INT *padding,
@@ -536,9 +549,9 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
 #define PAINT_FULL_WIDTH_CHARS(BASE) \
   paint_full_width_chars (hdc, x, y, flags, r, string, len, \
                           app.text_font.font (font_slot_of (BASE)))
-#define PAINT_HALF_WIDTH_CHARS(BASE) \
-  paint_half_width_chars (hdc, x, y, flags, r, string, len, padding, \
-                          BASE, app.text_font.font (font_slot_of (BASE)))
+#define PAINT_1BYTE_CHARS(BASE) \
+  paint_1byte_chars (hdc, x, y, flags, r, string, len, padding, \
+                     BASE, app.text_font.font (font_slot_of (BASE)))
 #define PAINT_JISX0212_HALF_WIDTH_CHARS() \
   paint_jisx0212_half_width_chars (hdc, x, y, flags, r, string, len, padding, \
                                    app.text_font.font (font_slot_of (CCS_JISX0212_MIN)))
@@ -578,35 +591,35 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       break;
 
     case GLYPH_CHARSET_ISO8859_1_2:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_1 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_1 << 7);
       break;
 
     case GLYPH_CHARSET_ISO8859_3_4:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_3 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_3 << 7);
       break;
 
     case GLYPH_CHARSET_ISO8859_5:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_5 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_5 << 7);
       break;
 
     case GLYPH_CHARSET_ISO8859_7:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_7 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_7 << 7);
       break;
 
     case GLYPH_CHARSET_ISO8859_9_10:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_9 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_9 << 7);
       break;
 
     case GLYPH_CHARSET_ISO8859_13:
-      PAINT_HALF_WIDTH_CHARS (ccs_iso8859_13 << 7);
+      PAINT_1BYTE_CHARS (ccs_iso8859_13 << 7);
       break;
 
     case GLYPH_CHARSET_GEORGIAN:
-      PAINT_HALF_WIDTH_CHARS (CCS_GEORGIAN_MIN);
+      PAINT_1BYTE_CHARS (CCS_GEORGIAN_MIN);
       break;
 
     case GLYPH_CHARSET_IPA:
-      PAINT_HALF_WIDTH_CHARS (CCS_IPA_MIN);
+      PAINT_1BYTE_CHARS (CCS_IPA_MIN);
       break;
 
     case GLYPH_CHARSET_SMLCDM:
@@ -618,28 +631,28 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       break;
 
     case GLYPH_CHARSET_SURROGATE_H1:
-      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN);
+      PAINT_1BYTE_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN);
       break;
 
     case GLYPH_CHARSET_SURROGATE_H2:
-      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 256);
+      PAINT_1BYTE_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 256);
       break;
 
     case GLYPH_CHARSET_SURROGATE_H3:
-      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 512);
+      PAINT_1BYTE_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 512);
       break;
 
     case GLYPH_CHARSET_SURROGATE_H4:
-      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 768);
+      PAINT_1BYTE_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 768);
       break;
 
 #ifdef CCS_ULATIN_MIN
     case GLYPH_CHARSET_ULATIN1:
-      PAINT_HALF_WIDTH_CHARS (CCS_ULATIN_MIN);
+      PAINT_1BYTE_CHARS (CCS_ULATIN_MIN);
       break;
 
     case GLYPH_CHARSET_ULATIN2:
-      PAINT_HALF_WIDTH_CHARS (CCS_ULATIN_MIN + 256);
+      PAINT_1BYTE_CHARS (CCS_ULATIN_MIN + 256);
       break;
 #endif
 #ifdef CCS_UJP_MIN
@@ -648,15 +661,15 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       break;
 
     case GLYPH_CHARSET_UJP_H1:
-      PAINT_HALF_WIDTH_CHARS (CCS_UJP_MIN);
+      PAINT_1BYTE_CHARS (CCS_UJP_MIN);
       break;
 
     case GLYPH_CHARSET_UJP_H2:
-      PAINT_HALF_WIDTH_CHARS (CCS_UJP_MIN + 256);
+      PAINT_1BYTE_CHARS (CCS_UJP_MIN + 256);
       break;
 
     case GLYPH_CHARSET_UJP_H3:
-      PAINT_HALF_WIDTH_CHARS (CCS_UJP_MIN + 512);
+      PAINT_1BYTE_CHARS (CCS_UJP_MIN + 512);
       break;
 #endif
     }
@@ -1402,6 +1415,45 @@ Window::kwdmatch (lisp kwdhash, const Point &point,
   return f;
 }
 
+// 一バイトの文字集合を、升目に持たせる文字集合の番号へ対応づける
+static inline glyph_t
+glyph_charset_1byte (Char cc)
+{
+  switch (code_charset (cc))
+    {
+    case ccs_iso8859_1:
+    case ccs_iso8859_2:
+      return GLYPH_CHARSET_ISO8859_1_2;
+
+    case ccs_iso8859_3:
+    case ccs_iso8859_4:
+      return GLYPH_CHARSET_ISO8859_3_4;
+
+    case ccs_iso8859_5:
+      return GLYPH_CHARSET_ISO8859_5;
+
+    case ccs_iso8859_7:
+      return GLYPH_CHARSET_ISO8859_7;
+
+    case ccs_iso8859_9:
+    case ccs_iso8859_10:
+      return GLYPH_CHARSET_ISO8859_9_10;
+
+    case ccs_iso8859_13:
+      return GLYPH_CHARSET_ISO8859_13;
+
+    case ccs_georgian:
+      return GLYPH_CHARSET_GEORGIAN;
+
+#ifdef CCS_ULATIN_MIN
+    case ccs_ulatin:
+      return (GLYPH_CHARSET_ULATIN1
+              + MAKE_GLYPH_CHARSET ((cc - CCS_ULATIN_MIN) >> 8));
+#endif
+    }
+  return GLYPH_CHARSET_USASCII;
+}
+
 static inline glyph_t *
 glyph_dbchar (glyph_t *g, Char cc, int f, int flags)
 {
@@ -1447,6 +1499,24 @@ glyph_dbchar (glyph_t *g, Char cc, int f, int flags)
       f |= GLYPH_CHARSET_UJP;
       goto output;
 #endif
+
+    case ccs_iso8859_1:
+    case ccs_iso8859_2:
+    case ccs_iso8859_3:
+    case ccs_iso8859_4:
+    case ccs_iso8859_5:
+    case ccs_iso8859_7:
+    case ccs_iso8859_9:
+    case ccs_iso8859_10:
+    case ccs_iso8859_13:
+    case ccs_georgian:
+#ifdef CCS_ULATIN_MIN
+    case ccs_ulatin:
+#endif
+      // 一バイトの文字集合でも、担当のフォントが全角で描くなら二桁を占める。
+      // 内部コードを上位と下位へ分けて二つの升目に持たせ、全角の文字と同じ形にする
+      f |= glyph_charset_1byte (cc);
+      goto output;
 
     output:
       if (i2w (cc) == ucs2_t (-1))
