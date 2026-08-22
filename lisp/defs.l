@@ -101,8 +101,9 @@
 (defvar *tab-columns* 8)
 
 (defvar *kinsoku-mode* 15)
+;; \X814C ‚Í‘SŠp‚Ì LBUnicode ‚Å‚Í”¼Šp‚Ì L ‚Æ“¯‚¶ U+00B4 ‚É‚È‚è‹æ•Ê‚Å‚«‚È‚¢
 (defvar *kinsoku-bol-chars*
-  "!),.:;?]}¡£¤¥ŞßABCDEFGHIJKLRSTUXfhjlnprtvxz„â")
+  "!),.:;?]}¡£¤¥ŞßABCDEFGHIJK\X814CRSTUXfhjlnprtvxz„â")
 (defvar *kinsoku-eol-chars*
   "([{¢Megikmoqsuwyƒá")
 (defvar *kinsoku-extend-limit* 3)
