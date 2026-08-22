@@ -5,6 +5,27 @@
 
 Sysdep sysdep;
 
+int
+screen_dpi ()
+{
+  static int dpi = 0;
+  if (!dpi)
+    {
+      HDC hdc = GetDC (0);
+      dpi = GetDeviceCaps (hdc, LOGPIXELSY);
+      ReleaseDC (0, hdc);
+      if (dpi <= 0)
+        dpi = BASE_SCREEN_DPI;
+    }
+  return dpi;
+}
+
+int
+dpi_scale (int n)
+{
+  return MulDiv (n, screen_dpi (), BASE_SCREEN_DPI);
+}
+
 Sysdep::Sysdep ()
 {
   os_ver.dwOSVersionInfoSize = sizeof os_ver;

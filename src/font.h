@@ -1,8 +1,9 @@
 #ifndef _font_h_
 #define _font_h_
 
-#define FONT_SIZE_MIN_PIXEL 8
-#define FONT_SIZE_MAX_PIXEL 48
+// 選択できるフォントサイズの範囲。96 DPI では 8〜48 ピクセルに相当する
+#define FONT_SIZE_MIN_POINT 6
+#define FONT_SIZE_MAX_POINT 36
 
 class FontObject
 {
@@ -32,10 +33,7 @@ public:
   static const bool update (LOGFONT &lf, const lisp keys, const bool recommend_size_p);
   static const int dpi ()
     {
-      HDC hdc = GetDC (0);
-      int dpi = GetDeviceCaps (hdc, LOGPIXELSY);
-      ReleaseDC (0, hdc);
-      return dpi;
+      return screen_dpi ();
     }
   static const int pixel_to_point (int pixel)
     {
@@ -44,6 +42,14 @@ public:
   static const int point_to_pixel (int point)
     {
       return MulDiv (point, dpi (), 72);
+    }
+  static const int min_size_pixel ()
+    {
+      return point_to_pixel (FONT_SIZE_MIN_POINT);
+    }
+  static const int max_size_pixel ()
+    {
+      return point_to_pixel (FONT_SIZE_MAX_POINT);
     }
 };
 
@@ -159,5 +165,10 @@ public:
 
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const char *face, BYTE charset);
+
+// フォントの寸法を記録する節の名前。画面の DPI ごとに分かれる
+const char *font_conf_section ();
+// 上の節から LOGFONT を読む。無ければ [Font] 節を読んで DPI に合わせて換算する
+int read_font_conf (const char *name, LOGFONT &lf);
 
 #endif /* _font_h_ */

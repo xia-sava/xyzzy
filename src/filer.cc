@@ -88,7 +88,7 @@ FilerView::set_font () const
   if (!filer_font.hfont ())
     {
       LOGFONT lf;
-      if (read_conf (cfgFont, cfgFiler, lf))
+      if (read_font_conf (cfgFiler, lf))
         {
           lf.lfCharSet = SHIFTJIS_CHARSET;
           filer_font.create (lf);

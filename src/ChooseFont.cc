@@ -73,8 +73,11 @@ ChooseFontP::enum_font_size_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, L
         }
       else
         {
-          if (SendMessage (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1), LPARAM ("  8")) == LB_ERR)
-            for (int i = FONT_SIZE_MIN_PIXEL; i <= FONT_SIZE_MAX_PIXEL; i++)
+          int min_pixel = FontObject::min_size_pixel ();
+          int max_pixel = FontObject::max_size_pixel ();
+          sprintf (b, "%3d", min_pixel);
+          if (SendMessage (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1), LPARAM (b)) == LB_ERR)
+            for (int i = min_pixel; i <= max_pixel; i++)
               {
                 sprintf (b, "%3d", i);
                 SendMessage (hwnd, LB_ADDSTRING, 0, LPARAM (b));
