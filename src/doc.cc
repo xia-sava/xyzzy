@@ -3,7 +3,8 @@
 #include "except.h"
 #include "mman.h"
 
-#define MAGIC 'CODX'
+/* 記録の並びは内部コードの大きさに依存するので、印に含める */
+#define MAGIC ('CODX' + sizeof (Char))
 
 static void
 snarf_doc (FILE *fp, lisp vec, lisp symlist)

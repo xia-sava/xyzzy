@@ -327,7 +327,10 @@ Fchar_code (lisp cc)
 lisp
 Fcode_char (lisp code)
 {
-  return make_char (Char (fixnum_value (code)));
+  long n = fixnum_value (code);
+  if (n < 0 || n >= CHAR_LIMIT)
+    return Qnil;
+  return make_char (Char (n));
 }
 
 lisp

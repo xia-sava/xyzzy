@@ -2024,6 +2024,8 @@ print_engine::page_cache::save (const Point &point, int linenum, int page)
 int
 get_glyph_width (Char cc, const glyph_width &gw)
 {
+  if (cc >= CHAR_LIMIT)
+    return 0;
   if (gw.pixel[cc] >= 0)
     return gw.pixel[cc];
 

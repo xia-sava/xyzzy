@@ -176,11 +176,12 @@
 #define CP_KOI8R          878
 #define CP_PSEUDO_KOI8U   100878
 
+/* 文字として扱えない内部コード（鍵盤の符号）は、どの表も引かずに退ける */
 static inline u_char
 code_charset (Char cc)
 {
   extern u_char code_charset_table[];
-  return code_charset_table[cc >> 7];
+  return cc < CHAR_LIMIT ? code_charset_table[cc >> 7] : u_char (ccs_invalid);
 }
 
 static inline u_int
@@ -383,20 +384,22 @@ extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
 static inline int
 charset_width (Char cc)
 {
-  return char_width_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
+  return (cc < CHAR_LIMIT
+          && (char_width_table[cc >> 3] & (1 << (cc & 7)))) ? 2 : 1;
 }
 
 static inline int
 char_width (Char cc)
 {
-  return char_columns_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
+  return (cc < CHAR_LIMIT
+          && (char_columns_table[cc >> 3] & (1 << (cc & 7)))) ? 2 : 1;
 }
 
 static inline const ucs2_t &
 i2w (Char cc)
 {
   extern ucs2_t internal2wc_table[];
-  return internal2wc_table[cc];
+  return internal2wc_table[cc < CHAR_LIMIT ? cc : CHAR_INVALID];
 }
 
 static inline const Char &

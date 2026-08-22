@@ -1374,7 +1374,7 @@ after_jump:
           break;
 
         case BCcode_char:
-          top () = make_char (Char (fixnum_value (top ())));
+          top () = Fcode_char (top ());
           break;
 
         case BCbobp:
