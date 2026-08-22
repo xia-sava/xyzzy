@@ -41,6 +41,21 @@ const char *const FontSet::fs_regent[] =
   "Georgian",
 };
 
+// 各スロットの送り幅を測るための文字。受け持つ文字体系の中から、その体系を
+// 収めたフォントならまず持っている字を選ぶ
+const ucs2_t FontSet::fs_sample_char[] =
+{
+  'A',
+  0x3042,  // あ
+  0x00e0,  // à
+  0x0430,  // а
+  0x03b1,  // α
+  0x4e2d,  // 中
+  0x4e2d,  // 中
+  0xac00,  // 가
+  0x10d0,  // ა
+};
+
 const FontSet::fontface FontSet::fs_default_face[] =
 {
   {"FixedSys", "ＭＳ ゴシック", SHIFTJIS_CHARSET},
@@ -53,6 +68,63 @@ const FontSet::fontface FontSet::fs_default_face[] =
   {"GulimChe", 0, HANGEUL_CHARSET},
   {"BPG Courier New U"},
 };
+
+// 漢字は同じ字が日本・中国・台湾の文字集合に重ねて含まれ、Unicode では同じ符号
+// 位置になる。どの字形で描くかは符号位置だけでは決められないので、内部コードが
+// どの文字集合の区画にあるかで振り分ける
+int
+font_slot_of (Char cc)
+{
+  switch (code_charset (cc))
+    {
+    case ccs_usascii:
+      return FONT_ASCII;
+
+    case ccs_iso8859_1:
+    case ccs_iso8859_2:
+    case ccs_iso8859_3:
+    case ccs_iso8859_4:
+    case ccs_iso8859_9:
+    case ccs_iso8859_10:
+    case ccs_iso8859_13:
+#ifdef CCS_ULATIN_MIN
+    case ccs_ulatin:
+#endif
+      return FONT_LATIN;
+
+    case ccs_iso8859_5:
+      return FONT_CYRILLIC;
+
+    case ccs_iso8859_7:
+      return FONT_GREEK;
+
+    case ccs_georgian:
+      return FONT_GEORGIAN;
+
+    case ccs_gb2312:
+      return FONT_CN_SIMPLIFIED;
+
+    case ccs_big5:
+      return FONT_CN_TRADITIONAL;
+
+    case ccs_ksc5601:
+      return FONT_HANGUL;
+
+    case ccs_utf16_surrogate_high:
+    case ccs_utf16_surrogate_low:
+    case ccs_utf16_undef_char_high:
+    case ccs_utf16_undef_char_low:
+      // 対にならなかったサロゲートなどは字が無い。豆腐は ASCII のフォントで出す
+      return FONT_ASCII;
+
+    case ccs_ipa:
+      // IPA 拡張は専用の枠を持たないので日本語のフォントで描く
+      return FONT_JP;
+
+    default:
+      return FONT_JP;
+    }
+}
 
 int
 FontObject::create (const char *face, int h, int charset)
@@ -82,15 +154,13 @@ FontObject::create (const LOGFONT &lf)
 void
 FontObject::get_metrics ()
 {
-  SIZE ex1, ex2;
-
   HDC hdc = GetDC (0);
-  get_metrics (hdc, ex1, ex2);
+  get_metrics (hdc);
   ReleaseDC (0, hdc);
 }
 
 void
-FontObject::get_metrics (HDC hdc, SIZE &ex1, SIZE &ex2)
+FontObject::get_metrics (HDC hdc)
 {
   HGDIOBJ of = SelectObject (hdc, fo_hfont);
   TEXTMETRIC tm;
@@ -98,8 +168,27 @@ FontObject::get_metrics (HDC hdc, SIZE &ex1, SIZE &ex2)
   fo_size.cx = tm.tmAveCharWidth;
   fo_size.cy = tm.tmAscent + tm.tmDescent;
   fo_ascent = tm.tmAscent;
-  GetTextExtentPoint32 (hdc, "A", 1, &ex1);
-  GetTextExtentPoint32 (hdc, "あ", 2, &ex2);
+  SelectObject (hdc, of);
+}
+
+// 受け持つ文字体系の代表の字を実測して、升目いくつぶんの送りになるかを決める。
+// フォント自身がその字を持っていないときは測らない。GDI がフォントリンクで
+// 選んだ別のフォントの寸法になり、このフォントの幅にならないため
+void
+FontObject::measure_columns (HDC hdc, ucs2_t sample, int cellw)
+{
+  fo_columns = 1;
+  if (cellw <= 0)
+    return;
+
+  HGDIOBJ of = SelectObject (hdc, fo_hfont);
+  WORD gi;
+  SIZE sz;
+  if (GetGlyphIndicesW (hdc, LPCWSTR (&sample), 1, &gi,
+                        GGI_MARK_NONEXISTING_GLYPHS) != GDI_ERROR
+      && gi != 0xffff
+      && GetTextExtentPoint32W (hdc, LPCWSTR (&sample), 1, &sz))
+    fo_columns = min (2, max (1, int ((sz.cx * 2 + cellw) / (cellw * 2))));
   SelectObject (hdc, of);
 }
 
@@ -337,13 +426,13 @@ FontSet::create_bitmap ()
 int
 FontSet::create (const FontSetParam &param)
 {
-  SIZE ex[FONT_MAX][2];
   HDC hdc = GetDC (0);
 
   fs_line_spacing = max (0, min (param.fs_line_spacing, dpi_scale (30)));
   fs_use_backsl = param.fs_use_backsl;
   fs_recommend_size = param.fs_recommend_size;
   fs_size_pixel = param.fs_size_pixel;
+  fs_ambiguous_width = param.fs_ambiguous_width;
 
   if (!fs_recommend_size)
     {
@@ -351,12 +440,12 @@ FontSet::create (const FontSetParam &param)
         fs_font[i].create (param.fs_logfont[i]);
 
       for (int i = 0; i < FONT_MAX; i++)
-        fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+        fs_font[i].get_metrics (hdc);
     }
   else
     {
       fs_font[FONT_ASCII].create (param.fs_logfont[FONT_ASCII]);
-      fs_font[FONT_ASCII].get_metrics (hdc, ex[FONT_ASCII][0], ex[FONT_ASCII][1]);
+      fs_font[FONT_ASCII].get_metrics (hdc);
 
       for (int i = 1; i < FONT_MAX; i++)
         for (int h = fs_font[FONT_ASCII].size ().cy; h > 0; h--)
@@ -365,7 +454,7 @@ FontSet::create (const FontSetParam &param)
             lf.lfHeight = h;
             lf.lfWidth = 0;
             fs_font[i].create (lf);
-            fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+            fs_font[i].get_metrics (hdc);
             if (fs_font[i].size ().cx <= fs_font[FONT_ASCII].size ().cx)
               break;
           }
@@ -379,8 +468,11 @@ FontSet::create (const FontSetParam &param)
         LOGFONT lf (param.fs_logfont[i]);
         lf.lfWidth = fs_size.cx;
         fs_font[i].create (lf);
-        fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+        fs_font[i].get_metrics (hdc);
       }
+
+  for (int i = 0; i < FONT_MAX; i++)
+    fs_font[i].measure_columns (hdc, fs_sample_char[i], fs_size.cx);
 
   ReleaseDC (0, hdc);
 
@@ -391,21 +483,45 @@ FontSet::create (const FontSetParam &param)
   if (!fs_line_width)
     fs_line_width = 1;
 
-  fs_need_pad = 0;
   for (int i = 0; i < FONT_MAX; i++)
-    {
-      fs_font[i].calc_offset (fs_size);
-      if (fs_font[i].size ().cx != fs_size.cx
-          || ex[i][0].cx * 2 != ex[i][0].cx)
-        {
-          fs_font[i].require_pad ();
-          fs_need_pad = 1;
-        }
-    }
+    fs_font[i].calc_offset (fs_size);
 
+  update_char_columns ();
   create_bitmap ();
   save_params (param);
   return 1;
+}
+
+// 半角の升目に並べているが、フォントによっては全角の字形しか持たない文字体系。
+// ラテン・キリル・ギリシャ・グルジアは、日本語のフォントでは全角に作られている
+static int
+ambiguous_width_slot_p (int slot)
+{
+  return (slot == FONT_LATIN || slot == FONT_CYRILLIC
+          || slot == FONT_GREEK || slot == FONT_GEORGIAN);
+}
+
+int
+FontSet::full_width_p (Char cc) const
+{
+  int slot = font_slot_of (cc);
+  return (charset_width (cc) == 1
+          && ambiguous_width_slot_p (slot)
+          && fs_font[slot].columns () == 2);
+}
+
+// 半角として並べている文字を、担当のフォントが全角で描くなら二桁として扱う。
+// 一桁の升目に押し込むと字形の右半分が切れて読めなくなる
+void
+FontSet::update_char_columns () const
+{
+  memcpy (char_columns_table, char_width_table, sizeof char_width_table);
+  if (fs_ambiguous_width != AMBIGUOUS_WIDTH_AUTO)
+    return;
+
+  for (int i = 0; i <= 0xffff; i++)
+    if (full_width_p (Char (i)))
+      char_columns_table[i >> 3] |= 1 << (i & 7);
 }
 
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに
@@ -452,6 +568,7 @@ FontSet::save_params (const FontSetParam &param)
   write_conf (cfgFont, cfgBackslash, param.fs_use_backsl);
   write_conf (cfgFont, cfgRecommendSize, param.fs_recommend_size);
   write_conf (cfgFont, cfgSizePixel, param.fs_size_pixel);
+  write_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width);
   flush_conf ();
 }
 
@@ -485,6 +602,8 @@ FontSet::load_params (FontSetParam &param)
     param.fs_recommend_size = 0;
   if (!read_conf (cfgFont, cfgSizePixel, param.fs_size_pixel))
     param.fs_size_pixel = 0;
+  if (!read_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width))
+    param.fs_ambiguous_width = AMBIGUOUS_WIDTH_AUTO;
   for (int i = 0; i < FONT_MAX; i++)
     if (!read_font_conf (regent (i), param.fs_logfont[i]))
       *param.fs_logfont[i].lfFaceName = 0;
@@ -549,6 +668,7 @@ FontSet::update (FontSetParam &param, const lisp lfontset) const
   param.fs_line_spacing = line_spacing ();
   param.fs_recommend_size = recommend_size_p ();
   param.fs_size_pixel = size_pixel_p ();
+  param.fs_ambiguous_width = ambiguous_width ();
   for (int i = 0; i < FONT_MAX; i++)
     param.fs_logfont[i] = font (i).logfont ();
 

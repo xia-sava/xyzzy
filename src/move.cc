@@ -875,7 +875,7 @@ word_wrap (const Buffer *bp, fold_info &f)
 static inline int
 word_char_p (Char cc)
 {
-  return cc > ' ' && char_width (cc) == 1 && !kana_char_p (cc);
+  return cc > ' ' && charset_width (cc) == 1 && !kana_char_p (cc);
 }
 
 static void

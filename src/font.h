@@ -9,24 +9,24 @@ class FontObject
 {
 protected:
   HFONT fo_hfont;
-  int fo_need_pad;
   POINT fo_offset;
   SIZE fo_size;
   int fo_ascent;
+  int fo_columns;
   LOGFONT fo_logfont;
 public:
-  FontObject () : fo_hfont (0) {}
+  FontObject () : fo_hfont (0), fo_columns (1) {}
   ~FontObject () {if (fo_hfont) DeleteObject (fo_hfont);}
   int create (const LOGFONT &);
   int create (const char *, int, int);
   operator HFONT () const {return fo_hfont;}
   const HFONT hfont () const {return fo_hfont;}
-  int need_pad_p () const {return fo_need_pad;}
-  void require_pad () {fo_need_pad = 1;}
   void get_metrics ();
-  void get_metrics (HDC, SIZE &, SIZE &);
+  void get_metrics (HDC);
+  void measure_columns (HDC, ucs2_t sample, int cellw);
   void calc_offset (const SIZE &);
   const SIZE &size () const {return fo_size;}
+  int columns () const {return fo_columns;}
   const POINT &offset () const {return fo_offset;}
   int ascent () const {return fo_ascent;}
   const LOGFONT &logfont () const {return fo_logfont;}
@@ -64,6 +64,13 @@ public:
 #define FONT_GEORGIAN       8
 #define FONT_MAX            9
 
+// 半角の升目に並べている文字を、フォントが全角の字形しか持たないときにどう扱うか
+enum
+{
+  AMBIGUOUS_WIDTH_AUTO,   // フォントに合わせて二桁にする
+  AMBIGUOUS_WIDTH_HALF    // 一桁のまま、字形をフォント側で押し込む
+};
+
 struct FontSetParam
 {
   LOGFONT fs_logfont[FONT_MAX];
@@ -71,6 +78,7 @@ struct FontSetParam
   int fs_line_spacing;
   int fs_recommend_size;
   int fs_size_pixel;
+  int fs_ambiguous_width;
 };
 
 class FontSet
@@ -87,12 +95,14 @@ protected:
   void paint_fold_bitmap (HDC);
   void save_params (const FontSetParam &);
   void load_params (FontSetParam &);
+  void update_char_columns () const;
 
   static const UINT fs_lang_id[];
   static const lisp *const fs_lang_key[];
   static const char *const fs_regent[];
   struct fontface {const char *disp, *print; int charset;};
   static const fontface fs_default_face[];
+  static const ucs2_t fs_sample_char[];
 public:
   enum
     {
@@ -120,12 +130,12 @@ protected:
   SIZE fs_size;
   SIZE fs_cell;
   int fs_ascent;
-  int fs_need_pad;
   int fs_line_spacing;
   int fs_use_backsl;
   int fs_line_width;
   int fs_recommend_size;
   int fs_size_pixel;
+  int fs_ambiguous_width;
 
 public:
   FontSet () : fs_hbm (0) {}
@@ -138,12 +148,14 @@ public:
   const HBITMAP &hbm () const {return fs_hbm;}
   const SIZE &size () const {return fs_size;}
   const SIZE &cell () const {return fs_cell;}
-  int need_pad_p () const {return fs_need_pad;}
   int use_backsl_p () const {return fs_use_backsl;}
   int line_width () const {return fs_line_width;}
   int line_spacing () const {return fs_line_spacing;}
   int recommend_size_p () const {return fs_recommend_size;}
   int size_pixel_p () const {return fs_size_pixel;}
+  int ambiguous_width () const {return fs_ambiguous_width;}
+  // 半角として並べている文字を、担当のフォントが全角の字形で描くか
+  int full_width_p (Char cc) const;
 
   static const char *regent (int n) {return fs_regent[n];}
   static const char *default_face (int n, int print)
@@ -162,6 +174,10 @@ public:
       return -1;
     }
 };
+
+// 内部コードを、それを描くフォントの枠へ対応づける。画面・印刷・入力のいずれも
+// ここを通す
+int font_slot_of (Char cc);
 
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const char *face, BYTE charset);

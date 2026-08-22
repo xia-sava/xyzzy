@@ -621,6 +621,14 @@ ChooseFontPage::get_result ()
       ccp_modified = 1;
     }
 
+  i = (SendDlgItemMessage (ccp_hwnd, IDC_AMBIGUOUS_WIDTH, BM_GETCHECK, 0, 0)
+       ? AMBIGUOUS_WIDTH_HALF : AMBIGUOUS_WIDTH_AUTO);
+  if (i != cfp_param.fs_ambiguous_width)
+    {
+      cfp_param.fs_ambiguous_width = i;
+      ccp_modified = 1;
+    }
+
   for (i = 0; i < FONT_MAX; i++)
     if (cfp_font.cf_param.fs_logfont[i].lfHeight != cfp_param.fs_logfont[i].lfHeight
         || cfp_font.cf_param.fs_logfont[i].lfCharSet != cfp_param.fs_logfont[i].lfCharSet
@@ -657,6 +665,8 @@ ChooseFontPage::init_dialog ()
                       cfp_param.fs_use_backsl ? 1 : 0, 0);
   SendDlgItemMessage (ccp_hwnd, IDC_RECOMMEND_SIZE, BM_SETCHECK,
                       cfp_param.fs_recommend_size ? 1 : 0, 0);
+  SendDlgItemMessage (ccp_hwnd, IDC_AMBIGUOUS_WIDTH, BM_SETCHECK,
+                      cfp_param.fs_ambiguous_width == AMBIGUOUS_WIDTH_HALF ? 1 : 0, 0);
 }
 
 void
@@ -678,6 +688,7 @@ ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
   cfp_param.fs_use_backsl = app.text_font.use_backsl_p ();
   cfp_param.fs_recommend_size = app.text_font.recommend_size_p ();
   cfp_param.fs_size_pixel = app.text_font.size_pixel_p ();
+  cfp_param.fs_ambiguous_width = app.text_font.ambiguous_width ();
   cfp_font.cf_param = cfp_param;
   cfp_font.cf_fg = Window::default_xcolors[WCOLOR_TEXT];
   cfp_font.cf_bg = Window::default_xcolors[WCOLOR_BACK];
