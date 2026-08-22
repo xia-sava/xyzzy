@@ -131,6 +131,13 @@ typedef u_long glyph_t;
 #  define GLYPH_CHARSET_ULATIN2       MAKE_GLYPH_CHARSET (21)
 # endif
 # define GLYPH_CHARSET_GEORGIAN       MAKE_GLYPH_CHARSET (22)
+// 対になったサロゲート。ペイロードには文字そのものではなく登録表の番号が入る
+# define GLYPH_CHARSET_SURROGATE_PAIR MAKE_GLYPH_CHARSET (23)
+// 対にならなかった上位サロゲート。値の上位 2bit を文字集合の番号で表す
+# define GLYPH_CHARSET_SURROGATE_H1   MAKE_GLYPH_CHARSET (24)
+# define GLYPH_CHARSET_SURROGATE_H2   MAKE_GLYPH_CHARSET (25)
+# define GLYPH_CHARSET_SURROGATE_H3   MAKE_GLYPH_CHARSET (26)
+# define GLYPH_CHARSET_SURROGATE_H4   MAKE_GLYPH_CHARSET (27)
 
 # define GLYPH_CATEGORY_MASK     0xc0000000
 # define  GLYPH_JUNK             0x40000000
