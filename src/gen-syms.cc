@@ -2985,13 +2985,18 @@ putq (const char *p)
   putchar ('"');
   while (*p)
     {
-      if ((*p & 0xff) < ' ')
-        printf ("\\%03o", *p++);
+      u_char c = *p++;
+      if (c < ' ' || c >= 0x80)
+        {
+          printf ("\\%03o", c);
+          if (_ismbblead (c) && *p)
+            printf ("\\%03o", u_char (*p++));
+        }
       else
         {
-          if (*p == '\\' || *p == '"')
+          if (c == '\\' || c == '"')
             putchar ('\\');
-          putchar (*p++);
+          putchar (c);
         }
     }
   putchar ('"');

@@ -60,7 +60,7 @@
       <WarningLevel>Level3</WarningLevel>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
-      <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/source-charset:utf-8 /execution-charset:.932 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -79,7 +79,7 @@
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/source-charset:utf-8 /execution-charset:.932 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -102,8 +102,8 @@
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-fontrange.cc">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>%(AdditionalOptions) /execution-charset:.932</AdditionalOptions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-ibmext.cc">
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -118,12 +118,12 @@
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-jisx0212-width.cc">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>%(AdditionalOptions) /execution-charset:.932</AdditionalOptions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-ktab.cc">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>%(AdditionalOptions) /execution-charset:.932</AdditionalOptions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-lucida-width.cc">
       <PrecompiledHeader>Use</PrecompiledHeader>
