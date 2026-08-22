@@ -12,9 +12,10 @@ protected:
   POINT fo_offset;
   SIZE fo_size;
   int fo_ascent;
+  int fo_columns;
   LOGFONT fo_logfont;
 public:
-  FontObject () : fo_hfont (0) {}
+  FontObject () : fo_hfont (0), fo_columns (1) {}
   ~FontObject () {if (fo_hfont) DeleteObject (fo_hfont);}
   int create (const LOGFONT &);
   int create (const char *, int, int);
@@ -22,8 +23,10 @@ public:
   const HFONT hfont () const {return fo_hfont;}
   void get_metrics ();
   void get_metrics (HDC);
+  void measure_columns (HDC, ucs2_t sample, int cellw);
   void calc_offset (const SIZE &);
   const SIZE &size () const {return fo_size;}
+  int columns () const {return fo_columns;}
   const POINT &offset () const {return fo_offset;}
   int ascent () const {return fo_ascent;}
   const LOGFONT &logfont () const {return fo_logfont;}
@@ -90,6 +93,7 @@ protected:
   static const char *const fs_regent[];
   struct fontface {const char *disp, *print; int charset;};
   static const fontface fs_default_face[];
+  static const ucs2_t fs_sample_char[];
 public:
   enum
     {

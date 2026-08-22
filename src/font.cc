@@ -41,6 +41,21 @@ const char *const FontSet::fs_regent[] =
   "Georgian",
 };
 
+// 各スロットの送り幅を測るための文字。受け持つ文字体系の中から、その体系を
+// 収めたフォントならまず持っている字を選ぶ
+const ucs2_t FontSet::fs_sample_char[] =
+{
+  'A',
+  0x3042,  // あ
+  0x00e0,  // à
+  0x0430,  // а
+  0x03b1,  // α
+  0x4e2d,  // 中
+  0x4e2d,  // 中
+  0xac00,  // 가
+  0x10d0,  // ა
+};
+
 const FontSet::fontface FontSet::fs_default_face[] =
 {
   {"FixedSys", "ＭＳ ゴシック", SHIFTJIS_CHARSET},
@@ -96,6 +111,27 @@ FontObject::get_metrics (HDC hdc)
   fo_size.cx = tm.tmAveCharWidth;
   fo_size.cy = tm.tmAscent + tm.tmDescent;
   fo_ascent = tm.tmAscent;
+  SelectObject (hdc, of);
+}
+
+// 受け持つ文字体系の代表の字を実測して、升目いくつぶんの送りになるかを決める。
+// フォント自身がその字を持っていないときは測らない。GDI がフォントリンクで
+// 選んだ別のフォントの寸法になり、このフォントの幅にならないため
+void
+FontObject::measure_columns (HDC hdc, ucs2_t sample, int cellw)
+{
+  fo_columns = 1;
+  if (cellw <= 0)
+    return;
+
+  HGDIOBJ of = SelectObject (hdc, fo_hfont);
+  WORD gi;
+  SIZE sz;
+  if (GetGlyphIndicesW (hdc, LPCWSTR (&sample), 1, &gi,
+                        GGI_MARK_NONEXISTING_GLYPHS) != GDI_ERROR
+      && gi != 0xffff
+      && GetTextExtentPoint32W (hdc, LPCWSTR (&sample), 1, &sz))
+    fo_columns = min (2, max (1, int ((sz.cx * 2 + cellw) / (cellw * 2))));
   SelectObject (hdc, of);
 }
 
@@ -376,6 +412,9 @@ FontSet::create (const FontSetParam &param)
         fs_font[i].create (lf);
         fs_font[i].get_metrics (hdc);
       }
+
+  for (int i = 0; i < FONT_MAX; i++)
+    fs_font[i].measure_columns (hdc, fs_sample_char[i], fs_size.cx);
 
   ReleaseDC (0, hdc);
 
