@@ -4,8 +4,15 @@
 #include "ipc.h"
 #include "wheel.h"
 
+// BASE_SCREEN_DPI 基準の値なので、使うときは ruler_height () を通す
 #define RULER_HEIGHT 13
 #define FRAME_WIDTH 2
+
+static inline int
+ruler_height ()
+{
+  return dpi_scale (RULER_HEIGHT);
+}
 
 int Window::w_hjump_columns = 8;
 int Window::w_default_flags = (WF_LINE_NUMBER | WF_RULER | WF_NEWLINE | WF_MODE_LINE
@@ -996,7 +1003,7 @@ Window::compute_geometry (const SIZE &old_size, int lcell)
       if (wp->w_hwnd_ml)
         cy -= app.modeline_param.m_height + 4 + FRAME_WIDTH;
       if (!wp->minibuffer_window_p () && wp->flags () & WF_RULER)
-        cy -= RULER_HEIGHT;
+        cy -= ruler_height ();
 
       wp->calc_client_size (cx, cy);
     }
@@ -1032,7 +1039,7 @@ Window::move_all_windows (int update)
       SIZE size;
       size.cx = max (0, int (wp->w_rect.right - wp->w_rect.left - cx));
       int ruler = (!wp->minibuffer_window_p () && wp->flags () & WF_RULER
-                   ? RULER_HEIGHT : 0);
+                   ? ruler_height () : 0);
       size.cy = max (0, int (wp->w_rect.bottom - wp->w_rect.top - mlh - cy - ruler));
       MoveWindow (wp->w_hwnd, wp->w_rect.left, wp->w_rect.top + ruler,
                   size.cx, size.cy, 1);
@@ -2191,7 +2198,7 @@ Window::get_horiz_min (int xmin, int xmax) const
   y += (app.modeline_param.m_height + 4 + app.text_font.cell ().cy
         + sysdep.edge.cy + FRAME_WIDTH);
   if (!minibuffer_window_p () && flags () & WF_RULER)
-    y += RULER_HEIGHT;
+    y += ruler_height ();
   return min (y, int (w_rect.bottom));
 }
 
@@ -2211,7 +2218,7 @@ Window::get_horiz_max (int xmin, int xmax) const
       y -= (app.modeline_param.m_height + 4 + app.text_font.cell ().cy
             + sysdep.edge.cy + FRAME_WIDTH);
       if (flags () & WF_RULER)
-        y -= RULER_HEIGHT;
+        y -= ruler_height ();
     }
   return y;
 }
@@ -3288,7 +3295,7 @@ Window::calc_ruler_rect (RECT &r) const
   r.left = p.x + app.text_font.cell ().cx / 2;
   if (flags () & WF_LINE_NUMBER)
     r.left += (LINENUM_COLUMNS + 1) * app.text_font.cell ().cx;
-  r.top = p.y - RULER_HEIGHT;
+  r.top = p.y - ruler_height ();
   r.right = p.x + w_clsize.cx + RIGHT_PADDING - 1;
   r.bottom = p.y - 3;
 }
@@ -3354,7 +3361,7 @@ Window::paint_ruler (HDC hdc) const
   GetWindowRect (w_hwnd, &r);
   MapWindowPoints (HWND_DESKTOP, app.active_frame.hwnd, (POINT *)&r, 2);
   r.bottom = r.top;
-  r.top -= RULER_HEIGHT;
+  r.top -= ruler_height ();
   draw_hline (hdc, r.left, r.right - 1, r.top, sysdep.btn_highlight);
   draw_vline (hdc, r.top, r.bottom, r.left, sysdep.btn_highlight);
 //  draw_hline (hdc, r.left, r.right, r.bottom, sysdep.btn_shadow);

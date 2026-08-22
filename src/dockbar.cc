@@ -481,7 +481,7 @@ tab_bar::create (HWND hwnd_parent)
                0))
     return 0;
 
-  set_padding (6, 4);
+  set_padding (dpi_scale (6), dpi_scale (4));
   set_font (sysdep.ui_font ());
   calc_tab_height ();
 
