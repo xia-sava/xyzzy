@@ -82,15 +82,13 @@ FontObject::create (const LOGFONT &lf)
 void
 FontObject::get_metrics ()
 {
-  SIZE ex1, ex2;
-
   HDC hdc = GetDC (0);
-  get_metrics (hdc, ex1, ex2);
+  get_metrics (hdc);
   ReleaseDC (0, hdc);
 }
 
 void
-FontObject::get_metrics (HDC hdc, SIZE &ex1, SIZE &ex2)
+FontObject::get_metrics (HDC hdc)
 {
   HGDIOBJ of = SelectObject (hdc, fo_hfont);
   TEXTMETRIC tm;
@@ -98,8 +96,6 @@ FontObject::get_metrics (HDC hdc, SIZE &ex1, SIZE &ex2)
   fo_size.cx = tm.tmAveCharWidth;
   fo_size.cy = tm.tmAscent + tm.tmDescent;
   fo_ascent = tm.tmAscent;
-  GetTextExtentPoint32 (hdc, "A", 1, &ex1);
-  GetTextExtentPoint32 (hdc, "あ", 2, &ex2);
   SelectObject (hdc, of);
 }
 
@@ -337,7 +333,6 @@ FontSet::create_bitmap ()
 int
 FontSet::create (const FontSetParam &param)
 {
-  SIZE ex[FONT_MAX][2];
   HDC hdc = GetDC (0);
 
   fs_line_spacing = max (0, min (param.fs_line_spacing, dpi_scale (30)));
@@ -351,12 +346,12 @@ FontSet::create (const FontSetParam &param)
         fs_font[i].create (param.fs_logfont[i]);
 
       for (int i = 0; i < FONT_MAX; i++)
-        fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+        fs_font[i].get_metrics (hdc);
     }
   else
     {
       fs_font[FONT_ASCII].create (param.fs_logfont[FONT_ASCII]);
-      fs_font[FONT_ASCII].get_metrics (hdc, ex[FONT_ASCII][0], ex[FONT_ASCII][1]);
+      fs_font[FONT_ASCII].get_metrics (hdc);
 
       for (int i = 1; i < FONT_MAX; i++)
         for (int h = fs_font[FONT_ASCII].size ().cy; h > 0; h--)
@@ -365,7 +360,7 @@ FontSet::create (const FontSetParam &param)
             lf.lfHeight = h;
             lf.lfWidth = 0;
             fs_font[i].create (lf);
-            fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+            fs_font[i].get_metrics (hdc);
             if (fs_font[i].size ().cx <= fs_font[FONT_ASCII].size ().cx)
               break;
           }
@@ -379,7 +374,7 @@ FontSet::create (const FontSetParam &param)
         LOGFONT lf (param.fs_logfont[i]);
         lf.lfWidth = fs_size.cx;
         fs_font[i].create (lf);
-        fs_font[i].get_metrics (hdc, ex[i][0], ex[i][1]);
+        fs_font[i].get_metrics (hdc);
       }
 
   ReleaseDC (0, hdc);
@@ -391,17 +386,8 @@ FontSet::create (const FontSetParam &param)
   if (!fs_line_width)
     fs_line_width = 1;
 
-  fs_need_pad = 0;
   for (int i = 0; i < FONT_MAX; i++)
-    {
-      fs_font[i].calc_offset (fs_size);
-      if (fs_font[i].size ().cx != fs_size.cx
-          || ex[i][0].cx * 2 != ex[i][0].cx)
-        {
-          fs_font[i].require_pad ();
-          fs_need_pad = 1;
-        }
-    }
+    fs_font[i].calc_offset (fs_size);
 
   create_bitmap ();
   save_params (param);

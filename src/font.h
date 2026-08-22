@@ -9,7 +9,6 @@ class FontObject
 {
 protected:
   HFONT fo_hfont;
-  int fo_need_pad;
   POINT fo_offset;
   SIZE fo_size;
   int fo_ascent;
@@ -21,10 +20,8 @@ public:
   int create (const char *, int, int);
   operator HFONT () const {return fo_hfont;}
   const HFONT hfont () const {return fo_hfont;}
-  int need_pad_p () const {return fo_need_pad;}
-  void require_pad () {fo_need_pad = 1;}
   void get_metrics ();
-  void get_metrics (HDC, SIZE &, SIZE &);
+  void get_metrics (HDC);
   void calc_offset (const SIZE &);
   const SIZE &size () const {return fo_size;}
   const POINT &offset () const {return fo_offset;}
@@ -120,7 +117,6 @@ protected:
   SIZE fs_size;
   SIZE fs_cell;
   int fs_ascent;
-  int fs_need_pad;
   int fs_line_spacing;
   int fs_use_backsl;
   int fs_line_width;
@@ -138,7 +134,6 @@ public:
   const HBITMAP &hbm () const {return fs_hbm;}
   const SIZE &size () const {return fs_size;}
   const SIZE &cell () const {return fs_cell;}
-  int need_pad_p () const {return fs_need_pad;}
   int use_backsl_p () const {return fs_use_backsl;}
   int line_width () const {return fs_line_width;}
   int line_spacing () const {return fs_line_spacing;}

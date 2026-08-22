@@ -454,7 +454,7 @@ paint_ascii_chars (HDC hdc, int x, int y, int flags, const RECT &r,
 {
   const FontObject &f = app.text_font.font (FONT_ASCII);
   ExtTextOut (hdc, x + f.offset ().x, y + f.offset ().y, flags,
-              &r, string, len, f.need_pad_p () ? padding : 0);
+              &r, string, len, padding);
 }
 
 static inline void
@@ -464,7 +464,7 @@ paint_jp_chars (HDC hdc, int x, int y, int flags, const RECT &r,
   const FontObject &f = app.text_font.font (FONT_JP);
   HGDIOBJ of = SelectObject (hdc, f);
   ExtTextOut (hdc, x + f.offset ().x, y + f.offset ().y, flags,
-              &r, string, len, f.need_pad_p () ? padding : 0);
+              &r, string, len, padding);
   SelectObject (hdc, of);
 }
 
@@ -1009,15 +1009,9 @@ Window::erase_cursor_line (HDC hdc) const
       HGDIOBJ obm = SelectObject (hdcmem, app.text_font.hbm ());
       HGDIOBJ obr = SelectObject (hdc, CreateSolidBrush (w_colors[WCOLOR_BACK]));
 
-      INT *padding;
-      if (!app.text_font.need_pad_p ())
-        padding = 0;
-      else
-        {
-          padding = (INT *)alloca (sizeof *padding * w_ch_max.cx);
-          for (int i = 0; i < w_ch_max.cx; i++)
-            padding[i] = app.text_font.cell ().cx;
-        }
+      INT *padding = (INT *)alloca (sizeof *padding * w_ch_max.cx);
+      for (int i = 0; i < w_ch_max.cx; i++)
+        padding[i] = app.text_font.cell ().cx;
       char *buf = (char *)alloca (w_ch_max.cx + 3);
       paint_glyphs (hdc, hdcmem, gd->gd_cc, g, ge, buf, padding, x,
                     (w_cursor_line.ypixel - app.text_font.cell ().cy + 1),
@@ -2764,15 +2758,9 @@ Window::paint_region (HDC hdc, int from, int to) const
   HGDIOBJ obm = SelectObject (hdcmem, app.text_font.hbm ());
   HGDIOBJ obr = SelectObject (hdc, CreateSolidBrush (w_colors[WCOLOR_BACK]));
 
-  INT *padding;
-  if (!app.text_font.need_pad_p ())
-    padding = 0;
-  else
-    {
-      padding = (INT *)alloca (sizeof *padding * w_ch_max.cx);
-      for (int i = 0; i < w_ch_max.cx; i++)
-        padding[i] = app.text_font.cell ().cx;
-    }
+  INT *padding = (INT *)alloca (sizeof *padding * w_ch_max.cx);
+  for (int i = 0; i < w_ch_max.cx; i++)
+    padding[i] = app.text_font.cell ().cx;
   char *buf = (char *)alloca (w_ch_max.cx + 3);
   glyph_data **g = w_glyphs.g_rep->gr_nglyph + from;
   glyph_data **og = w_glyphs.g_rep->gr_oglyph + from;
