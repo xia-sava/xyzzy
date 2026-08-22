@@ -162,6 +162,10 @@ public:
     }
 };
 
+// 内部コードを、それを描くフォントの枠へ対応づける。画面・印刷・入力のいずれも
+// ここを通す
+int font_slot_of (Char cc);
+
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const char *face, BYTE charset);
 

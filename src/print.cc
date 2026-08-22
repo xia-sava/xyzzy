@@ -1056,15 +1056,9 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
           break;
 
         case ccs_gb2312:
-          paint_full_width (ctx, cc, FONT_CN_SIMPLIFIED);
-          break;
-
         case ccs_ksc5601:
-          paint_full_width (ctx, cc, FONT_HANGUL);
-          break;
-
         case ccs_big5:
-          paint_full_width (ctx, cc, FONT_CN_TRADITIONAL);
+          paint_full_width (ctx, cc, font_slot_of (cc));
           break;
 
         case ccs_iso8859_1:
@@ -1077,23 +1071,11 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
 #ifdef CCS_ULATIN_MIN
         case ccs_ulatin:
 #endif
-          paint_latin (ctx, cc, FONT_LATIN);
-          break;
-
         case ccs_iso8859_5:
-          paint_latin (ctx, cc, FONT_CYRILLIC);
-          break;
-
         case ccs_iso8859_7:
-          paint_latin (ctx, cc, FONT_GREEK);
-          break;
-
         case ccs_georgian:
-          paint_latin (ctx, cc, FONT_GEORGIAN);
-          break;
-
         case ccs_ipa:
-          paint_latin (ctx, cc, FONT_JP);
+          paint_latin (ctx, cc, font_slot_of (cc));
           break;
 
         case ccs_smlcdm:
@@ -2069,21 +2051,9 @@ get_glyph_width (Char cc, const glyph_width &gw)
 #ifdef CCS_UJP_MIN
     case ccs_ujp:
 #endif
-      f = FONT_JP;
-      goto unicode_char;
-
     case ccs_gb2312:
-      f = FONT_CN_SIMPLIFIED;
-      goto unicode_char;
-
     case ccs_ksc5601:
-      f = FONT_HANGUL;
-      goto unicode_char;
-
     case ccs_big5:
-      f = FONT_CN_TRADITIONAL;
-      goto unicode_char;
-
     case ccs_iso8859_1:
     case ccs_iso8859_2:
     case ccs_iso8859_3:
@@ -2094,23 +2064,11 @@ get_glyph_width (Char cc, const glyph_width &gw)
 #ifdef CCS_ULATIN_MIN
     case ccs_ulatin:
 #endif
-      f = FONT_LATIN;
-      goto unicode_char;
-
     case ccs_iso8859_5:
-      f = FONT_CYRILLIC;
-      goto unicode_char;
-
     case ccs_iso8859_7:
-      f = FONT_GREEK;
-      goto unicode_char;
-
     case ccs_georgian:
-      f = FONT_GEORGIAN;
-      goto unicode_char;
-
     case ccs_ipa:
-      f = FONT_JP;
+      f = font_slot_of (cc);
       goto unicode_char;
 
     case ccs_smlcdm:

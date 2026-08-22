@@ -69,6 +69,63 @@ const FontSet::fontface FontSet::fs_default_face[] =
   {"BPG Courier New U"},
 };
 
+// 漢字は同じ字が日本・中国・台湾の文字集合に重ねて含まれ、Unicode では同じ符号
+// 位置になる。どの字形で描くかは符号位置だけでは決められないので、内部コードが
+// どの文字集合の区画にあるかで振り分ける
+int
+font_slot_of (Char cc)
+{
+  switch (code_charset (cc))
+    {
+    case ccs_usascii:
+      return FONT_ASCII;
+
+    case ccs_iso8859_1:
+    case ccs_iso8859_2:
+    case ccs_iso8859_3:
+    case ccs_iso8859_4:
+    case ccs_iso8859_9:
+    case ccs_iso8859_10:
+    case ccs_iso8859_13:
+#ifdef CCS_ULATIN_MIN
+    case ccs_ulatin:
+#endif
+      return FONT_LATIN;
+
+    case ccs_iso8859_5:
+      return FONT_CYRILLIC;
+
+    case ccs_iso8859_7:
+      return FONT_GREEK;
+
+    case ccs_georgian:
+      return FONT_GEORGIAN;
+
+    case ccs_gb2312:
+      return FONT_CN_SIMPLIFIED;
+
+    case ccs_big5:
+      return FONT_CN_TRADITIONAL;
+
+    case ccs_ksc5601:
+      return FONT_HANGUL;
+
+    case ccs_utf16_surrogate_high:
+    case ccs_utf16_surrogate_low:
+    case ccs_utf16_undef_char_high:
+    case ccs_utf16_undef_char_low:
+      // 対にならなかったサロゲートなどは字が無い。豆腐は ASCII のフォントで出す
+      return FONT_ASCII;
+
+    case ccs_ipa:
+      // IPA 拡張は専用の枠を持たないので日本語のフォントで描く
+      return FONT_JP;
+
+    default:
+      return FONT_JP;
+    }
+}
+
 int
 FontObject::create (const char *face, int h, int charset)
 {
