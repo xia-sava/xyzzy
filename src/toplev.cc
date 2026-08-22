@@ -697,9 +697,9 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
           {
             GetWindowRect (hwnd, &nr);
 #if 1
-            /* StatusWindow �� Font ���ύX���ꂽ�ꍇ�ɁA�N���C�A���g�G���A��
-               ����Ȃ�̃T�C�Y�ɂ����������Ȃ񂾂��ǁA�����Ƃ܂Ƃ��ȕ��@����?
-               ���āANT �ł��������ĂȂ������B*/
+            /* StatusWindow の Font が変更された場合に、クライアントエリアを
+               それなりのサイズにしたいだけなんだけど、もっとまともな方法ある?
+               って、NT でしか動いてないじゃん。*/
             WINDOWPOS wp;
             wp.hwnd = hwnd;
             wp.hwndInsertAfter = 0;

@@ -22,7 +22,7 @@
 # define M_PI 3.141592653589793
 #endif
 
-const char Application::ToplevelClassName[] = "@";
+const char Application::ToplevelClassName[] = "ã€€";
 const char Application::FrameClassName[] = "  ";
 const char Application::ClientClassName[] = "   ";
 const char Application::ModelineClassName[] = "    ";
@@ -558,7 +558,7 @@ init_command_line (int ac)
 void
 report_out_of_memory ()
 {
-  MessageBox (0, "ƒƒ‚ƒŠ‚ª•s‘«‚µ‚Ä‚¢‚Ü‚·", TitleBarString, MB_OK | MB_ICONHAND);
+  MessageBox (0, "ãƒ¡ãƒ¢ãƒªãŒä¸è¶³ã—ã¦ã„ã¾ã™", TitleBarString, MB_OK | MB_ICONHAND);
 }
 
 static inline int

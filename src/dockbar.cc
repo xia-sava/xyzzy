@@ -1118,7 +1118,7 @@ tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   switch (msg)
     {
     case UDM_SETRANGE:
-      // �͈͂��t�]����B
+      // 範囲を逆転する。
       lparam = MAKELONG (HIWORD (lparam), LOWORD (lparam));
       break;
 
@@ -1151,7 +1151,7 @@ tab_bar::notify_spin (NMHDR *nm, LRESULT &r) const
     {
       DWORD range = SendMessage (nm->hwndFrom, UDM_GETRANGE, 0, 0);
 
-      // �͈͂��t�]���Ă���
+      // 範囲が逆転している
       int mn = LOWORD (range), mx = HIWORD (range);
       if (mn < mx)
         {
@@ -1232,7 +1232,7 @@ tab_bar::set_cursor (WPARAM wparam, LPARAM lparam)
   return 0;
 }
 
-/* �Ȃ񂾂����? */
+/* なんだこりゃ? */
 int
 tab_bar::lbtn_down (int x, int y)
 {

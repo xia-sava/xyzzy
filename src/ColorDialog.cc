@@ -498,13 +498,13 @@ ChangeColorsPageP::draw_item (int id, DRAWITEMSTRUCT *dis)
       else if (prop_fg_p (dis->itemData))
         {
           char b[32];
-          sprintf (b, "•¶Žš%d", dis->itemData - PROP_FG_OFFSET + 1);
+          sprintf (b, "æ–‡å­—%d", dis->itemData - PROP_FG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (prop_bg_p (dis->itemData))
         {
           char b[32];
-          sprintf (b, "”wŒi%d", dis->itemData - PROP_BG_OFFSET + 1);
+          sprintf (b, "èƒŒæ™¯%d", dis->itemData - PROP_BG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (misc_p (dis->itemData))

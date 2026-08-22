@@ -27,9 +27,7 @@ print_quote (const char *p)
         {
           if (*p == '\\' || *p == '"')
             putchar ('\\');
-          putchar (*p);
-          if (SJISP (*p++ & 0xff))
-            putchar (*p++);
+          putchar (*p++);
         }
     }
 }
@@ -45,9 +43,7 @@ print_quote_rc (const char *p)
         {
           if (*p == '\\' || *p == '"')
             putchar (*p);
-          putchar (*p);
-          if (SJISP (*p++ & 0xff))
-            putchar (*p++);
+          putchar (*p++);
         }
     }
 }
@@ -73,23 +69,13 @@ gen_msg (int argc, char **argv)
     }
   else if (!strcmp (argv[1], "-c"))
     {
-      printf ("const char SSM[] =\n");
+      printf ("static const char *const message_string[] =\n");
+      printf ("{\n");
       for (int i = 0; i < numberof (msg); i++)
         {
           printf ("  \"");
           print_quote (msg[i].text);
-          printf ("\\0\"\n");
-        }
-      printf (";\n\n");
-
-
-      printf ("static const char *const message_string[] =\n");
-      printf ("{\n");
-      int l = 0;
-      for (int i = 0; i < numberof (msg); i++)
-        {
-          printf ("  SSM + %d,\n", l);
-          l += strlen (msg[i].text) + 1;
+          printf ("\",\n");
         }
       printf ("};\n\n");
 

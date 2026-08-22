@@ -312,7 +312,7 @@ MsgBoxEx (HWND hwnd, const char *msg, const char *title,
           int type, int defbtn, int icon, int beep,
           const char **captions, int ncaptions, int crlf, int no_wrap)
 {
-  XMessageBox mb (app.hinst, msg ? msg : "", title ? title : "ÉGÉâÅ[", crlf, no_wrap);
+  XMessageBox mb (app.hinst, msg ? msg : "", title ? title : "„Ç®„É©„Éº", crlf, no_wrap);
   if (!captions)
     ncaptions = 0;
 
@@ -328,31 +328,31 @@ MsgBoxEx (HWND hwnd, const char *msg, const char *title,
 
     case MB_OKCANCEL:
       mb.add_button (IDOK, "OK");
-      mb.add_button (IDCANCEL, "ÉLÉÉÉìÉZÉã");
+      mb.add_button (IDCANCEL, "„Ç≠„É£„É≥„Çª„É´");
       mb.set_close (IDCANCEL);
       break;
 
     case MB_ABORTRETRYIGNORE:
-      mb.add_button (IDABORT, "íÜé~(&A)");
-      mb.add_button (IDRETRY, "çƒééçs(&R)");
-      mb.add_button (IDIGNORE, "ñ≥éã(&I)");
+      mb.add_button (IDABORT, "‰∏≠Ê≠¢(&A)");
+      mb.add_button (IDRETRY, "ÂÜçË©¶Ë°å(&R)");
+      mb.add_button (IDIGNORE, "ÁÑ°Ë¶ñ(&I)");
       break;
 
     case MB_YESNOCANCEL:
-      mb.add_button (IDYES, "ÇÕÇ¢(&Y)");
-      mb.add_button (IDNO, "Ç¢Ç¢Ç¶(&N)");
-      mb.add_button (IDCANCEL, "ÉLÉÉÉìÉZÉã");
+      mb.add_button (IDYES, "„ÅØ„ÅÑ(&Y)");
+      mb.add_button (IDNO, "„ÅÑ„ÅÑ„Åà(&N)");
+      mb.add_button (IDCANCEL, "„Ç≠„É£„É≥„Çª„É´");
       mb.set_close (IDCANCEL);
       break;
 
     case MB_YESNO:
-      mb.add_button (IDYES, "ÇÕÇ¢(&Y)");
-      mb.add_button (IDNO, "Ç¢Ç¢Ç¶(&N)");
+      mb.add_button (IDYES, "„ÅØ„ÅÑ(&Y)");
+      mb.add_button (IDNO, "„ÅÑ„ÅÑ„Åà(&N)");
       break;
 
     case MB_RETRYCANCEL:
-      mb.add_button (IDRETRY, "çƒééçs(&R)");
-      mb.add_button (IDCANCEL, "ÉLÉÉÉìÉZÉã");
+      mb.add_button (IDRETRY, "ÂÜçË©¶Ë°å(&R)");
+      mb.add_button (IDCANCEL, "„Ç≠„É£„É≥„Çª„É´");
       mb.set_close (IDCANCEL);
       break;
     }

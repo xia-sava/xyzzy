@@ -2285,7 +2285,7 @@ static symbols ed[] =
   DEFCMD3 (save-buffer, 0, 2, 0, ""),
   DEFUN3 (delete-auto-save-file, 1, 0, 0),
   DEFUN3 (do-auto-save, 0, 1, 0),
-  DEFCMD3 (write-region, 3, 3, 0, "r\nFÉtÉ@ÉCÉãñº: \np"),
+  DEFCMD3 (write-region, 3, 3, 0, "r\nF„Éï„Ç°„Ç§„É´Âêç: \np"),
   MAKE_SYMBOL2 (to-ascii-fileio),
   MAKE_SYMBOL2 (to-kanji-fileio),
   MAKE_SYMBOL2 (to-kana-fileio),
@@ -2991,9 +2991,7 @@ putq (const char *p)
         {
           if (*p == '\\' || *p == '"')
             putchar ('\\');
-          putchar (*p);
-          if (_ismbblead (*p++ & 0xff))
-            putchar (*p++);
+          putchar (*p++);
         }
     }
   putchar ('"');

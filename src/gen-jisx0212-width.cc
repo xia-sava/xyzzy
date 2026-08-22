@@ -25,11 +25,11 @@ gen_jisx0212_width (int argc, char **argv)
   memset (&lf, 0, sizeof lf);
   lf.lfHeight = 16;
   lf.lfCharSet = SHIFTJIS_CHARSET;
-  strcpy (lf.lfFaceName, "ÇlÇr ñæí©");
+  strcpy (lf.lfFaceName, "Ôº≠Ôº≥ ÊòéÊúù");
   HGDIOBJ of = SelectObject (hdc, CreateFontIndirect (&lf));
 
   SIZE sz0;
-  GetTextExtentPoint32 (hdc, "Ç†", 2, &sz0);
+  GetTextExtentPoint32 (hdc, "„ÅÇ", 2, &sz0);
 
   u_char width[SZ / 8];
   memset (width, 255, sizeof width);

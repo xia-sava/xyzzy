@@ -8,21 +8,21 @@
 static XCOLORREF xcolors[MC_NCOLORS];
 static struct {const char *name, *disp;} xnames[] =
 {
-  {cfgTextColor, "ƒtƒ@ƒCƒ‰•¶ŽšF"},
-  {cfgBackColor, "ƒtƒ@ƒCƒ‰”wŒiF"},
-  {"highlightTextColor", "ƒtƒ@ƒCƒ‰‘I‘ð•¶ŽšF"},
-  {"highlightBackColor", "ƒtƒ@ƒCƒ‰‘I‘ð”wŒiF"},
-  {cfgCursorColor, "ƒtƒ@ƒCƒ‰ƒJ[ƒ\ƒ‹F"},
-  {"buftabSelFg", "‘I‘ðƒoƒbƒtƒ@ƒ^ƒu•¶ŽšF"},
-  {"buftabSelBg", "‘I‘ðƒoƒbƒtƒ@ƒ^ƒu”wŒiF"},
-  {"buftabDispFg", "•\Ž¦ƒoƒbƒtƒ@ƒ^ƒu•¶ŽšF"},
-  {"buftabDispBg", "•\Ž¦ƒoƒbƒtƒ@ƒ^ƒu”wŒiF"},
-  {"buftabFg", "ƒoƒbƒtƒ@ƒ^ƒu•¶ŽšF"},
-  {"buftabBg", "ƒoƒbƒtƒ@ƒ^ƒu”wŒiF"},
-  {"tabSelFg", "‘I‘ðƒ^ƒu•¶ŽšF"},
-  {"tabSelBg", "‘I‘ðƒ^ƒu”wŒiF"},
-  {"tabFg", "ƒ^ƒu•¶ŽšF"},
-  {"tabBg", "ƒ^ƒu”wŒiF"},
+  {cfgTextColor, "ãƒ•ã‚¡ã‚¤ãƒ©æ–‡å­—è‰²"},
+  {cfgBackColor, "ãƒ•ã‚¡ã‚¤ãƒ©èƒŒæ™¯è‰²"},
+  {"highlightTextColor", "ãƒ•ã‚¡ã‚¤ãƒ©é¸æŠžæ–‡å­—è‰²"},
+  {"highlightBackColor", "ãƒ•ã‚¡ã‚¤ãƒ©é¸æŠžèƒŒæ™¯è‰²"},
+  {cfgCursorColor, "ãƒ•ã‚¡ã‚¤ãƒ©ã‚«ãƒ¼ã‚½ãƒ«è‰²"},
+  {"buftabSelFg", "é¸æŠžãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–æ–‡å­—è‰²"},
+  {"buftabSelBg", "é¸æŠžãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–èƒŒæ™¯è‰²"},
+  {"buftabDispFg", "è¡¨ç¤ºãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–æ–‡å­—è‰²"},
+  {"buftabDispBg", "è¡¨ç¤ºãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–èƒŒæ™¯è‰²"},
+  {"buftabFg", "ãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–æ–‡å­—è‰²"},
+  {"buftabBg", "ãƒãƒƒãƒ•ã‚¡ã‚¿ãƒ–èƒŒæ™¯è‰²"},
+  {"tabSelFg", "é¸æŠžã‚¿ãƒ–æ–‡å­—è‰²"},
+  {"tabSelBg", "é¸æŠžã‚¿ãƒ–èƒŒæ™¯è‰²"},
+  {"tabFg", "ã‚¿ãƒ–æ–‡å­—è‰²"},
+  {"tabBg", "ã‚¿ãƒ–èƒŒæ™¯è‰²"},
 };
 
 const char *

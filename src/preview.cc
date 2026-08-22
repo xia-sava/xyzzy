@@ -929,8 +929,8 @@ inline void
 preview_dialog::update_page (int page, int total)
 {
   char b[128];
-  //  sprintf (b, "ページ %d/%d", page, total);
-  sprintf (b, "ページ %d", page);
+  //  sprintf (b, "繝壹�ｼ繧ｸ %d/%d", page, total);
+  sprintf (b, "繝壹�ｼ繧ｸ %d", page);
   SendMessage (p_hwnd_sw, SB_SETTEXT, 0, LPARAM (b));
 }
 

@@ -4,7 +4,7 @@
 struct alloc_page_rep
 {
   alloc_page_rep *next;
-  u_int commit;          // Šeƒrƒbƒg‚É‘Î‰‚·‚éƒy[ƒW‚ªcommit‚³‚ê‚Ä‚¢‚é‚©‚Ç‚¤‚©
+  u_int commit;          // å„ãƒ“ãƒƒãƒˆã«å¯¾å¿œã™ã‚‹ãƒšãƒ¼ã‚¸ãŒcommitã•ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹
 };
 
 struct fixed_heap_rep
