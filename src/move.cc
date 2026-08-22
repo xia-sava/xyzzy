@@ -1118,6 +1118,9 @@ Buffer::parse_fold_line (Point &point, long fold_columns,
         {
           if (f.column > fold_columns && cl == 2 && c != '\t')
             f.p--;
+          // 対を分断すると両方とも字形を失うので、対ごと次の行へ送る
+          else if (utf16_surrogate_high_p (c) && f.column > cl)
+            f.p--;
           if (param.mode & (KINSOKU_EOL | KINSOKU_SPC) && hang_char (f, param.mode))
             break;
           if (param.mode & KINSOKU_CHARS)
@@ -1193,6 +1196,9 @@ Buffer::parse_fold_line (Point &point, long max_width, const glyph_width &gw,
       if (pixel >= max_width)
         {
           if (pixel > max_width && cl == 2 && c != '\t')
+            f.p--;
+          // 対を分断すると両方とも字形を失うので、対ごと次の行へ送る
+          else if (utf16_surrogate_high_p (c) && f.column > cl)
             f.p--;
           if (param.mode & (KINSOKU_EOL | KINSOKU_SPC) && hang_char (f, param.mode))
             break;
