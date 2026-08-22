@@ -531,7 +531,7 @@ word_state::char_category (const syntax_table *tab, Char c)
           if (wc < ws_range[i].from)
             return WC2symbol;
           if (wc <= ws_range[i].to)
-            return (!ws_range[i].cat2 || char_width (c) == 1
+            return (!ws_range[i].cat2 || charset_width (c) == 1
                     ? ws_range[i].cat1
                     : ws_range[i].cat2);
         }

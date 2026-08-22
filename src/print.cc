@@ -831,7 +831,7 @@ print_engine::paint_kana (PaintCtx &ctx, Char cc) const
 void
 print_engine::paint_kanji (PaintCtx &ctx, Char cc) const
 {
-  if (char_width (cc) == 2)
+  if (charset_width (cc) == 2)
     {
       char b[2];
       b[0] = cc >> 8;
@@ -860,7 +860,7 @@ print_engine::paint_kanji (PaintCtx &ctx, Char cc) const
 void
 print_engine::paint_jisx0212 (PaintCtx &ctx, Char cc) const
 {
-  int l = char_width (cc);
+  int l = charset_width (cc);
   ucs2_t wc = i2w (cc);
   if (wc != ucs2_t (-1))
     {
@@ -2128,7 +2128,7 @@ get_glyph_width (Char cc, const glyph_width &gw)
         else
           {
             SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-            GetTextExtentPoint32 (gw.hdc, "\0", char_width (cc), &sz);
+            GetTextExtentPoint32 (gw.hdc, "\0", charset_width (cc), &sz);
           }
         break;
       }
@@ -2144,13 +2144,13 @@ get_glyph_width (Char cc, const glyph_width &gw)
         else
           {
             SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-            GetTextExtentPoint32 (gw.hdc, "\0", char_width (cc), &sz);
+            GetTextExtentPoint32 (gw.hdc, "\0", charset_width (cc), &sz);
           }
         break;
       }
 
     default:
-      if (char_width (cc) == 2)
+      if (charset_width (cc) == 2)
         {
           char b[2];
           b[0] = cc >> 8;

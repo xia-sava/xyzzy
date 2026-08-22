@@ -4,6 +4,10 @@
 #include "ucs2tab.h"
 #include "char-width.h"
 
+// 画面で占める桁数。フォントの実測に合わせて書き換わるので、文字集合の属性である
+// char_width_table とは別に持つ
+u_char char_columns_table[sizeof char_width_table];
+
 wc2int_hash wc2int_iso8859_1_hash;
 wc2int_hash wc2int_iso8859_2_hash;
 wc2int_hash wc2int_iso8859_3_hash;
@@ -437,7 +441,7 @@ init_unicode (int min, int max, int off)
   for (int i = min; i <= max; i++)
     {
       Char c = wc2internal_table[i];
-      if (c == Char (-1) || char_width (c) == 2)
+      if (c == Char (-1) || charset_width (c) == 2)
         wc2internal_table[i] = i + off;
     }
 }
@@ -520,6 +524,8 @@ init_charset_category ()
 void
 init_ucs2_table ()
 {
+  memcpy (char_columns_table, char_width_table, sizeof char_width_table);
+
   make_wc2cp932_table ();
 
   for (int i = 0; i < numberof (wc2internal_table); i++)
@@ -600,7 +606,7 @@ Char
 w2i_half_width (ucs2_t wc)
 {
   Char cc = w2i (wc);
-  if (cc != Char (-1) && char_width (cc) != 1)
+  if (cc != Char (-1) && charset_width (cc) != 1)
     for (int i = 0; i < numberof (to_half_width_hashtabs); i++)
       {
         Char t = lookup_wc2int_hash (*to_half_width_hashtabs[i], wc);
