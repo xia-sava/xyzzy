@@ -33,8 +33,8 @@ extern lisp Qunbound;
                   MSB ........ ........ ........ ........  LSB
 IMMEDIATE:
    Short Integer:     BBBBBBBB BBBBBBBB BBBBBBBB BBBBBB01
-   Character:         BBBBBBBB BBBBBBBB 00000000 00000111
-   Message:           BBBBBBBB BBBBBBBB 00000000 00001011
+   Character:         BBBBBBBB BBBBBBBB BBBBBBBB 00000111
+   Message:           BBBBBBBB BBBBBBBB BBBBBBBB 00001011
 POINTER:
                       PPPPPPPP PPPPPPPP PPPPPPPP PPPPPP00
 
@@ -156,28 +156,28 @@ typedef lisp (__stdcall *lfunction_proc_3)(lisp, lisp, lisp);
 
 # include "msgcode.h"
 
-inline u_short
-lowbits (pointer_t x)
-{
-  return u_short (x & 0xffff);
-}
+/* 即値はタグを下位ビットへ、値をその上へ置く */
+# define IMMEDIATE_TAG_BITS 8
+# define IMMEDIATE_TAG_MASK ((1 << IMMEDIATE_TAG_BITS) - 1)
+# define IMMEDIATE_DATA_LIMIT (u_int32_t (1) << (32 - IMMEDIATE_TAG_BITS))
 
-inline u_short
-hibits (pointer_t x)
+inline u_int
+immediate_tag (lisp x)
 {
-  return u_short ((x >> 16) & 0xffff);
+  return u_int (pointer_t (x)) & IMMEDIATE_TAG_MASK;
 }
 
 inline lisp
-make_immediate (u_short type, u_short data)
+make_immediate (u_int type, u_int32_t data)
 {
-  return lisp ((pointer_t (data) << 16) | type);
+  assert (data < IMMEDIATE_DATA_LIMIT);
+  return lisp ((pointer_t (data) << IMMEDIATE_TAG_BITS) | type);
 }
 
-inline u_short
+inline u_int32_t
 ximmediate_data (lisp x)
 {
-  return hibits (pointer_t (x));
+  return u_int32_t (pointer_t (x) >> IMMEDIATE_TAG_BITS);
 }
 
 inline int
