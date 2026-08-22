@@ -11,7 +11,7 @@ del /S /Q xyzzy.wxp >nul 2>&1
 set XYZZYHOME=%~dp0
 set XYZZYINIFILE=
 set XYZZYCONFIGPATH=
-xyzzy.exe -q -trace -load misc/makelc.l -e "(makelc:makelc-and-exit t)"
+"%~dp0xyzzy.exe" -q -trace -load misc/makelc.l -e "(makelc:makelc-and-exit t)"
 if not %ERRORLEVEL%==0 goto error
 del /S /Q xyzzy.wxp 2> nul
 goto :eof
