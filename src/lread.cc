@@ -2114,6 +2114,7 @@ load_file (lisp filename, lisp realname, lisp if_does_not_exist,
                                    if_does_not_exist, Kcanonical, 0);
       if (stream == Qnil)
         return Qnil;
+      detect_utf8_stream (stream);
     }
 
   Char buf[PATH_MAX * 2], *b = buf;

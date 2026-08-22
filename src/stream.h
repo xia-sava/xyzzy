@@ -56,12 +56,14 @@ public:
   void *input;
   void *output;
   lChar pending;     // unread-char用バッファ
+  lChar deferred;    // 1文字が内部表現2つになる場合の後半
   lisp pathname;
   char *alt_pathname;
   int start;
   int end;
   char open_p;        // ストリームがオープンされている?
   char encoding;      // エンコードモード
+  char utf8_p;        // UTF-8として読む
   enum
     {
       ENCODE_CANON,   // text(行末変換する)
@@ -187,6 +189,13 @@ xstream_pending (lisp x)
   return ((lstream *)x)->pending;
 }
 
+inline lChar &
+xstream_deferred (lisp x)
+{
+  assert (streamp (x));
+  return ((lstream *)x)->deferred;
+}
+
 inline FILE *&
 xfile_stream_input (lisp x)
 {
@@ -225,6 +234,14 @@ xfile_stream_encoding (lisp x)
   assert (streamp (x));
   assert (file_stream_p (x));
   return ((lstream *)x)->encoding;
+}
+
+inline char &
+xfile_stream_utf8_p (lisp x)
+{
+  assert (streamp (x));
+  assert (file_stream_p (x));
+  return ((lstream *)x)->utf8_p;
 }
 
 inline lisp &
@@ -374,6 +391,7 @@ lChar peekc_stream (lisp);
 lChar readc_stream (lisp);
 void create_std_streams ();
 lisp create_file_stream (lisp, lisp, lisp, lisp, lisp, lisp);
+void detect_utf8_stream (lisp);
 int listen_stream (lisp);
 int get_stream_column (lisp);
 void flush_stream (lisp);

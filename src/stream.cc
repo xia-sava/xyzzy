@@ -50,12 +50,14 @@ make_stream (stream_type type)
   lstream *p = ldata <lstream, Tstream>::lalloc ();
   p->type = type;
   p->pending = lChar_EOF;
+  p->deferred = lChar_EOF;
   p->column = 0;
   p->linenum = 1;
   p->pathname = Qnil;
   p->alt_pathname = 0;
   p->open_p = 1;
   p->encoding = lstream::ENCODE_CANON;
+  p->utf8_p = 0;
   return p;
 }
 
@@ -494,6 +496,117 @@ Fopen (lisp filename, lisp keys)
 
   return create_file_stream (filename, direction, if_exists,
                              if_does_not_exist, encoding, share);
+}
+
+// 全体が UTF-8 として妥当なら 1 を返す。CP932 の日本語は必ずひらがな
+// (0x82xx) を含み、0x82 は UTF-8 では継続バイトなので先導になれない。
+// 冗長な表現とサロゲートを弾くので、両者を取り違えることがない
+static int
+utf8_contents_p (FILE *fp)
+{
+  int c;
+  while ((c = getc (fp)) != EOF)
+    {
+      if (c < 0x80)
+        continue;
+
+      int nfollow, min, max;
+      if (c >= 0xc2 && c <= 0xdf)
+        nfollow = 1, min = 0x80, max = 0xbf;
+      else if (c == 0xe0)
+        nfollow = 2, min = 0xa0, max = 0xbf;
+      else if (c == 0xed)
+        nfollow = 2, min = 0x80, max = 0x9f;
+      else if (c >= 0xe1 && c <= 0xef)
+        nfollow = 2, min = 0x80, max = 0xbf;
+      else if (c == 0xf0)
+        nfollow = 3, min = 0x90, max = 0xbf;
+      else if (c == 0xf4)
+        nfollow = 3, min = 0x80, max = 0x8f;
+      else if (c >= 0xf1 && c <= 0xf3)
+        nfollow = 3, min = 0x80, max = 0xbf;
+      else
+        return 0;
+
+      c = getc (fp);
+      if (c < min || c > max)
+        return 0;
+      while (--nfollow > 0)
+        {
+          c = getc (fp);
+          if (c < 0x80 || c > 0xbf)
+            return 0;
+        }
+    }
+  return 1;
+}
+
+// 中身が UTF-8 と見なせるストリームに印を付ける。読み出しの位置は変えない。
+// BOM があれば読み飛ばす
+void
+detect_utf8_stream (lisp stream)
+{
+  if (!streamp (stream) || !file_stream_p (stream))
+    return;
+  FILE *fp = xfile_stream_input (stream);
+  if (!fp || xfile_stream_encoding (stream) == lstream::ENCODE_BINARY)
+    return;
+
+  long pos = ftell (fp);
+  if (pos < 0 || fseek (fp, 0, SEEK_SET))
+    return;
+  int utf8_p = utf8_contents_p (fp);
+  clearerr (fp);
+  fseek (fp, pos, SEEK_SET);
+  if (!utf8_p)
+    return;
+
+  xfile_stream_utf8_p (stream) = 1;
+  if (!pos)
+    {
+      int c1 = getc (fp), c2 = getc (fp), c3 = getc (fp);
+      if (c1 != 0xef || c2 != 0xbb || c3 != 0xbf)
+        fseek (fp, pos, SEEK_SET);
+    }
+}
+
+// UTF-8 の後続バイトを読んで内部表現へ直す。内部表現 2 つになる文字は
+// 後半をストリームへ預けて、次の読み出しで返す
+static lChar
+readc_utf8 (lisp stream, int c)
+{
+  FILE *fp = xfile_stream_input (stream);
+  int nfollow;
+  ucs4_t lc;
+  if (c < 0xe0)
+    nfollow = 1, lc = c & 0x1f;
+  else if (c < 0xf0)
+    nfollow = 2, lc = c & 0x0f;
+  else
+    nfollow = 3, lc = c & 0x07;
+
+  for (int i = 0; i < nfollow; i++)
+    {
+      int c2 = getc (fp);
+      if (c2 < 0x80 || c2 > 0xbf)
+        {
+          ungetc (c2, fp);
+          return c;
+        }
+      lc = (lc << 6) | (c2 & 0x3f);
+    }
+
+  if (lc >= 0x10000)
+    {
+      xstream_deferred (stream) = utf16_ucs4_to_pair_low (lc);
+      return utf16_ucs4_to_pair_high (lc);
+    }
+
+  Char cc = w2i (ucs2_t (lc));
+  if (cc != Char (-1))
+    return cc;
+  xstream_deferred (stream) = utf16_ucs2_to_undef_pair_low (ucs2_t (lc));
+  return utf16_ucs2_to_undef_pair_high (ucs2_t (lc));
 }
 
 lisp
@@ -1383,6 +1496,13 @@ readc_stream (lisp stream)
           return cc;
         }
 
+      cc = xstream_deferred (stream);
+      if (cc != lChar_EOF)
+        {
+          xstream_deferred (stream) = lChar_EOF;
+          return cc;
+        }
+
       switch (xstream_type (stream))
         {
         case st_file_io:
@@ -1393,13 +1513,18 @@ readc_stream (lisp stream)
               return lChar_EOF;
             if (xfile_stream_encoding (stream) != lstream::ENCODE_BINARY)
               {
-                if (SJISP (c))
+                if (xfile_stream_utf8_p (stream))
+                  {
+                    if (c >= 0x80)
+                      return readc_utf8 (stream, c);
+                  }
+                else if (SJISP (c))
                   {
                     int c2 = getc (xfile_stream_input (stream));
                     return c2 == EOF ? c : ((c << 8) | c2);
                   }
-                else if (xfile_stream_encoding (stream) == lstream::ENCODE_CANON
-                         && c == '\r')
+                if (xfile_stream_encoding (stream) == lstream::ENCODE_CANON
+                    && c == '\r')
                   {
                     int c2 = getc (xfile_stream_input (stream));
                     if (c2 == '\n')
@@ -1563,7 +1688,7 @@ listen_stream (lisp stream)
         }
 
       lChar cc = xstream_pending (stream);
-      if (cc != lChar_EOF)
+      if (cc != lChar_EOF || xstream_deferred (stream) != lChar_EOF)
         return 1;
 
       switch (xstream_type (stream))
