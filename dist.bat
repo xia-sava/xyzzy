@@ -1,7 +1,7 @@
 @echo off
 rem
-rem _dist/ ‚É xyzzy ‚Ìƒ\[ƒX‚ðƒ`ƒFƒbƒNƒAƒEƒg‚µ‚ÄƒNƒŠ[ƒ“ƒrƒ‹ƒh‚ðs‚¢A
-rem xyzzy-(VERSION).zip ‚Æ xyzzy-src-(VERSION).zip ‚ðì¬‚·‚éB
+rem "_dist/ ã« xyzzy ã®ã‚½ãƒ¼ã‚¹ã‚’ãƒã‚§ãƒƒã‚¯ã‚¢ã‚¦ãƒˆã—ã¦ã‚¯ãƒªãƒ¼ãƒ³ãƒ“ãƒ«ãƒ‰ã‚’è¡Œã„ã€"
+rem "xyzzy-(VERSION).zip ã¨ xyzzy-src-(VERSION).zip ã‚’ä½œæˆã™ã‚‹ã€‚"
 rem
 
 setlocal

@@ -3,8 +3,8 @@ setlocal
 cd /d %~dp0
 
 echo Byte compile...
-rem startup.lc だけ「存在するファイルを作成することは出来ません」と言われて
-rem たまにエラーになるので削除
+rem "startup.lc 縺縺代悟ｭ伜惠縺吶ｋ繝輔ぃ繧､繝ｫ繧剃ｽ懈�舌☆繧九％縺ｨ縺ｯ蜃ｺ譚･縺ｾ縺帙ｓ縲阪→險繧上ｌ縺ｦ"
+rem "縺溘∪縺ｫ繧ｨ繝ｩ繝ｼ縺ｫ縺ｪ繧九�ｮ縺ｧ蜑企勁"
 del /S /Q lisp\startup.lc >nul 2>&1
 
 del /S /Q xyzzy.wxp >nul 2>&1
