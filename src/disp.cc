@@ -346,6 +346,61 @@ Window::update_caret () const
     }
 }
 
+// BMP 外の文字は 1 セルの 8bit に収まらないので、表に登録して番号で参照する。
+// 番号は上位・下位 2 つのセルに分けて持たせる
+#define SURROGATE_PAIR_MAX 4096
+#define SURROGATE_PAIR_HASH_SIZE 8192 // SURROGATE_PAIR_MAX の 2 倍で 2 の冪
+#define SURROGATE_FACE_NAME "Segoe UI Emoji"
+
+static ucs4_t surrogate_pair_table[SURROGATE_PAIR_MAX];
+static short surrogate_pair_hash[SURROGATE_PAIR_HASH_SIZE];
+static int n_surrogate_pairs;
+
+// 表に無ければ登録して番号を返す。表が一杯なら -1
+static int
+intern_surrogate_pair (ucs4_t lc)
+{
+  u_int h = u_int (lc) % SURROGATE_PAIR_HASH_SIZE;
+  while (surrogate_pair_hash[h])
+    {
+      int i = surrogate_pair_hash[h] - 1;
+      if (surrogate_pair_table[i] == lc)
+        return i;
+      if (++h == SURROGATE_PAIR_HASH_SIZE)
+        h = 0;
+    }
+  if (n_surrogate_pairs == SURROGATE_PAIR_MAX)
+    return -1;
+  int i = n_surrogate_pairs++;
+  surrogate_pair_table[i] = lc;
+  surrogate_pair_hash[h] = short (i + 1);
+  return i;
+}
+
+// BMP 外の文字を描くフォント。字送りが 2 セルに収まるよう高さを抑える。
+// 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
+// して掛かり、全角を基準に持つ漢字のフォントが倍の幅に引き伸ばされる
+static HFONT
+surrogate_font ()
+{
+  static HFONT hfont;
+  static SIZE size;
+  const SIZE &sz = app.text_font.size ();
+  if (!hfont || size.cx != sz.cx || size.cy != sz.cy)
+    {
+      if (hfont)
+        DeleteObject (hfont);
+      LOGFONT lf;
+      bzero (&lf, sizeof lf);
+      lf.lfHeight = min (sz.cy, sz.cx * 2);
+      lf.lfCharSet = DEFAULT_CHARSET;
+      strcpy (lf.lfFaceName, SURROGATE_FACE_NAME);
+      hfont = CreateFontIndirect (&lf);
+      size = sz;
+    }
+  return hfont;
+}
+
 class paint_chars_ctx
 {
   int p_x, p_y;
@@ -365,6 +420,16 @@ public:
     {
       p_r.right = min (int (p_r.left + p_cellw), p_right);
       ExtTextOutW (hdc, p_x, p_y, flags, &p_r, &wc, 1, 0);
+      p_r.left = p_r.right;
+      p_x += p_cellw;
+    }
+  void paint_surrogate_pair (HDC hdc, ucs4_t lc, int flags)
+    {
+      ucs2_t w[2];
+      w[0] = utf16_ucs4_to_pair_high (lc);
+      w[1] = utf16_ucs4_to_pair_low (lc);
+      p_r.right = min (int (p_r.left + p_cellw), p_right);
+      ExtTextOutW (hdc, p_x, p_y, flags, &p_r, w, 2, 0);
       p_r.left = p_r.right;
       p_x += p_cellw;
     }
@@ -435,6 +500,17 @@ paint_jisx0212_half_width_chars (HDC hdc, int x, int y, int flags, const RECT &r
   paint_chars_ctx ctx (x + f.offset ().x, y + f.offset ().y, r, 1);
   for (const u_char *s = (const u_char *)string, *const se = s + len; s < se; s++)
     ctx.paint (hdc, i2w (jisx0212_half_width_table[*s]), flags);
+  SelectObject (hdc, of);
+}
+
+static inline void
+paint_surrogate_pair_chars (HDC hdc, int x, int y, int flags, const RECT &r,
+                            const char *string, int len)
+{
+  HGDIOBJ of = SelectObject (hdc, surrogate_font ());
+  paint_chars_ctx ctx (x, y, r, 2);
+  for (const u_char *s = (const u_char *)string, *const se = s + len; s + 1 < se; s += 2)
+    ctx.paint_surrogate_pair (hdc, surrogate_pair_table[(s[0] << 8) | s[1]], flags);
   SelectObject (hdc, of);
 }
 
@@ -531,6 +607,26 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
 
     case GLYPH_CHARSET_SMLCDM:
       PAINT_CHARS_LUCIDA (CCS_SMLCDM_MIN);
+      break;
+
+    case GLYPH_CHARSET_SURROGATE_PAIR:
+      paint_surrogate_pair_chars (hdc, x, y, flags, r, string, len);
+      break;
+
+    case GLYPH_CHARSET_SURROGATE_H1:
+      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN, FONT_ASCII);
+      break;
+
+    case GLYPH_CHARSET_SURROGATE_H2:
+      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 256, FONT_ASCII);
+      break;
+
+    case GLYPH_CHARSET_SURROGATE_H3:
+      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 512, FONT_ASCII);
+      break;
+
+    case GLYPH_CHARSET_SURROGATE_H4:
+      PAINT_HALF_WIDTH_CHARS (CCS_UTF16_SURROGATE_HIGH_MIN + 768, FONT_ASCII);
       break;
 
 #ifdef CCS_ULATIN_MIN
@@ -1371,8 +1467,23 @@ glyph_dbchar (glyph_t *g, Char cc, int f, int flags)
   return g;
 }
 
+// 直前のセルが対にならなかった上位サロゲートならその値を返す
+static inline ucs2_t
+pending_surrogate_high (const glyph_t *g, const glyph_t *g0)
+{
+  if (g == g0)
+    return 0;
+  glyph_t c = GLYPH_CHARSET (g[-1]);
+  if (c < GLYPH_CHARSET_SURROGATE_H1 || c > GLYPH_CHARSET_SURROGATE_H4)
+    return 0;
+  return ucs2_t (CCS_UTF16_SURROGATE_HIGH_MIN
+                 + (((c - GLYPH_CHARSET_SURROGATE_H1) >> GLYPH_CHARSET_SHIFT_BIT) << 8)
+                 + (g[-1] & 255));
+}
+
+// g0 は行の先頭。下位サロゲートが直前のセルと対になれるかの判定に使う
 static inline glyph_t *
-glyph_sbchar (glyph_t *g, Char cc, int f, int flags)
+glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, int f, int flags)
 {
   int ccs = code_charset (cc);
   switch (ccs)
@@ -1447,6 +1558,28 @@ glyph_sbchar (glyph_t *g, Char cc, int f, int flags)
       *g++ = f | (cc & 255) | GLYPH_CHARSET_SMLCDM;
       break;
 
+    case ccs_utf16_surrogate_high:
+      *g++ = (f | (cc & 255)
+              | (GLYPH_CHARSET_SURROGATE_H1
+                 + MAKE_GLYPH_CHARSET ((cc - CCS_UTF16_SURROGATE_HIGH_MIN) >> 8)));
+      break;
+
+    case ccs_utf16_surrogate_low:
+      {
+        ucs2_t hi = pending_surrogate_high (g, g0);
+        if (!hi)
+          goto bad_char;
+        int i = intern_surrogate_pair (utf16_pair_to_ucs4 (hi, cc));
+        if (i < 0)
+          goto bad_char;
+        // 対の後半は前半の属性をそのまま引き継ぐ。走査の単位が割れないようにする
+        g[-1] = ((g[-1] & ~(GLYPH_CHARSET_MASK | GLYPH_CATEGORY_MASK | 255))
+                 | GLYPH_CHARSET_SURROGATE_PAIR | GLYPH_LEAD | (i >> 8));
+        *g = (g[-1] & ~(GLYPH_CATEGORY_MASK | 255)) | GLYPH_TRAIL | (i & 255);
+        g++;
+      }
+      break;
+
     case ccs_usascii:
       if (app.text_font.use_backsl_p () && cc == '\\')
         *g++ = f | GLYPH_BM_BACKSL;
@@ -1490,7 +1623,8 @@ glyph_bmchar (glyph_t *g, Char bm, lisp ch, int f, int n)
       *g++ = f | ' ';
   else if (charp (ch) && char_width (xchar_code (ch)) == 1)
     for (int i = 0; i < n; i++)
-      g = glyph_sbchar (g, xchar_code (ch), f, 0);
+      // 埋め草はそれぞれ独立した文字なので、隣どうしを対にしない
+      g = glyph_sbchar (g, g, xchar_code (ch), f, 0);
   else
     for (int i = 0; i < n; i++)
       *g++ = f | bm;
@@ -1931,7 +2065,7 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
                   g = glyph_dbchar (g, cc, 0, 0);
                 }
               else
-                g = glyph_sbchar (g, cc, 0, 0);
+                g = glyph_sbchar (g, gd->gd_cc, cc, 0, 0);
             }
         }
       while (g < ge2)
@@ -2317,7 +2451,7 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
               g = glyph_dbchar (g, cc, f, wflags);
             }
           else
-            g = glyph_sbchar (g, cc, f, wflags);
+            g = glyph_sbchar (g, g0, cc, f, wflags);
 
           if (f & GLYPH_SELECTED
               && seltype == Buffer::SELECTION_RECTANGLE
@@ -3176,7 +3310,7 @@ Window::paint_minibuffer_message (lisp string)
           g = glyph_dbchar (g, cc, 0, 0);
         }
       else
-        g = glyph_sbchar (g, cc, 0, 0);
+        g = glyph_sbchar (g, (*gr)->gd_cc, cc, 0, 0);
     }
 
   app.minibuffer_prompt_column = g - (*gr)->gd_cc;
