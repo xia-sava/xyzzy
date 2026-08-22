@@ -145,4 +145,8 @@ int screen_dpi ();
 // BASE_SCREEN_DPI 基準の寸法を、画面の DPI に合わせて拡大する
 int dpi_scale (int);
 
+// BASE_SCREEN_DPI 基準のビットマップ資源から、画面の DPI に合わせて拡大した
+// イメージリストを作る。cx は拡大前の 1 枚あたりの幅
+HIMAGELIST dpi_scale_imagelist (HINSTANCE, LPCSTR name, int cx, COLORREF mask);
+
 #endif

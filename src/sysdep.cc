@@ -26,6 +26,83 @@ dpi_scale (int n)
   return MulDiv (n, screen_dpi (), BASE_SCREEN_DPI);
 }
 
+static HBITMAP
+stretch_bitmap (HBITMAP src, int w, int h)
+{
+  BITMAP bm;
+  if (!GetObject (src, sizeof bm, &bm))
+    return 0;
+
+  // 画面と同じ 32bpp で作ると、StretchBlt が書かないアルファが 0 のままになり
+  // イメージリストが全面透明として扱う。アルファを持たない 24bpp で作る
+  BITMAPINFO bi;
+  bzero (&bi, sizeof bi);
+  bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+  bi.bmiHeader.biWidth = w;
+  bi.bmiHeader.biHeight = h;
+  bi.bmiHeader.biPlanes = 1;
+  bi.bmiHeader.biBitCount = 24;
+  bi.bmiHeader.biCompression = BI_RGB;
+
+  HDC hdc = GetDC (0);
+  HDC hdcs = CreateCompatibleDC (hdc);
+  HDC hdcd = CreateCompatibleDC (hdc);
+  void *bits;
+  HBITMAP dst = CreateDIBSection (hdc, &bi, DIB_RGB_COLORS, &bits, 0, 0);
+  if (hdcs && hdcd && dst)
+    {
+      HGDIOBJ os = SelectObject (hdcs, src);
+      HGDIOBJ od = SelectObject (hdcd, dst);
+      // 整数倍のときに滲ませないため最近傍で伸ばす
+      SetStretchBltMode (hdcd, COLORONCOLOR);
+      StretchBlt (hdcd, 0, 0, w, h, hdcs, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
+      SelectObject (hdcs, os);
+      SelectObject (hdcd, od);
+    }
+  else if (dst)
+    {
+      DeleteObject (dst);
+      dst = 0;
+    }
+  if (hdcs)
+    DeleteDC (hdcs);
+  if (hdcd)
+    DeleteDC (hdcd);
+  ReleaseDC (0, hdc);
+  return dst;
+}
+
+HIMAGELIST
+dpi_scale_imagelist (HINSTANCE hinst, LPCSTR name, int cx, COLORREF mask)
+{
+  if (screen_dpi () == BASE_SCREEN_DPI)
+    return ImageList_LoadBitmap (hinst, name, cx, 1, mask);
+
+  HBITMAP src = LoadBitmap (hinst, name);
+  if (!src)
+    return 0;
+
+  BITMAP bm;
+  HIMAGELIST hil = 0;
+  if (GetObject (src, sizeof bm, &bm) && cx > 0)
+    {
+      // 拡大後も 1 枚あたりの幅で割り切れるようにする
+      int n = bm.bmWidth / cx;
+      int cx2 = dpi_scale (cx);
+      int cy2 = dpi_scale (bm.bmHeight);
+      HBITMAP dst = stretch_bitmap (src, cx2 * n, cy2);
+      if (dst)
+        {
+          hil = ImageList_Create (cx2, cy2, ILC_COLOR24 | ILC_MASK, n, 1);
+          if (hil)
+            ImageList_AddMasked (hil, dst, mask);
+          DeleteObject (dst);
+        }
+    }
+  DeleteObject (src);
+  return hil ? hil : ImageList_LoadBitmap (hinst, name, cx, 1, mask);
+}
+
 Sysdep::Sysdep ()
 {
   os_ver.dwOSVersionInfoSize = sizeof os_ver;

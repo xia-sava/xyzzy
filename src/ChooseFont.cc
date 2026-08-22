@@ -4,9 +4,9 @@
 
 ChooseFontP::ChooseFontP ()
 {
-  cf_hil = ImageList_LoadBitmap (app.hinst,
+  cf_hil = dpi_scale_imagelist (app.hinst,
                                 MAKEINTRESOURCE (IDB_TT),
-                                18, 1, RGB (0, 0, 255));
+                                18, RGB (0, 0, 255));
 }
 
 ChooseFontP::~ChooseFontP ()
@@ -295,12 +295,12 @@ ChooseFontP::draw_font_list (HWND, DRAWITEMSTRUCT *dis)
       SIZE size;
       GetTextExtentPoint32 (dis->hDC, "0", 1, &size);
 
-      ExtTextOut (dis->hDC, r.left + 18, (r.top + r.bottom - size.cy) / 2,
+      ExtTextOut (dis->hDC, r.left + dpi_scale (18), (r.top + r.bottom - size.cy) / 2,
                   ETO_OPAQUE, &r, b, strlen (b), 0);
 
       if (dis->itemData & TRUETYPE_FONTTYPE)
         ImageList_Draw (cf_hil, 0, dis->hDC,
-                        r.left, (r.top + r.bottom - 12) / 2, ILD_TRANSPARENT);
+                        r.left, (r.top + r.bottom - dpi_scale (12)) / 2, ILD_TRANSPARENT);
     }
 
   if (dis->itemState & ODS_FOCUS)

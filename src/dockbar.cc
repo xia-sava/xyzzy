@@ -286,6 +286,7 @@ dock_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 tool_bar::tool_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name, DOCKABLE_ALL), t_bm (0)
 {
+  // ボタンの寸法は画像の大きさに合わせる必要があり、画像は拡大していない
   t_bitmap_size.cx = 16;
   t_bitmap_size.cy = 15;
   t_button_size.cx = 23;
