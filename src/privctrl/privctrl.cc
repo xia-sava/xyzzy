@@ -65,11 +65,6 @@ InitPrivateControls ()
   if (PrivateControlsInitialized)
     return;
 
-  OSVERSIONINFO o;
-  o.dwOSVersionInfoSize = sizeof o;
-  GetVersionEx (&o);
-  Win4p = o.dwMajorVersion >= 4;
-
   InitCommonControls ();
 
   if (!init_listview_class ()

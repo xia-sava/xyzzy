@@ -3,8 +3,6 @@
 #include "xyzzycli.h"
 #include "listen.h"
 
-#define PACK_VERSION(MAJ, MIN) MAKELONG ((MIN), (MAJ))
-
 #ifndef SPI_GETFOREGROUNDLOCKTIMEOUT
 #define SPI_GETFOREGROUNDLOCKTIMEOUT 0x2000
 #define SPI_SETFOREGROUNDLOCKTIMEOUT 0x2001
@@ -13,13 +11,8 @@
 void
 ForceSetForegroundWindow (HWND hwnd)
 {
-  OSVERSIONINFO os;
-  os.dwOSVersionInfoSize = sizeof os;
-  GetVersionEx (&os);
-
   DWORD timeout;
-  if (PACK_VERSION (os.dwMajorVersion, os.dwMinorVersion) >= PACK_VERSION (4, 10)
-      && SystemParametersInfo (SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0))
+  if (SystemParametersInfo (SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &timeout, 0))
     {
       SystemParametersInfo (SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, 0);
       SetForegroundWindow (hwnd);
