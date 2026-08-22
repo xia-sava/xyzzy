@@ -1414,7 +1414,8 @@ static int
 get_kbd_layout_name (HKL hkl, char *buf, int size)
 {
   char k[256];
-  sprintf (k, "SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts\\%08x", hkl);
+  sprintf (k, "SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts\\%08x",
+           reinterpret_cast <UINT_PTR> (hkl));
   ReadRegistry r (HKEY_LOCAL_MACHINE, k);
   return ((!r.fail () && r.get ("Layout Text", buf, size) > 0)
           || app.kbdq.gime.ImmGetDescription (hkl, buf, size) > 0);

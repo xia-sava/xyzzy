@@ -3049,7 +3049,7 @@ process_interactive ()
 static void
 print_version ()
 {
-  printf ("int dump_version = %d;\n", time (0));
+  printf ("int dump_version = %d;\n", static_cast <int> (time (0)));
 }
 
 void
