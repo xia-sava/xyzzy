@@ -391,7 +391,7 @@ lChar peekc_stream (lisp);
 lChar readc_stream (lisp);
 void create_std_streams ();
 lisp create_file_stream (lisp, lisp, lisp, lisp, lisp, lisp);
-void detect_utf8_stream (lisp);
+int detect_utf8_stream (lisp);
 int listen_stream (lisp);
 int get_stream_column (lisp);
 void flush_stream (lisp);

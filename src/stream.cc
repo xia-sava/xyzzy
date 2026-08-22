@@ -543,23 +543,23 @@ utf8_contents_p (FILE *fp)
 
 // 中身が UTF-8 と見なせるストリームに印を付ける。読み出しの位置は変えない。
 // BOM があれば読み飛ばす
-void
+int
 detect_utf8_stream (lisp stream)
 {
   if (!streamp (stream) || !file_stream_p (stream))
-    return;
+    return 0;
   FILE *fp = xfile_stream_input (stream);
   if (!fp || xfile_stream_encoding (stream) == lstream::ENCODE_BINARY)
-    return;
+    return 0;
 
   long pos = ftell (fp);
   if (pos < 0 || fseek (fp, 0, SEEK_SET))
-    return;
+    return 0;
   int utf8_p = utf8_contents_p (fp);
   clearerr (fp);
   fseek (fp, pos, SEEK_SET);
   if (!utf8_p)
-    return;
+    return 0;
 
   xfile_stream_utf8_p (stream) = 1;
   if (!pos)
@@ -568,6 +568,17 @@ detect_utf8_stream (lisp stream)
       if (c1 != 0xef || c2 != 0xbb || c3 != 0xbf)
         fseek (fp, pos, SEEK_SET);
     }
+  return 1;
+}
+
+// Lisp のソースを読むストリームの符号を判別する。UTF-8 と見なせたときは t
+lisp
+Fsi_detect_stream_encoding (lisp stream)
+{
+  check_stream (stream);
+  if (!xstream_open_p (stream))
+    FEtype_error (stream, Qopen_stream);
+  return boole (detect_utf8_stream (stream));
 }
 
 // UTF-8 の後続バイトを読んで内部表現へ直す。内部表現 2 つになる文字は
