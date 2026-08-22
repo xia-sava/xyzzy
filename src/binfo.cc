@@ -242,7 +242,7 @@ buffer_info::format (lisp fmt, char *b, char *be) const
         {
         normal_char:
           if (DBCP (c))
-            *b++ = c >> 8;
+            *b++ = char (c >> 8);
           *b++ = char (c);
         }
       else

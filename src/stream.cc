@@ -614,7 +614,7 @@ readc_utf8 (lisp stream, int c)
     }
 
   Char cc = w2i (ucs2_t (lc));
-  if (cc != Char (-1))
+  if (cc != CHAR_INVALID)
     return cc;
   xstream_deferred (stream) = utf16_ucs2_to_undef_pair_low (ucs2_t (lc));
   return utf16_ucs2_to_undef_pair_high (ucs2_t (lc));

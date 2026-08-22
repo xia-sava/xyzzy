@@ -55,7 +55,7 @@ Char big5cns_table[157 * 88];
 u_char code_charset_table[512];
 
 static void
-init_ucs2tab (int min, int max)
+init_ucs2tab (Char min, Char max)
 {
   Char o = wc2internal_table[0xffff];
   for (Char cc = max; cc >= min; cc--)
@@ -82,7 +82,7 @@ init_iso8859 (wc2int_hash &hash, wc2int_hash_rep *rep, int size, int ccs)
         rep[n].wc = w;
         rep[n].cc = ccs | i;
         Char ic = wc2internal_table[w];
-        if (ic == Char (-1) || w < 0x2000 || code_charset (ic) != ccs_jisx0208)
+        if (ic == CHAR_INVALID || w < 0x2000 || code_charset (ic) != ccs_jisx0208)
           wc2internal_table[w] = ccs | i;
       }
 }
@@ -138,7 +138,7 @@ init_cp932 ()
   for (int i = 0; i < 0x10000; i++)
     {
       Char cc = wc2cp932 (i);
-      if (cc != Char (-1))
+      if (cc != CHAR_INVALID)
         wc2internal_table[i] = cc;
     }
 }
@@ -247,15 +247,15 @@ static void
 make_wc2cp932_table ()
 {
   for (int i = 0; i < 0x10000; i++)
-    wc2cp932_table[i] = Char (-1);
+    wc2cp932_table[i] = CHAR_INVALID;
   for (int i = 0; i < 0x100; i++)
-    if (i2w (i) != Char (-1))
+    if (i2w (i) != CHAR_INVALID)
       wc2cp932_table[i2w (i)] = i;
   for (int i = 0x8100; i <= 0x9fff; i++)
     wc2cp932_table[i2w (i)] = i;
   for (int i = 0xe000; i <= 0xfcff; i++)
     wc2cp932_table[i2w (i)] = i;
-  wc2cp932_table[0xffff] = Char (-1);
+  wc2cp932_table[0xffff] = CHAR_INVALID;
   for (int i = CCS_UTF16_SURROGATE_HIGH_MIN; i <= CCS_UTF16_SURROGATE_LOW_MAX; i++)
     wc2cp932_table[i] = i;
 
@@ -292,10 +292,10 @@ init_wc2perlang_table (Char *const tab, int min, int max,
   for (i = 0; i < 0x80; i++)
     tab[i] = i;
   for (; i < 0x10000; i++)
-    tab[i] = Char (-1);
+    tab[i] = CHAR_INVALID;
   for (i = min; i <= max; i++)
     tab[i2w (i)] = i;
-  tab[0xffff] = Char (-1);
+  tab[0xffff] = CHAR_INVALID;
 
   COPY_DIFF_TABLE (tab, name, diff, ndiff, both, nboth, wsame, nwsame,
                    iincr, niincr, wincr, nwincr, rest, nrest);
@@ -369,7 +369,7 @@ make_cns_table (Char *buf, Char cc, const cns_table *cnstab, int csize)
       else
         {
           for (e = i + cp->c; i < e; i++)
-            buf[i] = Char (-1);
+            buf[i] = CHAR_INVALID;
         }
     }
   return i;
@@ -439,7 +439,7 @@ init_unicode (int min, int max, int off)
   for (int i = min; i <= max; i++)
     {
       Char c = wc2internal_table[i];
-      if (c == Char (-1) || charset_width (c) == 2)
+      if (c == CHAR_INVALID || charset_width (c) == 2)
         wc2internal_table[i] = i + off;
     }
 }
@@ -527,7 +527,7 @@ init_ucs2_table ()
   make_wc2cp932_table ();
 
   for (int i = 0; i < numberof (wc2internal_table); i++)
-    wc2internal_table[i] = Char (-1);
+    wc2internal_table[i] = CHAR_INVALID;
 
   init_charset_category ();
 
@@ -604,11 +604,11 @@ Char
 w2i_half_width (ucs2_t wc)
 {
   Char cc = w2i (wc);
-  if (cc != Char (-1) && charset_width (cc) != 1)
+  if (cc != CHAR_INVALID && charset_width (cc) != 1)
     for (int i = 0; i < numberof (to_half_width_hashtabs); i++)
       {
         Char t = lookup_wc2int_hash (*to_half_width_hashtabs[i], wc);
-        if (t != Char (-1))
+        if (t != CHAR_INVALID)
           return t;
       }
   return cc;

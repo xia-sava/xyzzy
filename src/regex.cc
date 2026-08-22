@@ -98,7 +98,7 @@ charclass::count_size (cc &f) const
         u++;
         int i;
         for (i = l; i < u; i++)
-          if (lo[h][i] != Char (-1))
+          if (lo[h][i] != CHAR_INVALID)
             break;
         size += 2;
         if (i < u)
@@ -1459,7 +1459,7 @@ Regexp::match_char_class (const Char *p, Char c) const
           if ((*p >> 8) == hi)
             {
               int x = lo / NBITS;
-              return x >= (p[1] & 0xff) && x < (p[1] >> 8);
+              return x >= int (p[1] & 0xff) && x < int (p[1] >> 8);
             }
           p += 2;
         }

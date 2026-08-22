@@ -1259,7 +1259,7 @@ Window::kwdmatch (lisp kwdhash, const Char *p, const Chunk *cp,
       else
         {
           const Chunk *prev = cp->c_prev;
-          pc = prev ? prev->c_text[prev->c_used - 1] : Char (-1);
+          pc = prev ? prev->c_text[prev->c_used - 1] : CHAR_INVALID;
         }
       if (ascii_char_p (pc)
           && (xchar_syntax (tab, pc) == SCword

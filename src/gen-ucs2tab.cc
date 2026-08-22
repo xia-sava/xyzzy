@@ -43,15 +43,17 @@ parse_line (char *b, int &mb, ucs2_t &wc, const char *file, int linenum, int und
   return 1;
 }
 
+template <class T>
 static void
-clear (ucs2_t *w, int size)
+clear (T *w, int size)
 {
   for (int i = 0; i < size; i++)
-    w[i] = ucs2_t (-1);
+    w[i] = T (0xffff);
 }
 
+template <class T>
 static void
-print (const ucs2_t *wbuf, int size)
+print (const T *wbuf, int size)
 {
   for (int i = 0; i < size; i += 8)
     {
@@ -345,7 +347,7 @@ output_diff (const Char *wc2int, const ucs2_t *int2wc, const char *name)
   Char diff[65536 * 2];
   int n = 0;
   for (int i = 0; i < 65536; i++)
-    if (wc2int[i] != Char (-1) && wc2int[i] != wc2int_2[i])
+    if (wc2int[i] != CHAR_INVALID && wc2int[i] != wc2int_2[i])
       {
         diff[n++] = i;
         diff[n++] = wc2int[i];
@@ -430,7 +432,7 @@ read_jisx0212 (ucs2_t *wbuf)
 }
 
 static void
-make_wc2cp950 (ucs2_t *const wc2cp950)
+make_wc2cp950 (Char *const wc2cp950)
 {
   for (int i = 0; i < 65536; i++)
     {
@@ -439,7 +441,7 @@ make_wc2cp950 (ucs2_t *const wc2cp950)
       BOOL f;
       int n = WideCharToMultiByte (CP_CN_TRADITIONAL, 0, (LPCWSTR)&wc, 1, mb, 3, 0, &f);
       if (f)
-        wc2cp950[i] = ucs2_t (-1);
+        wc2cp950[i] = CHAR_INVALID;
       else
         switch (n)
           {
@@ -456,12 +458,12 @@ make_wc2cp950 (ucs2_t *const wc2cp950)
                       || c2 >= 0xa1 && c2 <= 0xfe))
                 wc2cp950[i] = big5_to_int (c1, c2);
               else
-                wc2cp950[i] = ucs2_t (-1);
+                wc2cp950[i] = CHAR_INVALID;
               break;
             }
 
           default:
-            wc2cp950[i] = ucs2_t (-1);
+            wc2cp950[i] = CHAR_INVALID;
             break;
           }
     }
@@ -506,7 +508,7 @@ read_big5 (ucs2_t *wbuf)
   wbuf[big5_to_int (0xa1, 0xc3) - CCS_BIG5_MIN] = 0xffe3;
   wbuf[big5_to_int (0xa1, 0xc5) - CCS_BIG5_MIN] = 0x02cd;
 
-  ucs2_t wc2cp950[65536];
+  Char wc2cp950[65536];
   make_wc2cp950 (wc2cp950);
   ucs2_t wbuf2[65536];
   clear (wbuf2, 65536);
@@ -519,7 +521,7 @@ read_big5 (ucs2_t *wbuf)
 }
 
 static void
-make_wc2cp949 (ucs2_t *const wc2cp949)
+make_wc2cp949 (Char *const wc2cp949)
 {
   for (int i = 0; i < 65536; i++)
     {
@@ -528,7 +530,7 @@ make_wc2cp949 (ucs2_t *const wc2cp949)
       BOOL f;
       int n = WideCharToMultiByte (CP_KOREAN, 0,(LPCWSTR)&wc, 1, mb, 3, 0, &f);
       if (f)
-        wc2cp949[i] = ucs2_t (-1);
+        wc2cp949[i] = CHAR_INVALID;
       else
         switch (n)
           {
@@ -543,12 +545,12 @@ make_wc2cp949 (ucs2_t *const wc2cp949)
                   && c2 >= 0xa1 && c2 <= 0xfe)
                 wc2cp949[i] = ksc5601_to_int (c1 & 127, c2 & 127);
               else
-                wc2cp949[i] = ucs2_t (-1);
+                wc2cp949[i] = CHAR_INVALID;
               break;
             }
 
           default:
-            wc2cp949[i] = ucs2_t (-1);
+            wc2cp949[i] = CHAR_INVALID;
             break;
           }
     }
@@ -557,7 +559,7 @@ make_wc2cp949 (ucs2_t *const wc2cp949)
 static void
 read_ksc5601 (ucs2_t *wbuf)
 {
-  ucs2_t wc2cp949[65536];
+  Char wc2cp949[65536];
   ucs2_t wbuf2[65536];
   clear (wbuf2, 65536);
   read_94x94 (wbuf, "unicode/KSC5601.TXT", 1);
@@ -571,7 +573,7 @@ read_ksc5601 (ucs2_t *wbuf)
 }
 
 static void
-make_wc2cp936 (ucs2_t *const wc2cp936)
+make_wc2cp936 (Char *const wc2cp936)
 {
   for (int i = 0; i < 65536; i++)
     {
@@ -580,7 +582,7 @@ make_wc2cp936 (ucs2_t *const wc2cp936)
       BOOL f;
       int n = WideCharToMultiByte (CP_CN_SIMPLIFIED, 0, (LPCWSTR)&wc, 1, mb, 3, 0, &f);
       if (f)
-        wc2cp936[i] = ucs2_t (-1);
+        wc2cp936[i] = CHAR_INVALID;
       else
         switch (n)
           {
@@ -595,12 +597,12 @@ make_wc2cp936 (ucs2_t *const wc2cp936)
                   && c2 >= 0xa1 && c2 <= 0xfe)
                 wc2cp936[i] = gb2312_to_int (c1 & 127, c2 & 127);
               else
-                wc2cp936[i] = ucs2_t (-1);
+                wc2cp936[i] = CHAR_INVALID;
               break;
             }
 
           default:
-            wc2cp936[i] = ucs2_t (-1);
+            wc2cp936[i] = CHAR_INVALID;
             break;
           }
     }
@@ -609,7 +611,7 @@ make_wc2cp936 (ucs2_t *const wc2cp936)
 static void
 read_gb2312 (ucs2_t *wbuf)
 {
-  ucs2_t wc2cp936[65536];
+  Char wc2cp936[65536];
   ucs2_t wbuf2[65536];
   clear (wbuf2, 65536);
   read_94x94 (wbuf, "unicode/GB2312.TXT");
@@ -642,7 +644,7 @@ test_cns_table (Char *buf, Char cc, const cns_table *cnstab, int csize)
       else
         {
           for (e = i + cp->c; i < e; i++)
-            buf[i] = Char (-1);
+            buf[i] = CHAR_INVALID;
         }
     }
   return i;
@@ -659,10 +661,10 @@ make_cns_table (const char *name, const Char *p, int size)
     else
       {
         cp->i = p - pb;
-        if (*p == Char (-1))
+        if (*p == CHAR_INVALID)
           {
 			int n;
-            for (n = 0; p < pe && *p == Char (-1); p++, n++)
+            for (n = 0; p < pe && *p == CHAR_INVALID; p++, n++)
               ;
             if (n >= CNS_NIL_THRESHOLD)
               {
@@ -771,11 +773,11 @@ make_cns11643 (const ucs2_t *const big5, const ucs2_t *const gb2312)
       if (cns2wc1[i] != ucs2_t (-1))
         cns2int1[i] = wc2int[cns2wc1[i]];
       else
-        cns2int1[i] = Char (-1);
+        cns2int1[i] = CHAR_INVALID;
       if (cns2wc2[i] != ucs2_t (-1))
         cns2int2[i] = wc2int[cns2wc2[i]];
       else
-        cns2int2[i] = Char (-1);
+        cns2int2[i] = CHAR_INVALID;
     }
 
   printf ("struct cns_table {Char c; u_short i;};\n");
@@ -805,7 +807,7 @@ make_cns11643 (const ucs2_t *const big5, const ucs2_t *const gb2312)
     if (cns2wc1[i] != ucs2_t (-1))
       wc2int[cns2wc1[i]] = i / 94 * 256 + i % 94 + 0x2121 + BIG5CNS_CNS11643_1;
 
-  ucs2_t big5cns[BIG5_TABSIZE];
+  Char big5cns[BIG5_TABSIZE];
   clear (big5cns, numberof (big5cns));
   for (int i = 0; i < BIG5_TABSIZE; i++)
     big5cns[i] = wc2int[big5[i]];
@@ -820,7 +822,7 @@ make_cns11643 (const ucs2_t *const big5, const ucs2_t *const gb2312)
 }
 
 static void
-make_wc2cp932 (ucs2_t *const wc2cp932)
+make_wc2cp932 (Char *const wc2cp932)
 {
   int i;
   for (i = 0; i < 65536; i++)
@@ -830,7 +832,7 @@ make_wc2cp932 (ucs2_t *const wc2cp932)
       BOOL f;
       int n = WideCharToMultiByte (CP_JAPANESE, 0, (LPCWSTR) &wc, 1, mb, 3, 0, &f);
       if (f)
-        wc2cp932[i] = ucs2_t (-1);
+        wc2cp932[i] = CHAR_INVALID;
       else
         switch (n)
           {
@@ -843,7 +845,7 @@ make_wc2cp932 (ucs2_t *const wc2cp932)
             break;
 
           default:
-            wc2cp932[i] = ucs2_t (-1);
+            wc2cp932[i] = CHAR_INVALID;
             break;
           }
     }
@@ -892,7 +894,7 @@ make_cp932 (ucs2_t *wbuf)
   for (int i = CCS_UTF16_SURROGATE_HIGH_MIN; i <= CCS_UTF16_SURROGATE_LOW_MAX; i++)
     wbuf[i] = ucs2_t (i);
 
-  ucs2_t wc2cp932[65536];
+  Char wc2cp932[65536];
   make_wc2cp932 (wc2cp932);
   output_diff (wc2cp932, wbuf, "wc2cp932");
 }

@@ -180,7 +180,7 @@ inline int SJIS2P (int c) {return kanji2_char_p (c);}
 inline int ascii_char_p (int c) {return u_int (c) < 128;}
 
 inline int SBCP (Char c) {return c < 256;}
-inline int DBCP (Char c) {return c >= 256;}
+inline int DBCP (Char c) {return c >= 256 && c < CHAR_LIMIT;}
 inline int digit_char_p (Char c)
   {return ascii_char_p (c) && digit_char_p (int (c));}
 inline int upper_char_p (Char c)
@@ -194,25 +194,6 @@ inline int alphanumericp (Char c)
 inline int kana_char_p (Char c)
   {return SBCP (c) && kana_char_p (int (c));}
 inline int kanji_char_p (Char c)
-  {return DBCP (c);}
-
-inline int SBCP (lChar c)
-  {return c < 256;}
-inline int DBCP (lChar c)
-  {return c >= 256 && c < CHAR_LIMIT;}
-inline int digit_char_p (lChar c)
-  {return ascii_char_p (c) && digit_char_p (int (c));}
-inline int upper_char_p (lChar c)
-  {return ascii_char_p (c) && upper_char_p (int (c));}
-inline int lower_char_p (lChar c)
-  {return ascii_char_p (c) && lower_char_p (int (c));}
-inline int alpha_char_p (lChar c)
-  {return ascii_char_p (c) && alpha_char_p (int (c));}
-inline int alphanumericp (lChar c)
-  {return ascii_char_p (c) && alphanumericp (int (c));}
-inline int kana_char_p (lChar c)
-  {return SBCP (c) && kana_char_p (int (c));}
-inline int kanji_char_p (lChar c)
   {return DBCP (c);}
 
 inline int

@@ -667,7 +667,7 @@ Fconvert_encoding_from_internal (lisp encoding, lisp input, lisp output)
 
 struct to_half
 {
-  int min, max;
+  Char min, max;
   const u_char *b;
 };
 
@@ -799,7 +799,7 @@ Fmap_to_half_width_region (lisp from, lisp to, lisp keys)
           || (thp.flags & CYRILLIC && CP932_CYRILLIC_P (c)))
         {
           c = w2i (i2w (c));
-          if (c != Char (-1))
+          if (c != CHAR_INVALID)
             point.ch () = c;
         }
     next:
@@ -879,7 +879,7 @@ Fmap_to_full_width_region (lisp from, lisp to, lisp keys)
                || (flags & CYRILLIC && INTERNAL_CYRILLIC_P (c)))
         {
           c = wc2cp932 (i2w (c));
-          if (c != Char (-1))
+          if (c != CHAR_INVALID)
             point.ch () = c;
         }
       if (!bp->forward_char (point, 1))
@@ -994,7 +994,7 @@ Fmap_to_half_width_string (lisp string, lisp keys)
           || (thp.flags & CYRILLIC && CP932_CYRILLIC_P (c)))
         {
           c = w2i (i2w (c));
-          if (c != Char (-1))
+          if (c != CHAR_INVALID)
             *s = c;
         }
     next:;
@@ -1050,7 +1050,7 @@ Fmap_to_full_width_string (lisp string, lisp keys)
                || (flags & CYRILLIC && INTERNAL_CYRILLIC_P (c)))
         {
           c = wc2cp932 (i2w (c));
-          if (c != Char (-1))
+          if (c != CHAR_INVALID)
             *s = c;
         }
     }

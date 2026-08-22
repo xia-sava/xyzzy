@@ -447,8 +447,8 @@ ime_composition (HWND hwnd, LPARAM lparam)
                   for (ucs2_t *sp = s, *se = s + l; sp < se; sp++)
                     {
                       Char cc;
-                      if ((!tab || (cc = tab[*sp]) == Char (-1))
-                          && (cc = w2i (*sp)) == Char (-1))
+                      if ((!tab || (cc = tab[*sp]) == CHAR_INVALID)
+                          && (cc = w2i (*sp)) == CHAR_INVALID)
                         {
                           app.kbdq.putc (utf16_ucs2_to_undef_pair_high (*sp));
                           cc = utf16_ucs2_to_undef_pair_low (*sp);
@@ -821,7 +821,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       {
         ucs2_t wc = ucs2_t (wparam);
         Char cc = w2i_half_width (wc);
-        if (cc != Char (-1))
+        if (cc != CHAR_INVALID)
           app.kbdq.putc (decode_chars (cc));
         else
           {

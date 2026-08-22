@@ -265,7 +265,7 @@ obj2variant (lisp object, VARIANT &variant)
       if (charp (object))
         {
           V_VT (&variant) = VT_I2;
-          V_I2 (&variant) = xchar_code (object);
+          V_I2 (&variant) = SHORT (xchar_code (object));
           return;
         }
     }

@@ -834,7 +834,7 @@ print_engine::paint_kanji (PaintCtx &ctx, Char cc) const
   if (charset_width (cc) == 2)
     {
       char b[2];
-      b[0] = cc >> 8;
+      b[0] = char (cc >> 8);
       b[1] = char (cc);
       if (!b[1] || !SJISP (b[0] & 255))
         b[0] = char (0x81), b[1] = char (0x45);
@@ -2111,7 +2111,7 @@ get_glyph_width (Char cc, const glyph_width &gw)
       if (charset_width (cc) == 2)
         {
           char b[2];
-          b[0] = cc >> 8;
+          b[0] = char (cc >> 8);
           b[1] = char (cc);
           if (!b[1] || !SJISP (b[0] & 255))
             b[0] = char (0x81), b[1] = char (0x45);
