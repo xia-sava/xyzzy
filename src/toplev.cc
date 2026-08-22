@@ -1459,7 +1459,7 @@ static lisp
 dispatch (lChar cc)
 {
   lisp command;
-  Char c = Char (cc);
+  Char c = lchar_to_char (cc);
 
   app.gc_itimer.reset ();
   app.as_itimer.reset ();

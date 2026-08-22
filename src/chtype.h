@@ -22,111 +22,115 @@
 #define CC_SS2 142
 #define CC_SS3 143
 
-#define CC_META_BIT 0x8000
+/* キーの符号は Unicode の符号位置と重ならない位置に置く。下位バイトが
+   キーの索引と Shift / Ctrl の修飾を表す */
+#define CCF_FUNCTION 0x200000
+#define CCF_META 0x400000
+#define CC_META_BIT 0x800000
 
 #define CCF_CHAR_MIN CCF_PRIOR
 // See WINUSER.H
-#define  CCF_PRIOR 0xff00
-#define  CCF_NEXT 0xff01
-#define  CCF_END 0xff02
-#define  CCF_HOME 0xff03
-#define  CCF_LEFT 0xff04
-#define  CCF_UP 0xff05
-#define  CCF_RIGHT 0xff06
-#define  CCF_DOWN 0xff07
-#define  CCF_SCROLL 0xff08
-#define  CCF_MOUSEMOVE 0xff09
-#define  CCF_PAUSE 0xff0a
-#define  CCF_APPS 0xff0b
-#define  CCF_INSERT 0xff0c
-#define  CCF_DELETE 0xff0d
-#define  CCF_HELP 0xff0e
+#define  CCF_PRIOR (CCF_FUNCTION | 0x00)
+#define  CCF_NEXT (CCF_FUNCTION | 0x01)
+#define  CCF_END (CCF_FUNCTION | 0x02)
+#define  CCF_HOME (CCF_FUNCTION | 0x03)
+#define  CCF_LEFT (CCF_FUNCTION | 0x04)
+#define  CCF_UP (CCF_FUNCTION | 0x05)
+#define  CCF_RIGHT (CCF_FUNCTION | 0x06)
+#define  CCF_DOWN (CCF_FUNCTION | 0x07)
+#define  CCF_SCROLL (CCF_FUNCTION | 0x08)
+#define  CCF_MOUSEMOVE (CCF_FUNCTION | 0x09)
+#define  CCF_PAUSE (CCF_FUNCTION | 0x0a)
+#define  CCF_APPS (CCF_FUNCTION | 0x0b)
+#define  CCF_INSERT (CCF_FUNCTION | 0x0c)
+#define  CCF_DELETE (CCF_FUNCTION | 0x0d)
+#define  CCF_HELP (CCF_FUNCTION | 0x0e)
 
-#define  CCF_F1 0xff0f
-#define  CCF_F2 0xff10
-#define  CCF_F3 0xff11
-#define  CCF_F4 0xff12
-#define  CCF_F5 0xff13
-#define  CCF_F6 0xff14
-#define  CCF_F7 0xff15
-#define  CCF_F8 0xff16
-#define  CCF_F9 0xff17
-#define  CCF_F10 0xff18
-#define  CCF_F11 0xff19
-#define  CCF_F12 0xff1a
-#define  CCF_F13 0xff1b
-#define  CCF_F14 0xff1c
-#define  CCF_F15 0xff1d
-#define  CCF_F16 0xff1e
-#define  CCF_F17 0xff1f
-#define  CCF_F18 0xff20
-#define  CCF_F19 0xff21
-#define  CCF_F20 0xff22
-#define  CCF_F21 0xff23
-#define  CCF_F22 0xff24
-#define  CCF_F23 0xff25
-#define  CCF_F24 0xff26
+#define  CCF_F1 (CCF_FUNCTION | 0x0f)
+#define  CCF_F2 (CCF_FUNCTION | 0x10)
+#define  CCF_F3 (CCF_FUNCTION | 0x11)
+#define  CCF_F4 (CCF_FUNCTION | 0x12)
+#define  CCF_F5 (CCF_FUNCTION | 0x13)
+#define  CCF_F6 (CCF_FUNCTION | 0x14)
+#define  CCF_F7 (CCF_FUNCTION | 0x15)
+#define  CCF_F8 (CCF_FUNCTION | 0x16)
+#define  CCF_F9 (CCF_FUNCTION | 0x17)
+#define  CCF_F10 (CCF_FUNCTION | 0x18)
+#define  CCF_F11 (CCF_FUNCTION | 0x19)
+#define  CCF_F12 (CCF_FUNCTION | 0x1a)
+#define  CCF_F13 (CCF_FUNCTION | 0x1b)
+#define  CCF_F14 (CCF_FUNCTION | 0x1c)
+#define  CCF_F15 (CCF_FUNCTION | 0x1d)
+#define  CCF_F16 (CCF_FUNCTION | 0x1e)
+#define  CCF_F17 (CCF_FUNCTION | 0x1f)
+#define  CCF_F18 (CCF_FUNCTION | 0x20)
+#define  CCF_F19 (CCF_FUNCTION | 0x21)
+#define  CCF_F20 (CCF_FUNCTION | 0x22)
+#define  CCF_F21 (CCF_FUNCTION | 0x23)
+#define  CCF_F22 (CCF_FUNCTION | 0x24)
+#define  CCF_F23 (CCF_FUNCTION | 0x25)
+#define  CCF_F24 (CCF_FUNCTION | 0x26)
 #define CCF_Fn_MAX CCF_F24
 
-#define  CCF_LBTNDOWN 0xff27
-#define  CCF_LBTNMOVE 0xff28
-#define  CCF_LBTNUP 0xff29
-#define  CCF_RBTNDOWN 0xff2a
-#define  CCF_RBTNMOVE 0xff2b
-#define  CCF_RBTNUP 0xff2c
-#define  CCF_MBTNDOWN 0xff2d
-#define  CCF_MBTNMOVE 0xff2e
-#define  CCF_MBTNUP 0xff2f
+#define  CCF_LBTNDOWN (CCF_FUNCTION | 0x27)
+#define  CCF_LBTNMOVE (CCF_FUNCTION | 0x28)
+#define  CCF_LBTNUP (CCF_FUNCTION | 0x29)
+#define  CCF_RBTNDOWN (CCF_FUNCTION | 0x2a)
+#define  CCF_RBTNMOVE (CCF_FUNCTION | 0x2b)
+#define  CCF_RBTNUP (CCF_FUNCTION | 0x2c)
+#define  CCF_MBTNDOWN (CCF_FUNCTION | 0x2d)
+#define  CCF_MBTNMOVE (CCF_FUNCTION | 0x2e)
+#define  CCF_MBTNUP (CCF_FUNCTION | 0x2f)
 
 #define CCF_CTLCHAR_MIN CCF_EXCLAM
-#define  CCF_EXCLAM 0xff30
-#define  CCF_DQUOTE 0xff31
-#define  CCF_NUMBER 0xff32
-#define  CCF_DOLLAR 0xff33
-#define  CCF_PERCENT 0xff34
-#define  CCF_AMPER 0xff35
-#define  CCF_QUOTE 0xff36
-#define  CCF_LPAREN 0xff37
-#define  CCF_RPAREN 0xff38
+#define  CCF_EXCLAM (CCF_FUNCTION | 0x30)
+#define  CCF_DQUOTE (CCF_FUNCTION | 0x31)
+#define  CCF_NUMBER (CCF_FUNCTION | 0x32)
+#define  CCF_DOLLAR (CCF_FUNCTION | 0x33)
+#define  CCF_PERCENT (CCF_FUNCTION | 0x34)
+#define  CCF_AMPER (CCF_FUNCTION | 0x35)
+#define  CCF_QUOTE (CCF_FUNCTION | 0x36)
+#define  CCF_LPAREN (CCF_FUNCTION | 0x37)
+#define  CCF_RPAREN (CCF_FUNCTION | 0x38)
 #define CCF_CTLCHAR_MAX CCF_RPAREN
 
-#define  CCF_ASTER 0xff70
-#define  CCF_PLUS 0xff71
-#define  CCF_COMMA 0xff72
-#define  CCF_MINUS 0xff73
-#define  CCF_DOT 0xff74
-#define  CCF_SLASH 0xff75
-#define  CCF_0 0xff76
-#define  CCF_1 0xff77
-#define  CCF_2 0xff78
+#define  CCF_ASTER (CCF_FUNCTION | 0x70)
+#define  CCF_PLUS (CCF_FUNCTION | 0x71)
+#define  CCF_COMMA (CCF_FUNCTION | 0x72)
+#define  CCF_MINUS (CCF_FUNCTION | 0x73)
+#define  CCF_DOT (CCF_FUNCTION | 0x74)
+#define  CCF_SLASH (CCF_FUNCTION | 0x75)
+#define  CCF_0 (CCF_FUNCTION | 0x76)
+#define  CCF_1 (CCF_FUNCTION | 0x77)
+#define  CCF_2 (CCF_FUNCTION | 0x78)
 
-#define  CCF_3 0xffb0
-#define  CCF_4 0xffb1
-#define  CCF_5 0xffb2
-#define  CCF_6 0xffb3
-#define  CCF_7 0xffb4
-#define  CCF_8 0xffb5
-#define  CCF_9 0xffb6
-#define  CCF_COLON 0xffb7
-#define  CCF_SEMI 0xffb8
+#define  CCF_3 (CCF_FUNCTION | 0xb0)
+#define  CCF_4 (CCF_FUNCTION | 0xb1)
+#define  CCF_5 (CCF_FUNCTION | 0xb2)
+#define  CCF_6 (CCF_FUNCTION | 0xb3)
+#define  CCF_7 (CCF_FUNCTION | 0xb4)
+#define  CCF_8 (CCF_FUNCTION | 0xb5)
+#define  CCF_9 (CCF_FUNCTION | 0xb6)
+#define  CCF_COLON (CCF_FUNCTION | 0xb7)
+#define  CCF_SEMI (CCF_FUNCTION | 0xb8)
 
-#define  CCF_LT 0xfff0
-#define  CCF_EQ 0xfff1
-#define  CCF_GT 0xfff2
+#define  CCF_LT (CCF_FUNCTION | 0xf0)
+#define  CCF_EQ (CCF_FUNCTION | 0xf1)
+#define  CCF_GT (CCF_FUNCTION | 0xf2)
 //#define  CCF_QUESTION  --> DEL
-#define  CCF_BACKQ 0xfff3
-#define  CCF_LBRACE 0xfff4
-#define  CCF_VER 0xfff5
-#define  CCF_RBRACE 0xfff6
-#define  CCF_TILDE 0xfff7
-#define  CCF_EMPTY_CHAR 0xfff8 // XXX
+#define  CCF_BACKQ (CCF_FUNCTION | 0xf3)
+#define  CCF_LBRACE (CCF_FUNCTION | 0xf4)
+#define  CCF_VER (CCF_FUNCTION | 0xf5)
+#define  CCF_RBRACE (CCF_FUNCTION | 0xf6)
+#define  CCF_TILDE (CCF_FUNCTION | 0xf7)
+#define  CCF_EMPTY_CHAR (CCF_FUNCTION | 0xf8) // XXX
 
-#define  CCF_XBTN1DOWN 0xff39
-#define  CCF_XBTN1UP 0xff3a
-#define  CCF_XBTN1MOVE 0xff3b
-#define  CCF_XBTN2DOWN 0xff3c
-#define  CCF_XBTN2UP 0xff3d
-#define  CCF_XBTN2MOVE 0xff3e
+#define  CCF_XBTN1DOWN (CCF_FUNCTION | 0x39)
+#define  CCF_XBTN1UP (CCF_FUNCTION | 0x3a)
+#define  CCF_XBTN1MOVE (CCF_FUNCTION | 0x3b)
+#define  CCF_XBTN2DOWN (CCF_FUNCTION | 0x3c)
+#define  CCF_XBTN2UP (CCF_FUNCTION | 0x3d)
+#define  CCF_XBTN2MOVE (CCF_FUNCTION | 0x3e)
 
 #define CCF_CHAR_MAX CCF_XBTN2MOVE
 
@@ -136,11 +140,11 @@
 
 #define CCF_SHIFT_BIT 0x0040
 #define CCF_CTRL_BIT 0x0080
-#define CCF_FUNCTION_MASK 0xff00
-#define CCF_META 0xfe00
+#define CCF_FUNCTION_MASK 0xffffff00
 
-#define LCHAR_MOUSE 0x10000
-#define LCHAR_MENU 0x20000
+/* 鍵盤の待ち行列にだけ現れる。文字の即値には収まらない位置に置く */
+#define LCHAR_MOUSE 0x1000000
+#define LCHAR_MENU 0x2000000
 
 #define _CTN 1
 #define _CTU 2
@@ -277,6 +281,13 @@ meta_char_to_char (Char c)
   return Char (c & ~CC_META_BIT);
 }
 
+/* 鍵盤の待ち行列の値から、文字にあたる部分を取り出す */
+inline Char
+lchar_to_char (lChar c)
+{
+  return Char (c & ~(LCHAR_MOUSE | LCHAR_MENU));
+}
+
 inline Char
 function_to_meta_function (Char c)
 {
@@ -286,7 +297,7 @@ function_to_meta_function (Char c)
 inline Char
 meta_function_to_function (Char c)
 {
-  return Char (c | CCF_FUNCTION_MASK);
+  return Char ((c & ~CCF_FUNCTION_MASK) | CCF_FUNCTION);
 }
 
 inline int

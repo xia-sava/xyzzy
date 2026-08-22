@@ -124,14 +124,15 @@ kbd_queue::peek (int req_mouse_move)
             return lChar_EOF;
           c = cc[head];
           head = (head + 1) % QUEUE_MAX;
-          if (!req_mouse_move && char_mouse_move_p (Char (c)))
+          if (!req_mouse_move && char_mouse_move_p (lchar_to_char (c)))
             return lChar_EOF;
-          if (save_p () && !(c & LCHAR_MENU) && !char_mouse_move_p (Char (c)))
+          if (save_p () && !(c & LCHAR_MENU)
+              && !char_mouse_move_p (lchar_to_char (c)))
             {
               if (nsaved == KBDMACRO_MAX)
                 stop_macro ();
               else
-                saved[nsaved++] = Char (c);
+                saved[nsaved++] = lchar_to_char (c);
             }
         }
     }
