@@ -138,9 +138,14 @@
 ;; 	ときに発生した。
 ;;
 (deftest fix-abbreviate-display-string ()
-  "abbreviate-display-string で必要以上に文字列が省略されることがあるのを修正。"
-  (abbreviate-display-string "D:/src/cmigemo-1.3c-MIT/src/wordlist.h" 40 t)
-  => "D:/.../cmigemo-1.3c-MIT/src/wordlist.h")
+  "省略した文字列の後半が失われないことを確かめる。省略する位置は UI フォントの
+平均文字幅に依存するため、結果の文字列そのものは固定しない。"
+  (let ((s (abbreviate-display-string
+	    "D:/src/cmigemo-1.3c-MIT/src/query/migemo/wordlist.h" 20 t)))
+    (values (and (string-match "\\.\\.\\." s) t)
+	    (and (string-match "wordlist\\.h$" s) t)))
+  => t
+  => t)
 
 
 ;; 2011-01-21  NANRI Masaoki  <southly@gmail.com>

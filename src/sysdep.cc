@@ -73,7 +73,7 @@ Sysdep::Sysdep ()
 
   LOGFONT lf;
   memset (&lf, 0, sizeof lf);
-  lf.lfHeight = 12;
+  lf.lfHeight = dpi_scale (12);
   strcpy (lf.lfFaceName, "Arial");
   hfont_ruler = CreateFontIndirect (&lf);
   HDC hdc = GetDC (0);
@@ -214,12 +214,21 @@ Sysdep::init_process_type ()
 HFONT
 Sysdep::create_ui_font (int e)
 {
+  // システムの UI フォントを使う。DPI に応じた大きさで返ってくる
   LOGFONT lf;
-  bzero (&lf, sizeof lf);
-  lf.lfHeight = 12;
+  NONCLIENTMETRICS cm;
+  cm.cbSize = sizeof cm;
+  if (SystemParametersInfo (SPI_GETNONCLIENTMETRICS, 0, &cm, 0))
+    lf = cm.lfMessageFont;
+  else
+    {
+      bzero (&lf, sizeof lf);
+      lf.lfHeight = MulDiv (9, screen_dpi (), 72);
+      strcpy (lf.lfFaceName, "MS UI Gothic");
+    }
+  // バーの文字列は CP932 のバイト列のまま描画される
   lf.lfCharSet = SHIFTJIS_CHARSET;
   lf.lfEscapement = e;
-  strcpy (lf.lfFaceName, "MS UI Gothic");
   return CreateFontIndirect (&lf);
 }
 
