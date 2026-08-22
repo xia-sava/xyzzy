@@ -422,7 +422,7 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,13,141,90,10
 END
 
-IDD_FONT DIALOG DISCARDABLE  0, 0, 239, 199
+IDD_FONT DIALOG DISCARDABLE  0, 0, 239, 211
 STYLE WS_CHILD | WS_CAPTION
 CAPTION "フォント"
 FONT 9, "ＭＳ Ｐゴシック"
@@ -446,6 +446,8 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,172,87,10
     CONTROL         "\\をバックスラッシュに変換(&B)",IDC_BACKSL,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,184,111,10
+    CONTROL         "曖昧な文字幅を半角に固定(&W)",IDC_AMBIGUOUS_WIDTH,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,196,113,10
     LTEXT           "行間(&I):",IDC_STATIC,135,9,30,8
     EDITTEXT        IDC_LSP,164,6,34,14,ES_RIGHT | ES_MULTILINE | 
                     ES_AUTOHSCROLL
@@ -661,7 +663,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 233
         TOPMARGIN, 6
-        BOTTOMMARGIN, 193
+        BOTTOMMARGIN, 205
     END
 
     IDD_SELECT_COLOR, DIALOG

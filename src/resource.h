@@ -418,6 +418,7 @@
 #define IDC_HEADER_POPUP                2138
 #define IDC_FOOTER_POPUP                2139
 #define IDC_STD                         2140
+#define IDC_AMBIGUOUS_WIDTH             2141
 #define IDC_COPY                        40001
 #define IDC_MOVE                        40002
 #define IDC_LINK                        40003
@@ -460,7 +461,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        151
 #define _APS_NEXT_COMMAND_VALUE         40035
-#define _APS_NEXT_CONTROL_VALUE         2141
+#define _APS_NEXT_CONTROL_VALUE         2142
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
