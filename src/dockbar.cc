@@ -286,11 +286,10 @@ dock_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 tool_bar::tool_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name, DOCKABLE_ALL), t_bm (0)
 {
-  // ボタンの寸法は画像の大きさに合わせる必要があり、画像は拡大していない
-  t_bitmap_size.cx = 16;
-  t_bitmap_size.cy = 15;
-  t_button_size.cx = 23;
-  t_button_size.cy = 22;
+  t_bitmap_size.cx = dpi_scale (16);
+  t_bitmap_size.cy = dpi_scale (15);
+  t_button_size.cx = dpi_scale (23);
+  t_button_size.cy = dpi_scale (22);
 }
 
 tool_bar::~tool_bar ()
@@ -412,7 +411,8 @@ tool_bar::set_bitmap ()
   TBADDBITMAP tbab;
   tbab.hInst = 0;
   tbab.nID = (UINT)(HBITMAP)*t_bm;
-  add_bitmap (tbab, bm.bmWidth / 16);
+  // 画像は読み込みの際に拡大されているので、枚数は拡大後の幅で数える
+  add_bitmap (tbab, bm.bmWidth / t_bitmap_size.cx);
 }
 
 int
@@ -2417,6 +2417,42 @@ dock_frame::color_changed () const
       bar->color_changed ();
 }
 
+// BASE_SCREEN_DPI 基準で作られた 4/8bpp の DIB を、画面の DPI に合わせて拡大した
+// 24bpp の画素列へ展開する。GDI の変換を経ないので元の色がそのまま残る。
+// 拡大は最近傍で行うため、整数倍のときに滲まない
+static u_char *
+expand_dib (const BITMAPINFOHEADER &bi, const RGBQUAD *palette, int ncolors,
+            const u_char *bits, int dw, int dh)
+{
+  int w = bi.biWidth;
+  int h = abs (bi.biHeight);
+  int sstride = ((w * bi.biBitCount + 31) / 32) * 4;
+  int dstride = (dw * 3 + 3) & ~3;
+
+  u_char *buf = (u_char *)malloc (size_t (dstride) * dh);
+  if (!buf)
+    return 0;
+
+  for (int y = 0; y < dh; y++)
+    {
+      const u_char *s = bits + size_t (sstride) * (y * h / dh);
+      u_char *d = buf + size_t (dstride) * y;
+      for (int x = 0; x < dw; x++)
+        {
+          int sx = x * w / dw;
+          int i = (bi.biBitCount == 8
+                   ? s[sx]
+                   : (sx & 1 ? s[sx / 2] & 15 : s[sx / 2] >> 4));
+          if (i >= ncolors)
+            i = 0;
+          *d++ = palette[i].rgbBlue;
+          *d++ = palette[i].rgbGreen;
+          *d++ = palette[i].rgbRed;
+        }
+    }
+  return buf;
+}
+
 int
 tool_bm::load_mapped_bitmap (const char *filename, HBITMAP &hbm)
 {
@@ -2484,9 +2520,31 @@ tool_bm::load_mapped_bitmap (const char *filename, HBITMAP &hbm)
     }
 
   HDC hdc = GetDC (0);
-  hbm = CreateDIBitmap (hdc, &b.bi, CBM_INIT,
-                        (const char *)mf.base () + offset,
-                        (const BITMAPINFO *)&b, DIB_RGB_COLORS);
+
+  int dw = dpi_scale (bi.biWidth);
+  int dh = dpi_scale (abs (bi.biHeight));
+  if (dw != bi.biWidth || dh != abs (bi.biHeight))
+    {
+      u_char *buf = expand_dib (bi, b.rgb, ncolors,
+                                (const u_char *)mf.base () + offset, dw, dh);
+      if (buf)
+        {
+          BITMAPINFOHEADER e = bi;
+          e.biWidth = dw;
+          e.biHeight = bi.biHeight < 0 ? -dh : dh;
+          e.biBitCount = 24;
+          e.biSizeImage = 0;
+          e.biClrUsed = 0;
+          e.biClrImportant = 0;
+          hbm = CreateDIBitmap (hdc, &e, CBM_INIT, buf,
+                                (const BITMAPINFO *)&e, DIB_RGB_COLORS);
+          free (buf);
+        }
+    }
+  if (!hbm)
+    hbm = CreateDIBitmap (hdc, &b.bi, CBM_INIT,
+                          (const char *)mf.base () + offset,
+                          (const BITMAPINFO *)&b, DIB_RGB_COLORS);
   ReleaseDC (0, hdc);
   return hbm ? LMB_NO_ERRORS : LMB_FAILED;
 }

@@ -273,9 +273,8 @@ user_tool_bar::create (lisp bitmap, lisp items)
                          0))
     FEsimple_error (ECannot_create_toolbar);
 
-  // ボタンの寸法は画像の大きさに合わせる必要があり、画像は拡大していない
-  set_bitmap_size (16, 15);
-  set_button_size (23, 22);
+  set_bitmap_size (dpi_scale (16), dpi_scale (15));
+  set_button_size (dpi_scale (23), dpi_scale (22));
   if (new_comctl_p ())
     modify_style (0, TBSTYLE_FLAT);
 
