@@ -81,13 +81,13 @@ dock_bar::calc_window_size (SIZE &sz, int vert) const
   calc_client_size (sz, vert);
   if (!vert)
     {
-      sz.cx += HORZ_LEFT_PAD + HORZ_RIGHT_PAD;
-      sz.cy += HORZ_TOP_PAD + HORZ_BOTTOM_PAD;
+      sz.cx += dpi_scale (HORZ_LEFT_PAD + HORZ_RIGHT_PAD);
+      sz.cy += dpi_scale (HORZ_TOP_PAD + HORZ_BOTTOM_PAD);
     }
   else
     {
-      sz.cx += VERT_LEFT_PAD + VERT_RIGHT_PAD;
-      sz.cy += VERT_TOP_PAD + VERT_BOTTOM_PAD;
+      sz.cx += dpi_scale (VERT_LEFT_PAD + VERT_RIGHT_PAD);
+      sz.cy += dpi_scale (VERT_TOP_PAD + VERT_BOTTOM_PAD);
     }
 }
 
@@ -167,17 +167,17 @@ dock_bar::nc_calc_size (RECT &r) const
 {
   if (!dock_vert_p ())
     {
-      r.left += HORZ_LEFT_PAD;
-      r.right -= HORZ_RIGHT_PAD;
-      r.top += HORZ_TOP_PAD;
-      r.bottom -= HORZ_BOTTOM_PAD;
+      r.left += dpi_scale (HORZ_LEFT_PAD);
+      r.right -= dpi_scale (HORZ_RIGHT_PAD);
+      r.top += dpi_scale (HORZ_TOP_PAD);
+      r.bottom -= dpi_scale (HORZ_BOTTOM_PAD);
     }
   else
     {
-      r.left += VERT_LEFT_PAD;
-      r.right -= VERT_RIGHT_PAD;
-      r.top += VERT_TOP_PAD;
-      r.bottom -= VERT_BOTTOM_PAD;
+      r.left += dpi_scale (VERT_LEFT_PAD);
+      r.right -= dpi_scale (VERT_RIGHT_PAD);
+      r.top += dpi_scale (VERT_TOP_PAD);
+      r.bottom -= dpi_scale (VERT_BOTTOM_PAD);
     }
   return 0;
 }
@@ -464,7 +464,8 @@ tool_bar::dock_edge ()
 tab_bar::tab_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name,
                  new_comctl_p () ? DOCKABLE_ALL : DOCKABLE_TOP | DOCKABLE_BOTTOM),
-       t_tab_height (21), t_horz_width (60), t_horz_height (21)
+       t_tab_height (dpi_scale (21)), t_horz_width (dpi_scale (60)),
+       t_horz_height (dpi_scale (21))
 {
   t_horz_text = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
 }
@@ -632,16 +633,16 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
   if (!vert)
     {
       sz.cx = DOCK_LENGTH_INFINITE;
-      sz.cy = DOCK_BAR_CLIENT_HEIGHT;
+      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT);
     }
   else if (t_horz_text)
     {
-      sz.cx = t_horz_width + GRIPPER_SIZE;
+      sz.cx = t_horz_width + dpi_scale (GRIPPER_SIZE);
       sz.cy = DOCK_LENGTH_INFINITE;
     }
   else
     {
-      sz.cx = DOCK_BAR_CLIENT_HEIGHT + 1;
+      sz.cx = dpi_scale (DOCK_BAR_CLIENT_HEIGHT) + 1;
       sz.cy = DOCK_LENGTH_INFINITE;
     }
 }
@@ -1076,8 +1077,8 @@ tab_bar::nc_calc_size (RECT &r) const
 {
   if (!dock_vert_p ())
     {
-      r.left += HORZ_LEFT_PAD;
-      r.right -= HORZ_RIGHT_PAD;
+      r.left += dpi_scale (HORZ_LEFT_PAD);
+      r.right -= dpi_scale (HORZ_RIGHT_PAD);
       if (!inverse_p ())
         r.top = r.bottom - t_tab_height;
       else
@@ -1085,18 +1086,18 @@ tab_bar::nc_calc_size (RECT &r) const
     }
   else
     {
-      r.top += VERT_TOP_PAD;
-      r.bottom -= VERT_BOTTOM_PAD;
+      r.top += dpi_scale (VERT_TOP_PAD);
+      r.bottom -= dpi_scale (VERT_BOTTOM_PAD);
       if (t_horz_text)
         {
           if (!inverse_p ())
             {
-              r.right -= GRIPPER_SIZE;
+              r.right -= dpi_scale (GRIPPER_SIZE);
               r.left = r.right - t_horz_width;
             }
           else
             {
-              r.left += GRIPPER_SIZE;
+              r.left += dpi_scale (GRIPPER_SIZE);
               r.right = r.left + t_horz_width;
             }
         }
@@ -1274,14 +1275,14 @@ tab_bar::lbtn_down (int x, int y)
   if (edge () == EDGE_LEFT)
     {
       wr.left = cr.right;
-      mn = cr.left + MIN_WIDTH;
+      mn = cr.left + dpi_scale (MIN_WIDTH);
       mx = wr.right + fr.right - 5;
     }
   else
     {
       wr.right = cr.left;
       mn = wr.left - fr.right + 5;
-      mx = cr.right - MIN_WIDTH;
+      mx = cr.right - dpi_scale (MIN_WIDTH);
     }
 
   int ox = wr.left;
@@ -1597,7 +1598,7 @@ dock_frame::arrange_horz (const dock_bar_list &bars, LONG cx)
           if (bar->rect ().left + sz.cx > cx)
             {
               bar->rect ().left = max (cx - sz.cx, x);
-              int w = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cx : MIN_SIZE;
+              int w = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cx : dpi_scale (MIN_SIZE);
               if (bar != bb && bar->rect ().left + w > cx)
                 {
                   bb = bar;
@@ -1643,7 +1644,7 @@ dock_frame::arrange_vert (const dock_bar_list &bars, LONG cy)
           if (bar->rect ().top + sz.cy > cy)
             {
               bar->rect ().top = max (cy - sz.cy, y);
-              int h = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cy : MIN_SIZE;
+              int h = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cy : dpi_scale (MIN_SIZE);
               if (bar != bb && bar->rect ().top + h > cy)
                 {
                   bb = bar;
