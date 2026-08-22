@@ -126,17 +126,20 @@ XMessageBox::init_dialog ()
   hfont = HFONT (SendMessage (hwnd, WM_GETFONT, 0, 0));
 
   RECT tr, br[MAX_BUTTONS], ir;
-  ir.left = XOFF;
-  ir.top = YOFF;
+  const int xoff = dpi_scale (XOFF);
+  const int yoff = dpi_scale (YOFF);
+  ir.left = xoff;
+  ir.top = yoff;
   if (hicon)
     {
-      ir.right = XOFF + 32 + XOFF;
-      ir.bottom = YOFF + 32;
+      // アイコンは SM_CXICON の大きさで描かれるので、その分の場所を空ける
+      ir.right = xoff + GetSystemMetrics (SM_CXICON) + xoff;
+      ir.bottom = yoff + GetSystemMetrics (SM_CYICON);
     }
   else
     {
-      ir.right = XOFF;
-      ir.bottom = YOFF;
+      ir.right = xoff;
+      ir.bottom = yoff;
     }
 
   RECT warea;
@@ -171,8 +174,8 @@ XMessageBox::init_dialog ()
 
   tr.left += ir.right;
   tr.right += ir.right;
-  tr.top += YOFF;
-  tr.bottom += YOFF;
+  tr.top += yoff;
+  tr.bottom += yoff;
   int y;
   if (tr.bottom > ir.bottom)
     y = tr.bottom;
@@ -187,7 +190,7 @@ XMessageBox::init_dialog ()
       tr.bottom += d;
       y = ir.bottom;
     }
-  y += YOFF;
+  y += yoff;
   for (int i = 0; i < nbuttons; i++)
     {
       br[i].top += y;
@@ -197,19 +200,19 @@ XMessageBox::init_dialog ()
   RECT r;
   r.left = 0;
   r.top = 0;
-  r.right = tr.right + XOFF;
+  r.right = tr.right + xoff;
   r.bottom = y;
   if (nbuttons)
     {
-      r.bottom = br[0].bottom + YOFF;
-      int w = br[nbuttons - 1].right + 2 * XOFF;
+      r.bottom = br[0].bottom + yoff;
+      int w = br[nbuttons - 1].right + 2 * xoff;
       int d;
       if (r.right > w)
-        d = (r.right - (w - 2 * XOFF)) / 2;
+        d = (r.right - (w - 2 * xoff)) / 2;
       else
         {
           r.right = w;
-          d = XOFF;
+          d = xoff;
         }
       for (int i = 0; i < nbuttons; i++)
         {

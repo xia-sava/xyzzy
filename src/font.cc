@@ -133,7 +133,8 @@ FontObject::update (LOGFONT &lf, const lisp keys, const bool recommend_size_p)
           old_size = FontObject::pixel_to_point (lf.lfHeight);
           pixel = FontObject::point_to_pixel (size);
         }
-      if (pixel < FONT_SIZE_MIN_PIXEL || pixel > FONT_SIZE_MAX_PIXEL)
+      if (pixel < FontObject::min_size_pixel ()
+          || pixel > FontObject::max_size_pixel ())
         FErange_error (lsize);
       if (old_size != size)
         {
@@ -339,7 +340,7 @@ FontSet::create (const FontSetParam &param)
   SIZE ex[FONT_MAX][2];
   HDC hdc = GetDC (0);
 
-  fs_line_spacing = max (0, min (param.fs_line_spacing, 30));
+  fs_line_spacing = max (0, min (param.fs_line_spacing, dpi_scale (30)));
   fs_use_backsl = param.fs_use_backsl;
   fs_recommend_size = param.fs_recommend_size;
   fs_size_pixel = param.fs_size_pixel;
@@ -407,12 +408,47 @@ FontSet::create (const FontSetParam &param)
   return 1;
 }
 
+// フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに
+// 別の節へ記録し、その節が無ければ従来の [Font] 節を BASE_SCREEN_DPI のものと
+// みなして換算する。DPI に依存しない設定は [Font] 節に置いたままにする。
+const char *
+font_conf_section ()
+{
+  static char section[32];
+  if (!*section)
+    _snprintf_s (section, sizeof section, _TRUNCATE,
+                 "%s@%d", cfgFont, screen_dpi ());
+  return section;
+}
+
+int
+read_font_conf (const char *name, LOGFONT &lf)
+{
+  if (read_conf (font_conf_section (), name, lf))
+    return 1;
+  if (!read_conf (cfgFont, name, lf))
+    return 0;
+  lf.lfHeight = dpi_scale (lf.lfHeight);
+  return 1;
+}
+
+static int
+read_font_conf (const char *name, int &value)
+{
+  if (read_conf (font_conf_section (), name, value))
+    return 1;
+  if (!read_conf (cfgFont, name, value))
+    return 0;
+  value = dpi_scale (value);
+  return 1;
+}
+
 void
 FontSet::save_params (const FontSetParam &param)
 {
   for (int i = 0; i < FONT_MAX; i++)
-    write_conf (cfgFont, regent (i), param.fs_logfont[i]);
-  write_conf (cfgFont, cfgLineSpacing, param.fs_line_spacing);
+    write_conf (font_conf_section (), regent (i), param.fs_logfont[i]);
+  write_conf (font_conf_section (), cfgLineSpacing, param.fs_line_spacing);
   write_conf (cfgFont, cfgBackslash, param.fs_use_backsl);
   write_conf (cfgFont, cfgRecommendSize, param.fs_recommend_size);
   write_conf (cfgFont, cfgSizePixel, param.fs_size_pixel);
@@ -441,7 +477,7 @@ FontSet::load_params (FontSetParam &param)
 {
   bzero (&param, sizeof param);
 
-  if (!read_conf (cfgFont, cfgLineSpacing, param.fs_line_spacing))
+  if (!read_font_conf (cfgLineSpacing, param.fs_line_spacing))
     param.fs_line_spacing = 0;
   if (!read_conf (cfgFont, cfgBackslash, param.fs_use_backsl))
     param.fs_use_backsl = 0;
@@ -450,7 +486,7 @@ FontSet::load_params (FontSetParam &param)
   if (!read_conf (cfgFont, cfgSizePixel, param.fs_size_pixel))
     param.fs_size_pixel = 0;
   for (int i = 0; i < FONT_MAX; i++)
-    if (!read_conf (cfgFont, regent (i), param.fs_logfont[i]))
+    if (!read_font_conf (regent (i), param.fs_logfont[i]))
       *param.fs_logfont[i].lfFaceName = 0;
 
   for (int i = 0; i < FONT_MAX; i++)
@@ -462,7 +498,7 @@ FontSet::load_params (FontSetParam &param)
             {
               LOGFONT lf;
               GetObject (GetStockObject (SYSTEM_FIXED_FONT), sizeof lf, &lf);
-              param.fs_logfont[0].lfHeight = lf.lfHeight;
+              param.fs_logfont[0].lfHeight = dpi_scale (lf.lfHeight);
             }
           else
             param.fs_logfont[i].lfHeight = param.fs_logfont[0].lfHeight;

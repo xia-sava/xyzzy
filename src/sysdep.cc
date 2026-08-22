@@ -5,6 +5,104 @@
 
 Sysdep sysdep;
 
+int
+screen_dpi ()
+{
+  static int dpi = 0;
+  if (!dpi)
+    {
+      HDC hdc = GetDC (0);
+      dpi = GetDeviceCaps (hdc, LOGPIXELSY);
+      ReleaseDC (0, hdc);
+      if (dpi <= 0)
+        dpi = BASE_SCREEN_DPI;
+    }
+  return dpi;
+}
+
+int
+dpi_scale (int n)
+{
+  return MulDiv (n, screen_dpi (), BASE_SCREEN_DPI);
+}
+
+static HBITMAP
+stretch_bitmap (HBITMAP src, int w, int h)
+{
+  BITMAP bm;
+  if (!GetObject (src, sizeof bm, &bm))
+    return 0;
+
+  // 画面と同じ 32bpp で作ると、StretchBlt が書かないアルファが 0 のままになり
+  // イメージリストが全面透明として扱う。アルファを持たない 24bpp で作る
+  BITMAPINFO bi;
+  bzero (&bi, sizeof bi);
+  bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+  bi.bmiHeader.biWidth = w;
+  bi.bmiHeader.biHeight = h;
+  bi.bmiHeader.biPlanes = 1;
+  bi.bmiHeader.biBitCount = 24;
+  bi.bmiHeader.biCompression = BI_RGB;
+
+  HDC hdc = GetDC (0);
+  HDC hdcs = CreateCompatibleDC (hdc);
+  HDC hdcd = CreateCompatibleDC (hdc);
+  void *bits;
+  HBITMAP dst = CreateDIBSection (hdc, &bi, DIB_RGB_COLORS, &bits, 0, 0);
+  if (hdcs && hdcd && dst)
+    {
+      HGDIOBJ os = SelectObject (hdcs, src);
+      HGDIOBJ od = SelectObject (hdcd, dst);
+      // 整数倍のときに滲ませないため最近傍で伸ばす
+      SetStretchBltMode (hdcd, COLORONCOLOR);
+      StretchBlt (hdcd, 0, 0, w, h, hdcs, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
+      SelectObject (hdcs, os);
+      SelectObject (hdcd, od);
+    }
+  else if (dst)
+    {
+      DeleteObject (dst);
+      dst = 0;
+    }
+  if (hdcs)
+    DeleteDC (hdcs);
+  if (hdcd)
+    DeleteDC (hdcd);
+  ReleaseDC (0, hdc);
+  return dst;
+}
+
+HIMAGELIST
+dpi_scale_imagelist (HINSTANCE hinst, LPCSTR name, int cx, COLORREF mask)
+{
+  if (screen_dpi () == BASE_SCREEN_DPI)
+    return ImageList_LoadBitmap (hinst, name, cx, 1, mask);
+
+  HBITMAP src = LoadBitmap (hinst, name);
+  if (!src)
+    return 0;
+
+  BITMAP bm;
+  HIMAGELIST hil = 0;
+  if (GetObject (src, sizeof bm, &bm) && cx > 0)
+    {
+      // 拡大後も 1 枚あたりの幅で割り切れるようにする
+      int n = bm.bmWidth / cx;
+      int cx2 = dpi_scale (cx);
+      int cy2 = dpi_scale (bm.bmHeight);
+      HBITMAP dst = stretch_bitmap (src, cx2 * n, cy2);
+      if (dst)
+        {
+          hil = ImageList_Create (cx2, cy2, ILC_COLOR24 | ILC_MASK, n, 1);
+          if (hil)
+            ImageList_AddMasked (hil, dst, mask);
+          DeleteObject (dst);
+        }
+    }
+  DeleteObject (src);
+  return hil ? hil : ImageList_LoadBitmap (hinst, name, cx, 1, mask);
+}
+
 Sysdep::Sysdep ()
 {
   os_ver.dwOSVersionInfoSize = sizeof os_ver;
@@ -52,7 +150,7 @@ Sysdep::Sysdep ()
 
   LOGFONT lf;
   memset (&lf, 0, sizeof lf);
-  lf.lfHeight = 12;
+  lf.lfHeight = dpi_scale (12);
   strcpy (lf.lfFaceName, "Arial");
   hfont_ruler = CreateFontIndirect (&lf);
   HDC hdc = GetDC (0);
@@ -193,12 +291,21 @@ Sysdep::init_process_type ()
 HFONT
 Sysdep::create_ui_font (int e)
 {
+  // システムの UI フォントを使う。DPI に応じた大きさで返ってくる
   LOGFONT lf;
-  bzero (&lf, sizeof lf);
-  lf.lfHeight = 12;
+  NONCLIENTMETRICS cm;
+  cm.cbSize = sizeof cm;
+  if (SystemParametersInfo (SPI_GETNONCLIENTMETRICS, 0, &cm, 0))
+    lf = cm.lfMessageFont;
+  else
+    {
+      bzero (&lf, sizeof lf);
+      lf.lfHeight = MulDiv (9, screen_dpi (), 72);
+      strcpy (lf.lfFaceName, "MS UI Gothic");
+    }
+  // バーの文字列は CP932 のバイト列のまま描画される
   lf.lfCharSet = SHIFTJIS_CHARSET;
   lf.lfEscapement = e;
-  strcpy (lf.lfFaceName, "MS UI Gothic");
   return CreateFontIndirect (&lf);
 }
 

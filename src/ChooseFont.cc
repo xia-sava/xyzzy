@@ -4,9 +4,9 @@
 
 ChooseFontP::ChooseFontP ()
 {
-  cf_hil = ImageList_LoadBitmap (app.hinst,
+  cf_hil = dpi_scale_imagelist (app.hinst,
                                 MAKEINTRESOURCE (IDB_TT),
-                                18, 1, RGB (0, 0, 255));
+                                18, RGB (0, 0, 255));
 }
 
 ChooseFontP::~ChooseFontP ()
@@ -73,8 +73,11 @@ ChooseFontP::enum_font_size_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, L
         }
       else
         {
-          if (SendMessage (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1), LPARAM ("  8")) == LB_ERR)
-            for (int i = FONT_SIZE_MIN_PIXEL; i <= FONT_SIZE_MAX_PIXEL; i++)
+          int min_pixel = FontObject::min_size_pixel ();
+          int max_pixel = FontObject::max_size_pixel ();
+          sprintf (b, "%3d", min_pixel);
+          if (SendMessage (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1), LPARAM (b)) == LB_ERR)
+            for (int i = min_pixel; i <= max_pixel; i++)
               {
                 sprintf (b, "%3d", i);
                 SendMessage (hwnd, LB_ADDSTRING, 0, LPARAM (b));
@@ -292,12 +295,12 @@ ChooseFontP::draw_font_list (HWND, DRAWITEMSTRUCT *dis)
       SIZE size;
       GetTextExtentPoint32 (dis->hDC, "0", 1, &size);
 
-      ExtTextOut (dis->hDC, r.left + 18, (r.top + r.bottom - size.cy) / 2,
+      ExtTextOut (dis->hDC, r.left + dpi_scale (18), (r.top + r.bottom - size.cy) / 2,
                   ETO_OPAQUE, &r, b, strlen (b), 0);
 
       if (dis->itemData & TRUETYPE_FONTTYPE)
         ImageList_Draw (cf_hil, 0, dis->hDC,
-                        r.left, (r.top + r.bottom - 12) / 2, ILD_TRANSPARENT);
+                        r.left, (r.top + r.bottom - dpi_scale (12)) / 2, ILD_TRANSPARENT);
     }
 
   if (dis->itemState & ODS_FOCUS)

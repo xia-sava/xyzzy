@@ -88,7 +88,7 @@ FilerView::set_font () const
   if (!filer_font.hfont ())
     {
       LOGFONT lf;
-      if (read_conf (cfgFont, cfgFiler, lf))
+      if (read_font_conf (cfgFiler, lf))
         {
           lf.lfCharSet = SHIFTJIS_CHARSET;
           filer_font.create (lf);
@@ -414,25 +414,25 @@ FilerView::init_view (HWND hwnd, HWND hwnd_mask, HWND hwnd_marks,
   fv_directory_index = -(filer_data::ICON_DIRECTORY + 1);
   if (!fv_retrieve_icon)
     {
-      HIMAGELIST hil = ImageList_LoadBitmap (app.hinst,
-                                             MAKEINTRESOURCE (IDB_FILESEL),
-                                             16, 1, RGB (0, 0, 255));
+      HIMAGELIST hil = dpi_scale_imagelist (app.hinst,
+                                           MAKEINTRESOURCE (IDB_FILESEL),
+                                           16, RGB (0, 0, 255));
       ListView_SetImageList (fv_hwnd, hil, LVSIL_SMALL);
     }
   else
     {
       SHFILEINFO fi;
       int flags = (SHGFI_SYSICONINDEX | SHGFI_USEFILEATTRIBUTES
-                   | (filer_font.size ().cy >= 32 ? SHGFI_LARGEICON : SHGFI_SMALLICON));
+                   | (filer_font.size ().cy >= dpi_scale (32) ? SHGFI_LARGEICON : SHGFI_SMALLICON));
       HIMAGELIST hil =
         HIMAGELIST (SHGetFileInfo ("", 0, &fi, sizeof fi, flags));
       fv_regular_file_index = fi.iIcon;
       if (SHGetFileInfo ("", FILE_ATTRIBUTE_DIRECTORY, &fi, sizeof fi, flags))
         fv_directory_index = fi.iIcon;
       ListView_SetImageList (fv_hwnd, hil, LVSIL_SMALL);
-      hil = ImageList_LoadBitmap (app.hinst,
-                                  MAKEINTRESOURCE (IDB_FILESEL),
-                                  16, 1, RGB (0, 0, 255));
+      hil = dpi_scale_imagelist (app.hinst,
+                                MAKEINTRESOURCE (IDB_FILESEL),
+                                16, RGB (0, 0, 255));
       ListView_SetSubImageList (fv_hwnd, hil, 0);
     }
 
@@ -1390,7 +1390,7 @@ FilerView::thread_main ()
           SHFILEINFO fi;
           if (!SHGetFileInfo (path, attr, &fi, sizeof fi,
                               (SHGFI_ICON | SHGFI_OVERLAYINDEX
-                               | ((filer_font.size ().cy >= 32 ? SHGFI_LARGEICON : SHGFI_SMALLICON)))))
+                               | ((filer_font.size ().cy >= dpi_scale (32) ? SHGFI_LARGEICON : SHGFI_SMALLICON)))))
             continue;
 
           DestroyIcon (fi.hIcon);
@@ -2835,7 +2835,7 @@ filer_idd (lisp dual, int modeless)
     return IDD_FILER_DUAL_MODELESS;
   if (dual != Qnil)
     return IDD_FILER_DUAL;
-  if (GetSystemMetrics (SM_CYSCREEN) < 600)
+  if (GetSystemMetrics (SM_CYSCREEN) < dpi_scale (600))
     return IDD_FILER_SMALL;
   return IDD_FILER;
 }

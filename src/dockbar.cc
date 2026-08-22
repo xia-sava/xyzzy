@@ -81,13 +81,13 @@ dock_bar::calc_window_size (SIZE &sz, int vert) const
   calc_client_size (sz, vert);
   if (!vert)
     {
-      sz.cx += HORZ_LEFT_PAD + HORZ_RIGHT_PAD;
-      sz.cy += HORZ_TOP_PAD + HORZ_BOTTOM_PAD;
+      sz.cx += dpi_scale (HORZ_LEFT_PAD + HORZ_RIGHT_PAD);
+      sz.cy += dpi_scale (HORZ_TOP_PAD + HORZ_BOTTOM_PAD);
     }
   else
     {
-      sz.cx += VERT_LEFT_PAD + VERT_RIGHT_PAD;
-      sz.cy += VERT_TOP_PAD + VERT_BOTTOM_PAD;
+      sz.cx += dpi_scale (VERT_LEFT_PAD + VERT_RIGHT_PAD);
+      sz.cy += dpi_scale (VERT_TOP_PAD + VERT_BOTTOM_PAD);
     }
 }
 
@@ -167,17 +167,17 @@ dock_bar::nc_calc_size (RECT &r) const
 {
   if (!dock_vert_p ())
     {
-      r.left += HORZ_LEFT_PAD;
-      r.right -= HORZ_RIGHT_PAD;
-      r.top += HORZ_TOP_PAD;
-      r.bottom -= HORZ_BOTTOM_PAD;
+      r.left += dpi_scale (HORZ_LEFT_PAD);
+      r.right -= dpi_scale (HORZ_RIGHT_PAD);
+      r.top += dpi_scale (HORZ_TOP_PAD);
+      r.bottom -= dpi_scale (HORZ_BOTTOM_PAD);
     }
   else
     {
-      r.left += VERT_LEFT_PAD;
-      r.right -= VERT_RIGHT_PAD;
-      r.top += VERT_TOP_PAD;
-      r.bottom -= VERT_BOTTOM_PAD;
+      r.left += dpi_scale (VERT_LEFT_PAD);
+      r.right -= dpi_scale (VERT_RIGHT_PAD);
+      r.top += dpi_scale (VERT_TOP_PAD);
+      r.bottom -= dpi_scale (VERT_BOTTOM_PAD);
     }
   return 0;
 }
@@ -286,10 +286,10 @@ dock_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 tool_bar::tool_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name, DOCKABLE_ALL), t_bm (0)
 {
-  t_bitmap_size.cx = 16;
-  t_bitmap_size.cy = 15;
-  t_button_size.cx = 23;
-  t_button_size.cy = 22;
+  t_bitmap_size.cx = dpi_scale (16);
+  t_bitmap_size.cy = dpi_scale (15);
+  t_button_size.cx = dpi_scale (23);
+  t_button_size.cy = dpi_scale (22);
 }
 
 tool_bar::~tool_bar ()
@@ -411,7 +411,8 @@ tool_bar::set_bitmap ()
   TBADDBITMAP tbab;
   tbab.hInst = 0;
   tbab.nID = (UINT)(HBITMAP)*t_bm;
-  add_bitmap (tbab, bm.bmWidth / 16);
+  // 画像は読み込みの際に拡大されているので、枚数は拡大後の幅で数える
+  add_bitmap (tbab, bm.bmWidth / t_bitmap_size.cx);
 }
 
 int
@@ -464,7 +465,8 @@ tool_bar::dock_edge ()
 tab_bar::tab_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name,
                  new_comctl_p () ? DOCKABLE_ALL : DOCKABLE_TOP | DOCKABLE_BOTTOM),
-       t_tab_height (21), t_horz_width (60), t_horz_height (21)
+       t_tab_height (dpi_scale (21)), t_horz_width (dpi_scale (60)),
+       t_horz_height (dpi_scale (21))
 {
   t_horz_text = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
 }
@@ -480,7 +482,7 @@ tab_bar::create (HWND hwnd_parent)
                0))
     return 0;
 
-  set_padding (6, 4);
+  set_padding (dpi_scale (6), dpi_scale (4));
   set_font (sysdep.ui_font ());
   calc_tab_height ();
 
@@ -632,16 +634,16 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
   if (!vert)
     {
       sz.cx = DOCK_LENGTH_INFINITE;
-      sz.cy = DOCK_BAR_CLIENT_HEIGHT;
+      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT);
     }
   else if (t_horz_text)
     {
-      sz.cx = t_horz_width + GRIPPER_SIZE;
+      sz.cx = t_horz_width + dpi_scale (GRIPPER_SIZE);
       sz.cy = DOCK_LENGTH_INFINITE;
     }
   else
     {
-      sz.cx = DOCK_BAR_CLIENT_HEIGHT + 1;
+      sz.cx = dpi_scale (DOCK_BAR_CLIENT_HEIGHT) + 1;
       sz.cy = DOCK_LENGTH_INFINITE;
     }
 }
@@ -1076,8 +1078,8 @@ tab_bar::nc_calc_size (RECT &r) const
 {
   if (!dock_vert_p ())
     {
-      r.left += HORZ_LEFT_PAD;
-      r.right -= HORZ_RIGHT_PAD;
+      r.left += dpi_scale (HORZ_LEFT_PAD);
+      r.right -= dpi_scale (HORZ_RIGHT_PAD);
       if (!inverse_p ())
         r.top = r.bottom - t_tab_height;
       else
@@ -1085,18 +1087,18 @@ tab_bar::nc_calc_size (RECT &r) const
     }
   else
     {
-      r.top += VERT_TOP_PAD;
-      r.bottom -= VERT_BOTTOM_PAD;
+      r.top += dpi_scale (VERT_TOP_PAD);
+      r.bottom -= dpi_scale (VERT_BOTTOM_PAD);
       if (t_horz_text)
         {
           if (!inverse_p ())
             {
-              r.right -= GRIPPER_SIZE;
+              r.right -= dpi_scale (GRIPPER_SIZE);
               r.left = r.right - t_horz_width;
             }
           else
             {
-              r.left += GRIPPER_SIZE;
+              r.left += dpi_scale (GRIPPER_SIZE);
               r.right = r.left + t_horz_width;
             }
         }
@@ -1274,14 +1276,14 @@ tab_bar::lbtn_down (int x, int y)
   if (edge () == EDGE_LEFT)
     {
       wr.left = cr.right;
-      mn = cr.left + MIN_WIDTH;
+      mn = cr.left + dpi_scale (MIN_WIDTH);
       mx = wr.right + fr.right - 5;
     }
   else
     {
       wr.right = cr.left;
       mn = wr.left - fr.right + 5;
-      mx = cr.right - MIN_WIDTH;
+      mx = cr.right - dpi_scale (MIN_WIDTH);
     }
 
   int ox = wr.left;
@@ -1597,7 +1599,7 @@ dock_frame::arrange_horz (const dock_bar_list &bars, LONG cx)
           if (bar->rect ().left + sz.cx > cx)
             {
               bar->rect ().left = max (cx - sz.cx, x);
-              int w = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cx : MIN_SIZE;
+              int w = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cx : dpi_scale (MIN_SIZE);
               if (bar != bb && bar->rect ().left + w > cx)
                 {
                   bb = bar;
@@ -1643,7 +1645,7 @@ dock_frame::arrange_vert (const dock_bar_list &bars, LONG cy)
           if (bar->rect ().top + sz.cy > cy)
             {
               bar->rect ().top = max (cy - sz.cy, y);
-              int h = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cy : MIN_SIZE;
+              int h = bar->status () & dock_bar::DOCK_STAT_NEW ? sz.cy : dpi_scale (MIN_SIZE);
               if (bar != bb && bar->rect ().top + h > cy)
                 {
                   bb = bar;
@@ -2415,6 +2417,42 @@ dock_frame::color_changed () const
       bar->color_changed ();
 }
 
+// BASE_SCREEN_DPI 基準で作られた 4/8bpp の DIB を、画面の DPI に合わせて拡大した
+// 24bpp の画素列へ展開する。GDI の変換を経ないので元の色がそのまま残る。
+// 拡大は最近傍で行うため、整数倍のときに滲まない
+static u_char *
+expand_dib (const BITMAPINFOHEADER &bi, const RGBQUAD *palette, int ncolors,
+            const u_char *bits, int dw, int dh)
+{
+  int w = bi.biWidth;
+  int h = abs (bi.biHeight);
+  int sstride = ((w * bi.biBitCount + 31) / 32) * 4;
+  int dstride = (dw * 3 + 3) & ~3;
+
+  u_char *buf = (u_char *)malloc (size_t (dstride) * dh);
+  if (!buf)
+    return 0;
+
+  for (int y = 0; y < dh; y++)
+    {
+      const u_char *s = bits + size_t (sstride) * (y * h / dh);
+      u_char *d = buf + size_t (dstride) * y;
+      for (int x = 0; x < dw; x++)
+        {
+          int sx = x * w / dw;
+          int i = (bi.biBitCount == 8
+                   ? s[sx]
+                   : (sx & 1 ? s[sx / 2] & 15 : s[sx / 2] >> 4));
+          if (i >= ncolors)
+            i = 0;
+          *d++ = palette[i].rgbBlue;
+          *d++ = palette[i].rgbGreen;
+          *d++ = palette[i].rgbRed;
+        }
+    }
+  return buf;
+}
+
 int
 tool_bm::load_mapped_bitmap (const char *filename, HBITMAP &hbm)
 {
@@ -2482,9 +2520,31 @@ tool_bm::load_mapped_bitmap (const char *filename, HBITMAP &hbm)
     }
 
   HDC hdc = GetDC (0);
-  hbm = CreateDIBitmap (hdc, &b.bi, CBM_INIT,
-                        (const char *)mf.base () + offset,
-                        (const BITMAPINFO *)&b, DIB_RGB_COLORS);
+
+  int dw = dpi_scale (bi.biWidth);
+  int dh = dpi_scale (abs (bi.biHeight));
+  if (dw != bi.biWidth || dh != abs (bi.biHeight))
+    {
+      u_char *buf = expand_dib (bi, b.rgb, ncolors,
+                                (const u_char *)mf.base () + offset, dw, dh);
+      if (buf)
+        {
+          BITMAPINFOHEADER e = bi;
+          e.biWidth = dw;
+          e.biHeight = bi.biHeight < 0 ? -dh : dh;
+          e.biBitCount = 24;
+          e.biSizeImage = 0;
+          e.biClrUsed = 0;
+          e.biClrImportant = 0;
+          hbm = CreateDIBitmap (hdc, &e, CBM_INIT, buf,
+                                (const BITMAPINFO *)&e, DIB_RGB_COLORS);
+          free (buf);
+        }
+    }
+  if (!hbm)
+    hbm = CreateDIBitmap (hdc, &b.bi, CBM_INIT,
+                          (const char *)mf.base () + offset,
+                          (const BITMAPINFO *)&b, DIB_RGB_COLORS);
   ReleaseDC (0, hdc);
   return hbm ? LMB_NO_ERRORS : LMB_FAILED;
 }

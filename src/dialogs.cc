@@ -51,6 +51,13 @@ init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
   int *v = (int *)alloca (sizeof *v * ncolumns);
   if (read_conf (entry, key, v, ncolumns))
     width = v;
+  else
+    {
+      // 既定値は BASE_SCREEN_DPI 基準
+      for (int i = 0; i < ncolumns; i++)
+        v[i] = dpi_scale (width[i]);
+      width = v;
+    }
 
   LV_COLUMN lvc;
   lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
@@ -111,9 +118,9 @@ buffer_list_init_column (HWND list)
   init_list_column (list, 4, width, fmts, IDS_SELECT_BUFFER1,
                     cfgBufferSelector, cfgColumn);
 
-  HIMAGELIST hil = ImageList_LoadBitmap (app.hinst,
-                                         MAKEINTRESOURCE (IDB_BUFSEL),
-                                         17, 1, RGB (255, 255, 255));
+  HIMAGELIST hil = dpi_scale_imagelist (app.hinst,
+                                       MAKEINTRESOURCE (IDB_BUFSEL),
+                                       17, RGB (255, 255, 255));
   ListView_SetImageList (list, hil, LVSIL_SMALL);
 }
 
@@ -1475,9 +1482,9 @@ DriveDialog::setup_list (HWND hwnd)
       ListView_InsertColumn (hwnd, i, &lvc);
     }
 
-  HIMAGELIST hil = ImageList_LoadBitmap (app.hinst,
-                                         MAKEINTRESOURCE (IDB_FILESEL),
-                                         16, 1, RGB (0, 0, 255));
+  HIMAGELIST hil = dpi_scale_imagelist (app.hinst,
+                                       MAKEINTRESOURCE (IDB_FILESEL),
+                                       16, RGB (0, 0, 255));
   ListView_SetImageList (hwnd, hil, LVSIL_SMALL);
 }
 

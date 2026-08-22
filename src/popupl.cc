@@ -7,6 +7,7 @@ static WNDPROC org_wndproc;
 static ATOM popup_list_atom;
 static HWND hwnd_popup;
 
+// 補完リストの寸法。BASE_SCREEN_DPI 基準なので使うときに dpi_scale する
 #define LIST_MAXW 800L
 #define LIST_MINW 64L
 #define LIST_MAXH 200L
@@ -162,7 +163,7 @@ Fpopup_list (lisp list, lisp callback, lisp lpoint)
   SendMessage (hwnd_popup, WM_SETFONT, WPARAM (hf), 1);
 
   SIZE sz;
-  sz.cx = LIST_MINW;
+  sz.cx = dpi_scale (LIST_MINW);
   sz.cy = 0;
 
   HDC hdc = GetDC (hwnd_popup);
@@ -181,11 +182,11 @@ Fpopup_list (lisp list, lisp callback, lisp lpoint)
   SelectObject (hdc, of);
   ReleaseDC (hwnd_popup, hdc);
 
-  if (sz.cx > LIST_MAXW)
-    sz.cx = LIST_MAXW;
-  if (sz.cy > LIST_MAXH)
+  if (sz.cx > dpi_scale (LIST_MAXW))
+    sz.cx = dpi_scale (LIST_MAXW);
+  if (sz.cy > dpi_scale (LIST_MAXH))
     {
-      sz.cy = LIST_MAXH;
+      sz.cy = dpi_scale (LIST_MAXH);
       sz.cx += sysdep.vscroll;
     }
   sz.cx += sysdep.edge.cx;
@@ -205,7 +206,7 @@ Fpopup_list (lisp list, lisp callback, lisp lpoint)
 
   if (pos.y + app.text_font.cell ().cy + sz.cy <= wk.bottom)
     pos.y += app.text_font.cell ().cy;
-  else if (wk.bottom - (pos.y + app.text_font.cell ().cy) > LIST_MAXH / 2)
+  else if (wk.bottom - (pos.y + app.text_font.cell ().cy) > dpi_scale (LIST_MAXH) / 2)
     {
       pos.y += app.text_font.cell ().cy;
       sz.cy = wk.bottom - pos.y;
