@@ -501,6 +501,15 @@ ambiguous_width_slot_p (int slot)
           || slot == FONT_GREEK || slot == FONT_GEORGIAN);
 }
 
+int
+FontSet::full_width_p (Char cc) const
+{
+  int slot = font_slot_of (cc);
+  return (charset_width (cc) == 1
+          && ambiguous_width_slot_p (slot)
+          && fs_font[slot].columns () == 2);
+}
+
 // 半角として並べている文字を、担当のフォントが全角で描くなら二桁として扱う。
 // 一桁の升目に押し込むと字形の右半分が切れて読めなくなる
 void
@@ -511,14 +520,8 @@ FontSet::update_char_columns () const
     return;
 
   for (int i = 0; i <= 0xffff; i++)
-    {
-      Char cc = Char (i);
-      int slot = font_slot_of (cc);
-      if (charset_width (cc) == 1
-          && ambiguous_width_slot_p (slot)
-          && fs_font[slot].columns () == 2)
-        char_columns_table[i >> 3] |= 1 << (i & 7);
-    }
+    if (full_width_p (Char (i)))
+      char_columns_table[i >> 3] |= 1 << (i & 7);
 }
 
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに

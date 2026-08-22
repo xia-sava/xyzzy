@@ -491,6 +491,41 @@ paint_half_width_chars (HDC hdc, int x, int y, int flags, const RECT &r,
   SelectObject (hdc, of);
 }
 
+// 升目より字形が広いとき、横だけ縮めて一桁に収める。GDI の座標変換を使うので、
+// 渡す座標は縮む分だけ伸ばしておく
+static inline void
+paint_narrowed_chars (HDC hdc, int x, int y, int flags, const RECT &r,
+                      const char *string, int len, int base, const FontObject &f)
+{
+  const int n = f.columns ();
+  int omode = SetGraphicsMode (hdc, GM_ADVANCED);
+  XFORM oxf;
+  GetWorldTransform (hdc, &oxf);
+  XFORM xf;
+  xf.eM11 = 1.0f / n;
+  xf.eM12 = 0;
+  xf.eM21 = 0;
+  xf.eM22 = 1;
+  xf.eDx = 0;
+  xf.eDy = 0;
+  SetWorldTransform (hdc, &xf);
+
+  RECT rr;
+  rr.left = r.left * n;
+  rr.right = r.right * n;
+  rr.top = r.top;
+  rr.bottom = r.bottom;
+
+  HGDIOBJ of = SelectObject (hdc, f);
+  paint_chars_ctx ctx ((x + f.offset ().x) * n, y + f.offset ().y, rr, n);
+  for (const u_char *s = (const u_char *)string, *const se = s + len; s < se; s++)
+    ctx.paint (hdc, i2w (base + *s), flags);
+  SelectObject (hdc, of);
+
+  SetWorldTransform (hdc, &oxf);
+  SetGraphicsMode (hdc, omode);
+}
+
 // 一桁の文字は升目ごとに一バイト、二桁の文字は全角と同じく上位と下位の
 // 二バイトで一文字を表す。BASE はその区画の先頭の内部コード
 static inline void
@@ -500,6 +535,9 @@ paint_1byte_chars (HDC hdc, int x, int y, int flags, const RECT &r,
 {
   if (char_width (Char (base)) == 2)
     paint_full_width_chars (hdc, x, y, flags, r, string, len, f);
+  else if (app.text_font.full_width_p (Char (base)))
+    // 一桁に固定しているが、フォントは全角の字形しか持たない
+    paint_narrowed_chars (hdc, x, y, flags, r, string, len, base, f);
   else
     paint_half_width_chars (hdc, x, y, flags, r, string, len, padding, base, f);
 }
