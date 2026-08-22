@@ -1205,11 +1205,6 @@ Fcopy_to_clipboard (lisp string)
       if (!make_cf_wtext (clp[0], string))
         FEstorage_error ();
     }
-  else if (encoding_sjis_p (encoding) || encoding_auto_detect_p (encoding))
-    {
-      if (!make_cf_text_sjis (clp[0], string))
-        FEstorage_error ();
-    }
   else
     {
       if (!make_cf_wtext (clp[0], string))
