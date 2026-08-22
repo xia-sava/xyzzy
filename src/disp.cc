@@ -1649,10 +1649,10 @@ glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, int f, int flags)
         if (!hi)
           goto bad_char;
         // 対の後半は前半の属性をそのまま引き継ぐ。走査の単位が割れないようにする
-        g[-1] = ((g[-1] & ~glyph_t (GLYPH_CHARSET_MASK | GLYPH_CATEGORY_MASK | 255))
+        g[-1] = ((g[-1] & ~(GLYPH_CHARSET_MASK | GLYPH_CATEGORY_MASK | 255))
                  | GLYPH_CHARSET_SURROGATE_PAIR | GLYPH_LEAD
                  | MAKE_GLYPH_CHAR (utf16_pair_to_ucs4 (hi, cc)));
-        *g = (g[-1] & ~glyph_t (GLYPH_CATEGORY_MASK)) | GLYPH_TRAIL;
+        *g = (g[-1] & ~GLYPH_CATEGORY_MASK) | GLYPH_TRAIL;
         g++;
       }
       break;

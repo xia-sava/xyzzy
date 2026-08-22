@@ -142,7 +142,8 @@ typedef unsigned long long glyph_t;
 # define GLYPH_CHARSET_SURROGATE_H3   MAKE_GLYPH_CHARSET (26)
 # define GLYPH_CHARSET_SURROGATE_H4   MAKE_GLYPH_CHARSET (27)
 
-# define GLYPH_CATEGORY_MASK     0xc0000000
+/* 補数を取ったときに上位の文字を巻き込まないよう、升目と同じ幅で持つ */
+# define GLYPH_CATEGORY_MASK     glyph_t (0xc0000000)
 # define  GLYPH_JUNK             0x40000000
 # define  GLYPH_LEAD             0x80000000
 # define  GLYPH_TRAIL            0xc0000000
