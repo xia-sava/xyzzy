@@ -1,7 +1,7 @@
 #ifndef _Window_h_
 # define _Window_h_
 
-typedef u_long glyph_t;
+typedef unsigned long long glyph_t;
 
 /*
  GLYPH BITS
@@ -31,6 +31,9 @@ typedef u_long glyph_t;
                     \___________________________ category
                                                    0: SBCS   2: DBCS lead
                                                    1: JUNK   3: DBCS trail
+
+ 上位 32bit は、下から 21bit が文字。8bit のペイロードに収まらない文字だけが使う。
+ 残りは未使用
 */
 
 # define GLYPH_NFOREGROUND_COLORS 128
@@ -143,6 +146,13 @@ typedef u_long glyph_t;
 # define  GLYPH_JUNK             0x40000000
 # define  GLYPH_LEAD             0x80000000
 # define  GLYPH_TRAIL            0xc0000000
+
+/* 下位 8bit のペイロードに収まらない文字は、上位へそのまま持たせる */
+# define GLYPH_CHAR_SHIFT 32
+# define GLYPH_CHAR_BITS 21
+# define MAKE_GLYPH_CHAR(C) (glyph_t (ucs4_t (C)) << GLYPH_CHAR_SHIFT)
+# define GLYPH_CHAR(G) \
+   (ucs4_t ((G) >> GLYPH_CHAR_SHIFT) & ((1 << GLYPH_CHAR_BITS) - 1))
 
 # define GLYPH_MAX_KEYWORDS      6
 

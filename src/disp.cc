@@ -346,36 +346,7 @@ Window::update_caret () const
     }
 }
 
-// BMP 外の文字は 1 セルの 8bit に収まらないので、表に登録して番号で参照する。
-// 番号は上位・下位 2 つのセルに分けて持たせる
-#define SURROGATE_PAIR_MAX 4096
-#define SURROGATE_PAIR_HASH_SIZE 8192 // SURROGATE_PAIR_MAX の 2 倍で 2 の冪
 #define SURROGATE_FACE_NAME "Segoe UI Emoji"
-
-static ucs4_t surrogate_pair_table[SURROGATE_PAIR_MAX];
-static short surrogate_pair_hash[SURROGATE_PAIR_HASH_SIZE];
-static int n_surrogate_pairs;
-
-// 表に無ければ登録して番号を返す。表が一杯なら -1
-static int
-intern_surrogate_pair (ucs4_t lc)
-{
-  u_int h = u_int (lc) % SURROGATE_PAIR_HASH_SIZE;
-  while (surrogate_pair_hash[h])
-    {
-      int i = surrogate_pair_hash[h] - 1;
-      if (surrogate_pair_table[i] == lc)
-        return i;
-      if (++h == SURROGATE_PAIR_HASH_SIZE)
-        h = 0;
-    }
-  if (n_surrogate_pairs == SURROGATE_PAIR_MAX)
-    return -1;
-  int i = n_surrogate_pairs++;
-  surrogate_pair_table[i] = lc;
-  surrogate_pair_hash[h] = short (i + 1);
-  return i;
-}
 
 // BMP 外の文字を描くフォント。字送りが 2 セルに収まるよう高さを抑える。
 // 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
@@ -556,12 +527,12 @@ paint_jisx0212_half_width_chars (HDC hdc, int x, int y, int flags, const RECT &r
 
 static inline void
 paint_surrogate_pair_chars (HDC hdc, int x, int y, int flags, const RECT &r,
-                            const char *string, int len)
+                            const glyph_t *g, int len)
 {
   HGDIOBJ of = SelectObject (hdc, surrogate_font ());
   paint_chars_ctx ctx (x, y, r, 2);
-  for (const u_char *s = (const u_char *)string, *const se = s + len; s + 1 < se; s += 2)
-    ctx.paint_surrogate_pair (hdc, surrogate_pair_table[(s[0] << 8) | s[1]], flags);
+  for (const glyph_t *ge = g + len; g + 1 < ge; g += 2)
+    ctx.paint_surrogate_pair (hdc, GLYPH_CHAR (*g), flags);
   SelectObject (hdc, of);
 }
 
@@ -580,7 +551,8 @@ paint_chars_lucida (HDC hdc, int x, int y, int flags, const RECT &r,
 
 static void
 paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
-             glyph_t charset, const char *string, int len, const INT *padding)
+             glyph_t charset, const glyph_t *g, const char *string, int len,
+             const INT *padding)
 {
   // BASE は区画の先頭の内部コード。ペイロードから文字を組み立てる下駄であり、
   // 同時にどのフォントで描くかを決める手掛かりでもある
@@ -665,7 +637,7 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       break;
 
     case GLYPH_CHARSET_SURROGATE_PAIR:
-      paint_surrogate_pair_chars (hdc, x, y, flags, r, string, len);
+      paint_surrogate_pair_chars (hdc, x, y, flags, r, g, len);
       break;
 
     case GLYPH_CHARSET_SURROGATE_H1:
@@ -781,7 +753,8 @@ Window::paint_glyphs (HDC hdc, HDC hdcmem, const glyph_t *gstart, const glyph_t 
         }
       else
         paint_chars (hdc, r.left + (b - buf) * app.text_font.cell ().cx, y,
-                     ETO_OPAQUE | ETO_CLIPPED, r, GLYPH_CHARSET (c), b, be - b, padding);
+                     ETO_OPAQUE | ETO_CLIPPED, r, GLYPH_CHARSET (c), g0,
+                     b, be - b, padding);
 
       SetTextColor (hdc, ofg);
       SetBkColor (hdc, obg);
@@ -843,7 +816,7 @@ Window::paint_glyphs (HDC hdc, HDC hdcmem, const glyph_t *gstart, const glyph_t 
               SetBkColor (hdc, obg);
             }
           else
-            paint_chars (hdc, r.left, y, ETO_CLIPPED, r, GLYPH_CHARSET (c),
+            paint_chars (hdc, r.left, y, ETO_CLIPPED, r, GLYPH_CHARSET (c), g0,
                          buf, be - buf, padding);
 
           SetTextColor (hdc, ofg);
@@ -1675,13 +1648,11 @@ glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, int f, int flags)
         ucs2_t hi = pending_surrogate_high (g, g0);
         if (!hi)
           goto bad_char;
-        int i = intern_surrogate_pair (utf16_pair_to_ucs4 (hi, cc));
-        if (i < 0)
-          goto bad_char;
         // 対の後半は前半の属性をそのまま引き継ぐ。走査の単位が割れないようにする
-        g[-1] = ((g[-1] & ~(GLYPH_CHARSET_MASK | GLYPH_CATEGORY_MASK | 255))
-                 | GLYPH_CHARSET_SURROGATE_PAIR | GLYPH_LEAD | (i >> 8));
-        *g = (g[-1] & ~(GLYPH_CATEGORY_MASK | 255)) | GLYPH_TRAIL | (i & 255);
+        g[-1] = ((g[-1] & ~glyph_t (GLYPH_CHARSET_MASK | GLYPH_CATEGORY_MASK | 255))
+                 | GLYPH_CHARSET_SURROGATE_PAIR | GLYPH_LEAD
+                 | MAKE_GLYPH_CHAR (utf16_pair_to_ucs4 (hi, cc)));
+        *g = (g[-1] & ~glyph_t (GLYPH_CATEGORY_MASK)) | GLYPH_TRAIL;
         g++;
       }
       break;
