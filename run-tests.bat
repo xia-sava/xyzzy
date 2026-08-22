@@ -5,13 +5,13 @@ cd /d %~dp0
 rem Usage: run-tests.bat [TESTS...]
 rem
 rem Example:
-rem  ‚·‚×‚Ä‚ÌƒeƒXƒg‚ğÀs
+rem  "ã™ã¹ã¦ã®ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ"
 rem  run-tests.bat
 rem
-rem  lisp-tests.l ‚¾‚¯‚ğÀs
+rem  "lisp-tests.l ã ã‘ã‚’å®Ÿè¡Œ"
 rem  run-tests.bat unittest/lisp-tests.l
 rem
-rem  lisp-tests.l ‚Æ editor-tests.l ‚¾‚¯‚ğÀs
+rem  "lisp-tests.l ã¨ editor-tests.l ã ã‘ã‚’å®Ÿè¡Œ"
 rem  run-tests.bat unittest/lisp-tests.l unittest/editor-tests.l
 
 set TESTDIR=%~dp0unittest

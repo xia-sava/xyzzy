@@ -2285,7 +2285,7 @@ static symbols ed[] =
   DEFCMD3 (save-buffer, 0, 2, 0, ""),
   DEFUN3 (delete-auto-save-file, 1, 0, 0),
   DEFUN3 (do-auto-save, 0, 1, 0),
-  DEFCMD3 (write-region, 3, 3, 0, "r\nFÉtÉ@ÉCÉãñº: \np"),
+  DEFCMD3 (write-region, 3, 3, 0, "r\nF„Éï„Ç°„Ç§„É´Âêç: \np"),
   MAKE_SYMBOL2 (to-ascii-fileio),
   MAKE_SYMBOL2 (to-kanji-fileio),
   MAKE_SYMBOL2 (to-kana-fileio),
@@ -2985,15 +2985,18 @@ putq (const char *p)
   putchar ('"');
   while (*p)
     {
-      if ((*p & 0xff) < ' ')
-        printf ("\\%03o", *p++);
+      u_char c = *p++;
+      if (c < ' ' || c >= 0x80)
+        {
+          printf ("\\%03o", c);
+          if (_ismbblead (c) && *p)
+            printf ("\\%03o", u_char (*p++));
+        }
       else
         {
-          if (*p == '\\' || *p == '"')
+          if (c == '\\' || c == '"')
             putchar ('\\');
-          putchar (*p);
-          if (_ismbblead (*p++ & 0xff))
-            putchar (*p++);
+          putchar (c);
         }
     }
   putchar ('"');
@@ -3051,7 +3054,7 @@ process_interactive ()
 static void
 print_version ()
 {
-  printf ("int dump_version = %d;\n", time (0));
+  printf ("int dump_version = %d;\n", static_cast <int> (time (0)));
 }
 
 void

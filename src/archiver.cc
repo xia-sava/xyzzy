@@ -248,7 +248,7 @@ ArchiverP::doit (HWND hwnd, const char *data) const
     SetFocus (hfocus);
 #endif /* NEED_EXTRACTINGINFO */
 
-  // tar32—p
+  // tar32ç”¨
   BYTE state[256];
   GetKeyboardState (state);
   for (int i = 0; i < 256; i++)

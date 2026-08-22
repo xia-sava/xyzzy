@@ -31,7 +31,7 @@ WindowConfiguration *WindowConfiguration::wc_chain;
 
 wcolor_index Window::forecolor_indexes[] =
 {
-//nrm ctl kw1 kw2 kw3 k1r k2r k3r -   -   -    -  lnm  str tag com   // ”½“] ‘I‘ğ –³Œø
+//nrm ctl kw1 kw2 kw3 k1r k2r k3r -   -   -    -  lnm  str tag com   // åè»¢ é¸æŠ ç„¡åŠ¹
   TXF,CXF,K1F,K2F,K3F,TXB,TXB,TXB,TXF,TXF,TXF,TXF,LNF,STF,TGF,CMF,  //   -    -    -
   GRF,GRF,GRF,GRF,GRF,TXB,TXB,TXB,GRF,GRF,GRF,GRF,LNF,GRF,GRF,GRF,  //   -    -    o
   HIF,CXF,HIF,HIF,HIF,HIF,HIF,HIF,HIF,HIF,HIF,HIF,LNF,HIF,HIF,HIF,  //   -    o    -
@@ -44,7 +44,7 @@ wcolor_index Window::forecolor_indexes[] =
 
 wcolor_index Window::backcolor_indexes[] =
 {
-//nrm ctl kw1 kw2 kw3 k1r k2r k3r -   -   -    -  lnm str tag com   // ”½“] ‘I‘ğ –³Œø
+//nrm ctl kw1 kw2 kw3 k1r k2r k3r -   -   -    -  lnm str tag com   // åè»¢ é¸æŠ ç„¡åŠ¹
   TXB,TXB,TXB,TXB,TXB,K1F,K2F,K3F,TXB,TXB,TXB,TXB,TXB,TXB,TXB,TXB,  //   -    -    -
   TXB,TXB,TXB,TXB,TXB,GRF,GRF,GRF,TXB,TXB,TXB,TXB,TXB,TXB,TXB,TXB,  //   -    -    o
   HIB,HIB,HIB,HIB,HIB,GRF,GRF,GRF,HIB,HIB,HIB,HIB,HIB,HIB,HIB,HIB,  //   -    o    -
@@ -105,27 +105,27 @@ XCOLORREF Window::w_textprop_xbackcolor[GLYPH_TEXTPROP_NCOLORS];
 
 const wcolor_index_name wcolor_index_names[] =
 {
-  {cfgTextColor, RGB (0, 0, 0), "•¶šF"},
-  {cfgBackColor, RGB (0xff, 0xff, 0xff), "”wŒiF"},
-  {cfgCtlColor, RGB (0x80, 0x80, 0), "§Œä•¶š"},
-  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), "‘I‘ğ•¶šF"},
-  {cfgSelectionBackColor, RGB (0, 0, 0), "‘I‘ğ”wŒiF"},
-  {cfgKwdColor1, RGB (0, 0, 0xff), "ƒL[ƒ[ƒh1"},
-  {cfgKwdColor2, RGB (0, 0x40, 0), "ƒL[ƒ[ƒh2"},
-  {cfgKwdColor3, RGB (0x80, 0, 0x80), "ƒL[ƒ[ƒh3"},
-  {cfgStringColor, RGB (0, 0x40, 0), "•¶š—ñ"},
-  {cfgCommentColor, RGB (0, 0x80, 0), "ƒRƒƒ“ƒg"},
-  {cfgTagColor, RGB (0x40, 0x40, 0), "ƒ^ƒO"},
-  {cfgCursorColor, RGB (0x80, 0, 0x80), "sƒJ[ƒ\ƒ‹"},
-  {cfgCaretColor, RGB (0, 0, 0), "ƒLƒƒƒŒƒbƒg"},
-  {cfgImeCaretColor, RGB (0x80, 0, 0), "IMEƒLƒƒƒŒƒbƒg"},
-  {cfgLinenum, RGB (0, 0, 0), "s”Ô†"},
-  {cfgReverse, RGB (0, 0, 0), "ƒjƒZ”½“]F"},
-  {cfgUnselectedModeLineFg, RGB (0, 0, 0), "ƒ‚[ƒhs•¶šF"},
-  {cfgUnselectedModeLineBg, RGB (0, 0, 0), "ƒ‚[ƒhs”wŒiF"},
+  {cfgTextColor, RGB (0, 0, 0), "æ–‡å­—è‰²"},
+  {cfgBackColor, RGB (0xff, 0xff, 0xff), "èƒŒæ™¯è‰²"},
+  {cfgCtlColor, RGB (0x80, 0x80, 0), "åˆ¶å¾¡æ–‡å­—"},
+  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), "é¸æŠæ–‡å­—è‰²"},
+  {cfgSelectionBackColor, RGB (0, 0, 0), "é¸æŠèƒŒæ™¯è‰²"},
+  {cfgKwdColor1, RGB (0, 0, 0xff), "ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰1"},
+  {cfgKwdColor2, RGB (0, 0x40, 0), "ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰2"},
+  {cfgKwdColor3, RGB (0x80, 0, 0x80), "ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰3"},
+  {cfgStringColor, RGB (0, 0x40, 0), "æ–‡å­—åˆ—"},
+  {cfgCommentColor, RGB (0, 0x80, 0), "ã‚³ãƒ¡ãƒ³ãƒˆ"},
+  {cfgTagColor, RGB (0x40, 0x40, 0), "ã‚¿ã‚°"},
+  {cfgCursorColor, RGB (0x80, 0, 0x80), "è¡Œã‚«ãƒ¼ã‚½ãƒ«"},
+  {cfgCaretColor, RGB (0, 0, 0), "ã‚­ãƒ£ãƒ¬ãƒƒãƒˆ"},
+  {cfgImeCaretColor, RGB (0x80, 0, 0), "IMEã‚­ãƒ£ãƒ¬ãƒƒãƒˆ"},
+  {cfgLinenum, RGB (0, 0, 0), "è¡Œç•ªå·"},
+  {cfgReverse, RGB (0, 0, 0), "ãƒ‹ã‚»åè»¢è‰²"},
+  {cfgUnselectedModeLineFg, RGB (0, 0, 0), "ãƒ¢ãƒ¼ãƒ‰è¡Œæ–‡å­—è‰²"},
+  {cfgUnselectedModeLineBg, RGB (0, 0, 0), "ãƒ¢ãƒ¼ãƒ‰è¡ŒèƒŒæ™¯è‰²"},
 
-  {0, RGB (0, 0, 0), "‘I‘ğƒ‚[ƒhs•¶šF"},
-  {0, RGB (0, 0, 0), "‘I‘ğƒ‚[ƒhs”wŒiF"},
+  {0, RGB (0, 0, 0), "é¸æŠãƒ¢ãƒ¼ãƒ‰è¡Œæ–‡å­—è‰²"},
+  {0, RGB (0, 0, 0), "é¸æŠãƒ¢ãƒ¼ãƒ‰è¡ŒèƒŒæ™¯è‰²"},
 };
 
 ModelineParam::ModelineParam ()
@@ -497,8 +497,8 @@ Window::Window (const Window &src)
 }
 
 #if defined(_MSC_VER) && (_MSC_VER < 1600)
-/* ‚È‚ñ‚©’m‚ç‚ñ‚ªinternal compiler error ‚ªo‚é‚æ‚¤‚É‚È‚Á‚Ä‚µ‚Ü‚Á‚½‚Ì‚Å
-   ‚Ä‚«‚Æ[‚É‘ÎˆB*/
+/* ãªã‚“ã‹çŸ¥ã‚‰ã‚“ãŒinternal compiler error ãŒå‡ºã‚‹ã‚ˆã†ã«ãªã£ã¦ã—ã¾ã£ãŸã®ã§
+   ã¦ãã¨ãƒ¼ã«å¯¾å‡¦ã€‚*/
 #pragma optimize("g", off)
 #endif
 

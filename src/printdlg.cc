@@ -391,8 +391,8 @@ print_dialog::save_history (UINT id_combo, const char *section)
   int n = SendMessage (hwnd_combo, CB_GETCOUNT, 0, 0);
   for (int i = 0; i < n; i++)
     {
-      // WinME ‚Ì CB_GETLBTEXTLEN ‚Í•¶Žš”‚ð•Ô‚·‚ç‚µ‚¢‚Ì‚Å(‚½‚¾‚µ–¢Šm”F)A
-      // ƒoƒbƒtƒ@‚ð”{‚É‚µ‚Ä‚¨‚­B
+      // WinME ã® CB_GETLBTEXTLEN ã¯æ–‡å­—æ•°ã‚’è¿”ã™ã‚‰ã—ã„ã®ã§(ãŸã ã—æœªç¢ºèª)ã€
+      // ãƒãƒƒãƒ•ã‚¡ã‚’å€ã«ã—ã¦ãŠãã€‚
       char buf[MAX_HEADER_LENGTH * 2 + 2];
       int l = SendMessage (hwnd_combo, CB_GETLBTEXTLEN, i, 0);
       if (l > 0 && l < MAX_HEADER_LENGTH

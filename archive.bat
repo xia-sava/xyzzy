@@ -1,7 +1,7 @@
 @echo off
 rem
-rem _dist/ ‚É xyzzy ‚ÌƒoƒCƒiƒŠ‚ğW‚ß‚Ä xyzzy.zip ‚ğì¬‚·‚éB
-rem –‘O‚É build.bat ‚Æ bytecompile.bat ‚ğÀs‚µ‚Äƒrƒ‹ƒh‚µ‚Ä‚¨‚­‚±‚ÆB
+rem "_dist/ ã« xyzzy ã®ãƒã‚¤ãƒŠãƒªã‚’é›†ã‚ã¦ xyzzy.zip ã‚’ä½œæˆã™ã‚‹ã€‚"
+rem "äº‹å‰ã« build.bat ã¨ bytecompile.bat ã‚’å®Ÿè¡Œã—ã¦ãƒ“ãƒ«ãƒ‰ã—ã¦ãŠãã“ã¨ã€‚"
 rem
 
 setlocal

@@ -3771,7 +3771,7 @@ refresh_screen (int f)
       if (SetMenu (app.toplev, lmenu == Qnil ? 0 : xwin32_menu_handle (lmenu)))
         {
           DrawMenuBar (app.toplev);
-#ifndef WINDOWBLINDS_FIXED // WindowBlindsëŒçÙ
+#ifndef WINDOWBLINDS_FIXED // WindowBlindsÂØæÁ≠ñ
           if (lmenu == Qnil || xsymbol_value (Vlast_active_menu) == Qnil)
             {
               RECT r;

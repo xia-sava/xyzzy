@@ -13,7 +13,7 @@ Emacs っぽいテキストエディタのようなものです。
 
 xyzzy 0.2.2 系列は以下の観点を重視したバージョンです。
 
-  * xyzzy 0.2.2.235 との後方互換性
+  * Lisp 動作における xyzzy 0.2.2.235 との後方互換性
     * xyzzy は過去に作られた資産のうちメンテされていないものが結構ありますが、
       これらを修正せずに動作できることが絶対条件です
     * そのためにはたとえバグでも直さないことがあります
@@ -84,8 +84,8 @@ https://github.com/xyzzy はすでにアカウントが取られていたので 
       * XML ドキュメントを記述
         * <http://msdn.microsoft.com/ja-jp/library/ms177227.aspx>
   * push または Pull Request する前に以下を確認
-    * `build.bat` と `build.bat Debug` が警告なしでビルドできること
-    * `run-tests-all.bat` がパスすること
+    * `build.bat` と `build.bat Debug` がエラーなしでビルドできること
+    * `run-tests.bat` がパスすること
   * .gitconfig に以下を設定しておく
 
     ```ini
@@ -112,7 +112,7 @@ https://github.com/xyzzy はすでにアカウントが取られていたので 
 
 ## サポート OS
 
-  * Windows XP SP3 以降をサポート
+  * Windows 10 / 11 をサポート
 
 
 ----
@@ -121,10 +121,12 @@ https://github.com/xyzzy はすでにアカウントが取られていたので 
 
 ### 環境
 
-  * Visual Studio Express 2013 for Windows Desktop
-    * <http://www.microsoft.com/ja-jp/download/details.aspx?id=40787>
-  * msysGit
-    * <http://code.google.com/p/msysgit/>
+  * Visual Studio 2022 または Build Tools for Visual Studio 2022
+    * <https://visualstudio.microsoft.com/ja/downloads/>
+    * 「C++ によるデスクトップ開発」ワークロードを入れる
+    * `build.bat` が vswhere.exe を使って自動的に見つける
+  * Git for Windows
+    * <https://gitforwindows.org/>
   * 7zip
     * <http://www.7-zip.org/>
     * リリース作業時のみ

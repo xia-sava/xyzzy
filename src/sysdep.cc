@@ -8,7 +8,11 @@ Sysdep sysdep;
 Sysdep::Sysdep ()
 {
   os_ver.dwOSVersionInfoSize = sizeof os_ver;
+  // *os-major-version* などが返す値は GetVersionEx のものを保つ
+#pragma warning (push)
+#pragma warning (disable: 4996)
   GetVersionEx (&os_ver);
+#pragma warning (pop)
 
   init_wintype ();
   init_machine_type ();
@@ -120,7 +124,7 @@ Sysdep::init_wintype ()
       else if (Win6p ())
         {
           wintype = WINTYPE_WINDOWS_NT6;
-          // �ݒ�t�@�C���̃p�X (user-config-path) ���ς�邽�� wxp �̂܂܂Ƃ���
+          // 設定ファイルのパス (user-config-path) が変わるため wxp のままとする
           windows_short_name = "wxp";
           if (version () >= WIN7_VERSION)
               windows_name = "7";

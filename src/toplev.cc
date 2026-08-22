@@ -610,7 +610,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       RevokeDragDrop (hwnd);
 #endif
       app.user_timer.cleanup ();
-      environ::save_geometry ();
+      WindowGeometry::save_geometry ();
       app.clipboard.remove_listener (hwnd);
       PostQuitMessage (0);
       app.toplev = 0;
@@ -697,9 +697,9 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
           {
             GetWindowRect (hwnd, &nr);
 #if 1
-            /* StatusWindow ‚Ì Font ‚ª•ÏX‚³‚ê‚½ê‡‚ÉAƒNƒ‰ƒCƒAƒ“ƒgƒGƒŠƒA‚ğ
-               ‚»‚ê‚È‚è‚ÌƒTƒCƒY‚É‚µ‚½‚¢‚¾‚¯‚È‚ñ‚¾‚¯‚ÇA‚à‚Á‚Æ‚Ü‚Æ‚à‚È•û–@‚ ‚é?
-               ‚Á‚ÄANT ‚Å‚µ‚©“®‚¢‚Ä‚È‚¢‚¶‚á‚ñB*/
+            /* StatusWindow ã® Font ãŒå¤‰æ›´ã•ã‚ŒãŸå ´åˆã«ã€ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‚¨ãƒªã‚¢ã‚’
+               ãã‚Œãªã‚Šã®ã‚µã‚¤ã‚ºã«ã—ãŸã„ã ã‘ãªã‚“ã ã‘ã©ã€ã‚‚ã£ã¨ã¾ã¨ã‚‚ãªæ–¹æ³•ã‚ã‚‹?
+               ã£ã¦ã€NT ã§ã—ã‹å‹•ã„ã¦ãªã„ã˜ã‚ƒã‚“ã€‚*/
             WINDOWPOS wp;
             wp.hwnd = hwnd;
             wp.hwndInsertAfter = 0;

@@ -2,8 +2,8 @@
 setlocal
 cd /d %~dp0
 
-REM src/zlib ‚ğXV‚µ‚Ü‚·
-REM curl.exe, 7za.exe ‚ª•K—v‚Å‚·B
+REM "src/zlib ã‚’æ›´æ–°ã—ã¾ã™"
+REM "curl.exe, 7za.exe ãŒå¿…è¦ã§ã™ã€‚"
 
 set ZLIBVER=zlib-1.2.8
 set ZLIBZIP=zlib128.zip
@@ -14,7 +14,9 @@ curl http://zlib.net/%ZLIBZIP% -o %ZLIBZIP%
 
 cd %ZLIBVER%
 
-call "%VS120COMNTOOLS%\vsvars32.bat"
+set VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -property installationPath`) do set VSINSTALL=%%i
+call "%VSINSTALL%\VC\Auxiliary\Build\vcvars32.bat" || exit /b 1
 
 nmake -f win32/Makefile.msc LOC=-MT
 copy zlib.lib %ZLIBDIST%\Release

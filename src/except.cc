@@ -433,7 +433,8 @@ cleanup_exception ()
                sysdep.os_ver.szCSDVersion);
 
       fprintf (fp, "%08x: %s\n", Win32Exception::code, desc);
-      fprintf (fp, "at %08x", Win32Exception::r.ExceptionAddress);
+      fprintf (fp, "at %08x",
+               reinterpret_cast <UINT_PTR> (Win32Exception::r.ExceptionAddress));
       if (*module)
         fprintf (fp, " (%s)", module);
       fprintf (fp, "\n\n");
@@ -445,7 +446,7 @@ cleanup_exception ()
 # error "yet"
 #endif
       fprintf (fp, "Initial stack: %08x  GC: %d\n\n",
-               app.initial_stack, app.in_gc);
+               reinterpret_cast <UINT_PTR> (app.initial_stack), app.in_gc);
 
       print_module_allocation (fp);
       lisp_stack_trace (fp);
@@ -457,25 +458,26 @@ cleanup_exception ()
     }
 
   char msg[1024], *p = msg;
-  p += sprintf (p, "’v–½“I‚È—áŠO(%s)‚ª”­¶‚µ‚Ü‚µ‚½B\nat %08x",
-                desc, Win32Exception::r.ExceptionAddress);
+  p += sprintf (p, "è‡´å‘½çš„ãªä¾‹å¤–(%s)ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚\nat %08x",
+                desc,
+                reinterpret_cast <UINT_PTR> (Win32Exception::r.ExceptionAddress));
   if (*module)
     p += sprintf (p, " (%s)", module);
   *p++ = '\n';
   *p++ = '\n';
   if (fp)
     p += sprintf (p,
-                  "‹C‚ªŒü‚¢‚½‚çˆÈ‰º‚Ìƒtƒ@ƒCƒ‹‚ğ“Y‚¦‚ÄìÒ‚É•ñ‚µ‚Ä‚­‚¾‚³‚¢B\n"
+                  "æ°—ãŒå‘ã„ãŸã‚‰ä»¥ä¸‹ã®ãƒ•ã‚¡ã‚¤ãƒ«ã‚’æ·»ãˆã¦ä½œè€…ã«å ±å‘Šã—ã¦ãã ã•ã„ã€‚\n"
                   "\n%s\n\n"
-                  "‚»‚ÌÛA‚Ç‚Ì‚æ‚¤‚È‘€ì‚ğ‚µ‚½‚©A‚Ü‚½A“¯‚¶‘€ì‚ğ‚µ‚ÄÄŒ»‚·\n"
-                  "‚é‚©‚Ç‚¤‚©‚È‚Ç‚à‡‚í‚¹‚Ä•ñ‚µ‚Ä‚­‚¾‚³‚¢B‚È‚¨AIME‚Ì‘€ì\n"
-                  "’†‚É”­¶‚µ‚½‚à‚Ì‚ÅÄŒ»«‚ª‚ ‚éê‡‚ÍA‘¼‚ÌƒAƒvƒŠƒP[ƒVƒ‡ƒ“\n"
-                  "(ƒƒ‚’ ‚È‚Ç)‚Å‚àÄŒ»‚·‚é‚©‚Ç‚¤‚©‚ğŠm”F‚µ‚Ä‚İ‚Ä‚­‚¾‚³‚¢B"
+                  "ãã®éš›ã€ã©ã®ã‚ˆã†ãªæ“ä½œã‚’ã—ãŸã‹ã€ã¾ãŸã€åŒã˜æ“ä½œã‚’ã—ã¦å†ç¾ã™\n"
+                  "ã‚‹ã‹ã©ã†ã‹ãªã©ã‚‚åˆã‚ã›ã¦å ±å‘Šã—ã¦ãã ã•ã„ã€‚ãªãŠã€IMEã®æ“ä½œ\n"
+                  "ä¸­ã«ç™ºç”Ÿã—ãŸã‚‚ã®ã§å†ç¾æ€§ãŒã‚ã‚‹å ´åˆã¯ã€ä»–ã®ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³\n"
+                  "(ãƒ¡ãƒ¢å¸³ãªã©)ã§ã‚‚å†ç¾ã™ã‚‹ã‹ã©ã†ã‹ã‚’ç¢ºèªã—ã¦ã¿ã¦ãã ã•ã„ã€‚"
                   "\n\n",
                   path);
   strcpy (p,
-          "‰^‚ª‚æ‚¯‚ê‚ÎA‘‚«‚©‚¯‚Ìƒtƒ@ƒCƒ‹‚ª‹~‚¦‚é‚©‚à‚µ‚ê‚Ü‚¹‚ñB\n"
-          "‚µ‚É©“®ƒZ[ƒu‚µ‚Ä‚İ‚Ü‚·‚©?");
+          "é‹ãŒã‚ˆã‘ã‚Œã°ã€æ›¸ãã‹ã‘ã®ãƒ•ã‚¡ã‚¤ãƒ«ãŒæ•‘ãˆã‚‹ã‹ã‚‚ã—ã‚Œã¾ã›ã‚“ã€‚\n"
+          "è©¦ã—ã«è‡ªå‹•ã‚»ãƒ¼ãƒ–ã—ã¦ã¿ã¾ã™ã‹?");
 
   if (MsgBox (get_active_window (), msg, TitleBarString,
               MB_ICONHAND | MB_YESNO, 1) != IDYES)

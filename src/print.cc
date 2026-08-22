@@ -797,8 +797,8 @@ struct PaintCtx
   int column;
 };
 
-/* ‚ß‚Á‚¿‚á‚Ä‚¯‚Æ[‚ÈÀ‘•‚¾‚ªAƒvƒŠƒ“ƒ^‘Šè‚¾‚©‚ç
-   ‚±‚ñ‚È‚à‚ñ‚ÅŠ¨•Ù‚µ‚Æ‚¢‚½‚éB*/
+/* ã‚ã£ã¡ã‚ƒã¦ã‘ã¨ãƒ¼ãªå®Ÿè£…ã ãŒã€ãƒ—ãƒªãƒ³ã‚¿ç›¸æ‰‹ã ã‹ã‚‰
+   ã“ã‚“ãªã‚‚ã‚“ã§å‹˜å¼ã—ã¨ã„ãŸã‚‹ã€‚*/
 
 void
 print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
@@ -1486,7 +1486,7 @@ print_engine::fmt_week (char *b, char *be, int star, int colon)
   static const char *const day_full_names[] =
     { "Sunday","Monday", "Tuesday", "Wednesday",
       "Thursday", "Friday", "Saturday",};
-  static const char day_japanese_names[] = "“úŒ‰Î…–Ø‹à“y";
+  static const char day_japanese_names[] = "æ—¥æœˆç«æ°´æœ¨é‡‘åœŸ";
   int w = current_time ().wDayOfWeek;
   if (w < 0 || w > 6)
     return b;
@@ -1529,37 +1529,37 @@ print_engine::fmt_second (char *b, char *be, int zero)
 }
 
 /*
-%f   ƒtƒ@ƒCƒ‹–¼
-%F   ƒtƒ@ƒCƒ‹–¼(ƒfƒBƒŒƒNƒgƒŠ•t‚«)
-%b   ƒoƒbƒtƒ@–¼
-%p   ƒy[ƒW”Ô†
-%P   ‘ƒy[ƒW”
+%f   ãƒ•ã‚¡ã‚¤ãƒ«å
+%F   ãƒ•ã‚¡ã‚¤ãƒ«å(ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªä»˜ã)
+%b   ãƒãƒƒãƒ•ã‚¡å
+%p   ãƒšãƒ¼ã‚¸ç•ªå·
+%P   ç·ãƒšãƒ¼ã‚¸æ•°
 
-%Y   ¼—ï(YYYY)
-%y   ¼—ï(YY)
-%m   Œ  (1`12)
-%0m  Œ  (01`12)
-%*m  Œ  (January`December)
-%:m  Œ  (Jan`Dec)
-%d   “ú  (1`31)
-%0d  “ú  (01`31)
-%*w  —j“ú (Sunday`Saturday)
-%:w  —j“ú (Sun`Sat)
-%w   —j“ú (“ú`“y)
-%h     (0`23)
-%0h    (00`23)
-%H     (0`11)
-%0H    (00`11)
-%:H    (1`12)
-%0:H   (01`12)
+%Y   è¥¿æš¦(YYYY)
+%y   è¥¿æš¦(YY)
+%m   æœˆ  (1ï½12)
+%0m  æœˆ  (01ï½12)
+%*m  æœˆ  (Januaryï½December)
+%:m  æœˆ  (Janï½Dec)
+%d   æ—¥  (1ï½31)
+%0d  æ—¥  (01ï½31)
+%*w  æ›œæ—¥ (Sundayï½Saturday)
+%:w  æ›œæ—¥ (Sunï½Sat)
+%w   æ›œæ—¥ (æ—¥ï½åœŸ)
+%h   æ™‚  (0ï½23)
+%0h  æ™‚  (00ï½23)
+%H   æ™‚  (0ï½11)
+%0H  æ™‚  (00ï½11)
+%:H   æ™‚ (1ï½12)
+%0:H  æ™‚ (01ï½12)
 %*H      (AM/PM)
 %*:H     (am/pm)
-%M   •ª  (0`59)
-%0M  •ª  (00`59)
-%s   •b  (0`59)
-%0s  •b  (00`59)
+%M   åˆ†  (0ï½59)
+%0M  åˆ†  (00ï½59)
+%s   ç§’  (0ï½59)
+%0s  ç§’  (00ï½59)
 
-%-   ‰¡ü
+%-   æ¨ªç·š
  */
 
 int

@@ -129,7 +129,7 @@ public:
   int kbd_mblead_p (int) const;
   static const class FontObject &kbd_encoding_font ();
   LANGID get_kbd_langid () const
-    {return LANGID (get_kbd_layout ());}
+    {return LANGID (reinterpret_cast <UINT_PTR> (get_kbd_layout ()) & 0xffff);}
   HKL get_kbd_layout () const;
   int ime_property () const {return ime_prop;}
   int unicode_kbd_p () const {return unicode_kbd;}

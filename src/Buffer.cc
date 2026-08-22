@@ -1315,7 +1315,7 @@ Buffer::refresh_title_bar () const
       char *b0 = (char *)alloca (l);
       char *b = b0;
       if (Fadmin_user_p () == Qt && sysdep.Win6p ())
-        b = stpcpy (b, "ŠÇ—Ò: ");
+        b = stpcpy (b, "ç®¡ç†è€…: ");
       if (xsymbol_value (Vtitle_bar_text_order) != Qnil)
         strcpy (stpcpy (store_title (x, b, b + l), " - "), TitleBarString);
       else
@@ -1323,7 +1323,7 @@ Buffer::refresh_title_bar () const
 
       SetWindowText (app.toplev, b0);
     }
-  b_last_title_bar_buffer = 0; // Ÿ‰ñƒ^ƒCƒgƒ‹ƒo[‚ğ‹­§“I‚ÉÄ•`‰æ‚³‚¹‚é
+  b_last_title_bar_buffer = 0; // æ¬¡å›ã‚¿ã‚¤ãƒˆãƒ«ãƒãƒ¼ã‚’å¼·åˆ¶çš„ã«å†æç”»ã•ã›ã‚‹
 }
 
 void

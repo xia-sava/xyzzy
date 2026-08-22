@@ -18,8 +18,6 @@ EXTERN ATOM hprop;
 EXTERN ATOM hownerdraw;
 #define ATOM2STR(a) LPSTR (a)
 
-EXTERN int Win4p;
-
 int subclass_parent (HWND);
 
 int init_listview_class ();

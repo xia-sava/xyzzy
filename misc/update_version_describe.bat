@@ -9,11 +9,11 @@ if exist .git goto gen_git_version
 goto gen_release_version
 
 :gen_git_version
-rem git describe ‚Ì‘Ž®
-rem   (tag)-(tag ˆÈ~‚ÌƒRƒ~ƒbƒg‰ñ”)-g(hash)
+rem "git describe ã®æ›¸å¼"
+rem   "(tag)-(tag ä»¥é™ã®ã‚³ãƒŸãƒƒãƒˆå›žæ•°)-g(hash)"
 rem
-rem git describe ‚É --long ‚ðŽw’è‚µ‚È‚¢‚ÆƒRƒ~ƒbƒg‰ñ”‚ª 0 ‚Ìê‡‚É
-rem ƒ^ƒO‚µ‚©•\Ž¦‚³‚ê‚È‚¢
+rem "git describe ã« --long ã‚’æŒ‡å®šã—ãªã„ã¨ã‚³ãƒŸãƒƒãƒˆå›žæ•°ãŒ 0 ã®å ´åˆã«"
+rem "ã‚¿ã‚°ã—ã‹è¡¨ç¤ºã•ã‚Œãªã„"
 
 set GIT_DESCRIBE=git describe --tags --dirty
 for /F "usebackq" %%i in (`%GIT_DESCRIBE% --long 2^> nul`) do (
