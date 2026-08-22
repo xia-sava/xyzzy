@@ -11,7 +11,7 @@
           (set-difference defs fns))))
 
 (deftest test-defun-builtin-1 ()
-  "builtin.l ‚Å’è‹`‚³‚ê‚Ä‚¢‚È‚¢ builtin ŠÖ”‚ª‘¶İ‚µ‚È‚¢‚±‚Æ"
+  "builtin.l ã§å®šç¾©ã•ã‚Œã¦ã„ãªã„ builtin é–¢æ•°ãŒå­˜åœ¨ã—ãªã„ã“ã¨"
   (values-list
    (mapcar #'car
            (mapcar #'list-wrong-builtin-function-definition
@@ -21,7 +21,7 @@
   => nil)
 
 (deftest test-defun-builtin-2 ()
-  "builtin.l ‚Å’è‹`‚³‚ê‚Ä‚¢‚é”ñ builtin ŠÖ”‚ª‘¶İ‚µ‚È‚¢‚±‚Æ"
+  "builtin.l ã§å®šç¾©ã•ã‚Œã¦ã„ã‚‹é builtin é–¢æ•°ãŒå­˜åœ¨ã—ãªã„ã“ã¨"
   (values-list
    (mapcar #'cadr
            (mapcar #'list-wrong-builtin-function-definition

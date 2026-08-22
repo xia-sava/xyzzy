@@ -14,7 +14,7 @@
     (when (or (< (- center (* nrings 3) 1) 0)
 	      (> (+ center (* nrings 3) 1) width)
 	      (> (+ nrings 4) height))
-      (error "ƒEƒBƒ“ƒhƒE‚ª¬‚³‚·‚¬‚Ü‚·"))
+      (error "ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒå°ã•ã™ãã¾ã™"))
     (set-buffer (or (find-buffer "*hanoi*")
 		    (create-new-buffer "*hanoi*")))
     (erase-buffer (selected-buffer))

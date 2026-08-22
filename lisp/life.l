@@ -249,7 +249,7 @@
   (goto-line life-window-start)
 ;  (recenter 0)
 ;  (clear-message-line)
-  (message "C-g‚ğ‰Ÿ‚¹‚ÎI‚í‚é")
+  (message "C-gã‚’æŠ¼ã›ã°çµ‚ã‚ã‚‹")
 ;  (refresh-screen)
   (sit-for sleeptime))
 

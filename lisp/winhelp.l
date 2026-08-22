@@ -56,7 +56,7 @@
 			    (let ((viewer (read-registry r "Exe"
 							 :current-user)))
 			      (unless viewer
-				(error "ƒrƒ…[ƒ‚ª’è‹`‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ"))
+				(error "ãƒ“ãƒ¥ãƒ¼ãƒ¯ãŒå®šç¾©ã•ã‚Œã¦ã„ã¾ã›ã‚“"))
 			      (setq *info-viewer-file-name* viewer)
 			      viewer))
 			" "

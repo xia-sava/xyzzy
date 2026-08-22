@@ -1,7 +1,7 @@
 ;;; -*- Mode: Lisp; Package: WIN-USER -*-
 ;;;
 ;;;  This module is loosely based on those from
-;;;  WinMul turtle.l, which is written by “n•Ó‹`‘¥.
+;;;  WinMul turtle.l, which is written by æ¸¡è¾ºç¾©å‰‡.
 ;;;
 ;;; Usage:
 ;;; (load-library "wip/turtle")

@@ -119,7 +119,7 @@
 				 (concat paragraph-separate
 					 "\\|^"
 					 (regexp-quote fill-prefix)
-					 "[ \t@]*$")
+					 "[ \tã€€]*$")
 			       paragraph-separate))))
     (while (and (looking-at sep)
 		(forward-line 1)))
@@ -142,21 +142,21 @@
 (defun set-fill-column (&optional (col (current-column)))
   (interactive "p")
   (unless (<= 4 col 30000)
-    (error "ƒtƒBƒ‹ƒJƒ‰ƒ€‚Í4ˆÈã30000ˆÈ‰º‚Å‚·"))
+    (error "ãƒ•ã‚£ãƒ«ã‚«ãƒ©ãƒ ã¯4ä»¥ä¸Š30000ä»¥ä¸‹ã§ã™"))
   (setq fill-column col)
-  (message "ƒtƒBƒ‹ƒJƒ‰ƒ€‚Í~d‚Å‚·" fill-column))
+  (message "ãƒ•ã‚£ãƒ«ã‚«ãƒ©ãƒ ã¯~dã§ã™" fill-column))
 
 (defun set-fill-prefix ()
   (interactive)
   (cond ((bolp)
 	 (setq fill-prefix nil)
-	 (message "fill prefix‚ğƒNƒŠƒA‚µ‚Ü‚µ‚½"))
+	 (message "fill prefixã‚’ã‚¯ãƒªã‚¢ã—ã¾ã—ãŸ"))
 	(t
 	 (setq fill-prefix (buffer-substring (point)
 					     (save-excursion
 					       (goto-bol)
 					       (point))))
-	 (message "fill prefix‚Í\"~a\"‚Å‚·" fill-prefix)))
+	 (message "fill prefixã¯\"~a\"ã§ã™" fill-prefix)))
   t)
 
 (define-key esc-map #\q 'fill-paragraph)

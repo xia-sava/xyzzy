@@ -124,7 +124,7 @@
 			)))))))
 
 (defun apropos (string &optional print-key pred)
-  "w’è‚µ‚½³‹K•\Œ»‚Éˆê’v‚·‚éƒVƒ“ƒ{ƒ‹‚ğ•\¦‚µ‚Ü‚·"
+  "æŒ‡å®šã—ãŸæ­£è¦è¡¨ç¾ã«ä¸€è‡´ã™ã‚‹ã‚·ãƒ³ãƒœãƒ«ã‚’è¡¨ç¤ºã—ã¾ã™"
   (interactive "sApropos(Regexp): \np")
   (if *apropos-no-regexp*
       (setq string (regexp-quote string)))

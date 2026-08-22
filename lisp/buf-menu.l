@@ -51,7 +51,7 @@
   (goto-column 1)
   (when (or (looking-at "[-M]")
 	    (eobp))
-    (plain-error "バッファ名がありません"))
+    (plain-error "繝舌ャ繝輔ぃ蜷阪′縺ゅｊ縺ｾ縺帙ｓ"))
   t)
 
 (defun buffer-menu-buffname ()

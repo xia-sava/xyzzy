@@ -181,7 +181,7 @@
 	       (eq (car form) 'declare))
 	  (progn
 	    (when body-p
-	      (error "ïsê≥Ç» declare Ç≈Ç∑: ~S" form))
+	      (error "‰∏çÊ≠£„Å™ declare „Åß„Åô: ~S" form))
 	    (setq decl (cons form decl)))
 	(if (and (not intr-p)
 		 (consp form)

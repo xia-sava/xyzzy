@@ -26,12 +26,12 @@
 	  *list-function-modified* (buffer-modified-count)))
   (multiple-value-bind (result data)
       (dialog-box '(dialog 0 0 286 162
-		    (:caption "ŠÖ”(‚¾‚¢‚½‚¢)ˆê——")
+		    (:caption "é–¢æ•°(ã ã„ãŸã„)ä¸€è¦§")
 		    (:font 9 "MS UI Gothic")
 		    (:control
 		     (:listbox list nil #x50b10111 7 7 216 148)
 		     (:button IDOK "OK" #x50010001 229 7 50 14)
-		     (:button IDCANCEL "ƒLƒƒƒ“ƒZƒ‹" #x50010000 229 24 50 14)))
+		     (:button IDCANCEL "ã‚­ãƒ£ãƒ³ã‚»ãƒ«" #x50010000 229 24 50 14)))
 		  (list (cons 'list *list-function-list*)
 			(cons 'list *list-function-selected*)
 		  )

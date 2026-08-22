@@ -3,27 +3,27 @@
 ;;; Usage:
 ;;
 ;; - M-x makelc:makelc
-;;   compiler �p�b�P�[�W�� lisp �p�b�P�[�W�̊֐����R���p�C����A
-;;   $XYZZY/lisp �t�H���_�ȉ��̍X�V���ꂽ*.l ���ăR���p�C�����ă����[�h
+;;   compiler パッケージと lisp パッケージの関数をコンパイル後、
+;;   $XYZZY/lisp フォルダ以下の更新された*.l を再コンパイルしてリロード
 ;;
 ;; - C-u M-x makelc:makelc
-;;   compiler �p�b�P�[�W�� lisp �p�b�P�[�W�̊֐����R���p�C����A
-;;   $XYZZY/lisp �t�H���_�ȉ���*.l ���ăR���p�C�����ă����[�h
+;;   compiler パッケージと lisp パッケージの関数をコンパイル後、
+;;   $XYZZY/lisp フォルダ以下の*.l を再コンパイルしてリロード
 ;;
 ;; - (makelc:makelc-and-exit &optional force-recompile)
-;;   compiler �p�b�P�[�W�� lisp �p�b�P�[�W�̊֐����R���p�C����A
-;;   $XYZZY/lisp �t�H���_�ȉ���*.l ���ăR���p�C������ xyzzy ���I��
-;;   force-recompile �� non-nil �̏ꍇ�͏�ɍăR���p�C��
+;;   compiler パッケージと lisp パッケージの関数をコンパイル後、
+;;   $XYZZY/lisp フォルダ以下の*.l を再コンパイルして xyzzy を終了
+;;   force-recompile が non-nil の場合は常に再コンパイル
 ;;
 ;; - (makelc:compile-files &key dir force-recompile)
-;;   �w��f�B���N�g���ȉ��̍X�V���ꂽ*.l ���ăR���p�C��
-;;   force-recompile �� non-nil �̏ꍇ�͏�ɍăR���p�C��
+;;   指定ディレクトリ以下の更新された*.l を再コンパイル
+;;   force-recompile が non-nil の場合は常に再コンパイル
 ;;
 ;; - (makelc:compile-package :packagename)
-;;   �w��p�b�P�[�W���Œ�`����Ă��関�R���p�C���̊֐����R���p�C��
+;;   指定パッケージ内で定義されている未コンパイルの関数をコンパイル
 ;;
 ;; - (makelc:reload-files)
-;;   lisp/�z���̃��W���[�������ׂčēǂݍ���
+;;   lisp/配下のモジュールをすべて再読み込み
 ;;
 ;;; Code:
 
