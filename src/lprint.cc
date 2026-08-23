@@ -927,33 +927,22 @@ print_char (wStream &stream, Char c, int escape)
               quote = 1;
             }
 
-          if (DBCP (c))
+          if (escape && !cp932_roundtrip_p (c))
             {
-              if (!escape || SJISP (c >> 8))
-                stream.add (c);
-              else
+              stream.add ('x');
+              if (DBCP (c))
                 {
-                  stream.add ('x');
                   stream.add (downcase_digit_char[(c >> 12) & 15]);
                   stream.add (downcase_digit_char[(c >> 8) & 15]);
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
                 }
+              stream.add (downcase_digit_char[(c >> 4) & 15]);
+              stream.add (downcase_digit_char[(c >> 0) & 15]);
             }
           else
             {
-              if (escape && SJISP (c))
-                {
-                  stream.add ('x');
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
-                }
-              else
-                {
-                  if (escape && quote)
-                    quote_char (stream, c);
-                  stream.add (c);
-                }
+              if (escape && quote && !DBCP (c))
+                quote_char (stream, c);
+              stream.add (c);
             }
         }
     }
@@ -983,35 +972,25 @@ print_string (wStream &stream, const print_control &pc, lisp object)
            p < pe; p++)
         {
           Char c = *p;
-          if (DBCP (c))
+          if (!cp932_roundtrip_p (c))
             {
-              if (SJISP (c >> 8))
-                stream.add (c);
-              else
+              stream.add ('\\');
+              if (DBCP (c))
                 {
-                  stream.add ('\\');
                   stream.add ('X');
                   stream.add (downcase_digit_char[(c >> 12) & 15]);
                   stream.add (downcase_digit_char[(c >> 8) & 15]);
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
                 }
+              else
+                stream.add ('x');
+              stream.add (downcase_digit_char[(c >> 4) & 15]);
+              stream.add (downcase_digit_char[(c >> 0) & 15]);
             }
           else
             {
-              if (SJISP (c))
-                {
-                  stream.add ('\\');
-                  stream.add ('x');
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
-                }
-              else
-                {
-                  if (c == '"' || c == '\\')
-                    stream.add ('\\');
-                  stream.add (c);
-                }
+              if (c == '"' || c == '\\')
+                stream.add ('\\');
+              stream.add (c);
             }
         }
       stream.add ('"');

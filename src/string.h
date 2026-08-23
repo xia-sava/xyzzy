@@ -118,6 +118,14 @@ w2b_char (Char cc)
   return cc < 0x100 ? cc : w2s_char (cc);
 }
 
+/* CP932 で書き出して読み直しても変わらない文字か。変わるものは、印字するとき
+   そのままでは渡せないので逃がす */
+inline int
+cp932_roundtrip_p (Char cc)
+{
+  return cc < 0x80 || s2w_char (w2s_char (cc)) == cc;
+}
+
 size_t s2wl (const char *);
 Char *s2w (Char *, size_t, const char **);
 Char *s2w (Char *, const char *);
