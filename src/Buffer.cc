@@ -149,6 +149,7 @@ Buffer::Buffer (lisp name, lisp filename, lisp dirname, int temporary)
   b_eol_code = eol_code (n);
 
   lchar_encoding = symbol_value_char_encoding (Vdefault_fileio_encoding);
+  b_char_language = ENCODING_LANG_NIL;
 
   b_selection_type = SELECTION_VOID;
   b_selection_point = NO_MARK_SET;
@@ -1075,6 +1076,14 @@ lisp
 Fbuffer_eol_code (lisp buffer)
 {
   return make_fixnum (Buffer::coerce_to_buffer (buffer)->b_eol_code);
+}
+
+// 欄が空のときは符号が表す言語に従う
+int
+Buffer::char_language () const
+{
+  return (b_char_language != ENCODING_LANG_NIL
+          ? b_char_language : encoding_language (lchar_encoding));
 }
 
 lisp

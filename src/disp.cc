@@ -1310,22 +1310,16 @@ Window::kwdmatch (lisp kwdhash, const Point &point,
 
 // 二桁を占める文字。二つの升目が同じ文字を持ち、前後の別だけが違う
 static inline glyph_t *
-glyph_dbchar (glyph_t *g, Char cc, glyph_t f, int flags)
+glyph_dbchar (glyph_t *g, Char cc, glyph_t f, int flags, int lang)
 {
-  ucs2_t wc = i2w (cc);
-  if (flags & Window::WF_FULLSPC && cc == 0x8140U)
+  if (flags & Window::WF_FULLSPC && cc == UNICODE_IDEOGRAPHIC_SPACE)
     {
       *g++ = (f & ~GLYPH_TEXT_MASK) | GLYPH_CTRL | GLYPH_LEAD | GLYPH_BM_FULLSPC1;
       *g++ = (f & ~GLYPH_TEXT_MASK) | GLYPH_CTRL | GLYPH_TRAIL | GLYPH_BM_FULLSPC2;
     }
-  else if (wc == CHAR_INVALID)
-    {
-      *g++ = f | GLYPH_LEAD | GLYPH_BM_WBLANK1;
-      *g++ = f | GLYPH_TRAIL | GLYPH_BM_WBLANK2;
-    }
   else
     {
-      f |= MAKE_GLYPH_FONT (font_slot_of (cc)) | MAKE_GLYPH_CHAR (wc);
+      f |= MAKE_GLYPH_FONT (font_slot_of (cc, lang)) | MAKE_GLYPH_CHAR (cc);
       *g++ = f | GLYPH_LEAD;
       *g++ = f | GLYPH_TRAIL;
     }
@@ -1343,14 +1337,10 @@ pending_surrogate_high (const glyph_t *g, const glyph_t *g0)
 
 // g0 は行の先頭。下位サロゲートが直前のセルと対になれるかの判定に使う
 static inline glyph_t *
-glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, glyph_t f, int flags)
+glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, glyph_t f, int flags, int lang)
 {
-  glyph_t font = MAKE_GLYPH_FONT (font_slot_of (cc));
-  ucs2_t wc = i2w (cc);
-
-  switch (code_charset (cc))
+  if (cc < 0x80)
     {
-    case ccs_usascii:
       if (app.text_font.use_backsl_p () && cc == '\\')
         *g++ = f | GLYPH_BM_BACKSL;
       else if (flags & Window::WF_HALFSPC && cc == ' ')
@@ -1359,43 +1349,33 @@ glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, glyph_t f, int flags)
         // ペイロードのバイトがそのまま符号位置なので、文字は持たせない
         *g++ = f | cc;
       return g;
-
-    case ccs_utf16_surrogate_low:
-      {
-        ucs2_t hi = pending_surrogate_high (g, g0);
-        if (!hi)
-          goto bad_char;
-        // 対の後半は前半の属性をそのまま引き継ぐ。走査の単位が割れないようにする
-        g[-1] = ((g[-1] & ~(GLYPH_FONT_MASK | GLYPH_CATEGORY_MASK | GLYPH_CHAR_MASK))
-                 | GLYPH_FONT_SURROGATE | GLYPH_LEAD
-                 | MAKE_GLYPH_CHAR (utf16_pair_to_ucs4 (hi, cc)));
-        *g = (g[-1] & ~GLYPH_CATEGORY_MASK) | GLYPH_TRAIL;
-        g++;
-      }
-      return g;
-
-    case ccs_jisx0201_kana:
-      // 二バイトの先導バイトが単独で現れたもの。対応表は代替の字を返す
-      if (SJISP (cc))
-        goto bad_char;
-      break;
-
-    case ccs_smlcdm:
-      font = GLYPH_FONT_SMLCDM;
-      break;
-
-    case ccs_utf16_surrogate_high:
-      font = GLYPH_FONT_SURROGATE_HIGH;
-      break;
     }
 
-  if (wc == CHAR_INVALID)
-    goto bad_char;
-  *g++ = f | font | MAKE_GLYPH_CHAR (wc);
-  return g;
+  if (utf16_surrogate_low_p (cc))
+    {
+      ucs2_t hi = pending_surrogate_high (g, g0);
+      if (!hi)
+        {
+          *g++ = f | GLYPH_BM_BLANK;
+          return g;
+        }
+      // 対の後半は前半の属性をそのまま引き継ぐ。走査の単位が割れないようにする
+      g[-1] = ((g[-1] & ~(GLYPH_FONT_MASK | GLYPH_CATEGORY_MASK | GLYPH_CHAR_MASK))
+               | GLYPH_FONT_SURROGATE | GLYPH_LEAD
+               | MAKE_GLYPH_CHAR (utf16_pair_to_ucs4 (hi, cc)));
+      *g = (g[-1] & ~GLYPH_CATEGORY_MASK) | GLYPH_TRAIL;
+      return g + 1;
+    }
 
- bad_char:
-  *g++ = f | GLYPH_BM_BLANK;
+  glyph_t font;
+  if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
+    font = GLYPH_FONT_SMLCDM;
+  else if (utf16_surrogate_high_p (cc))
+    font = GLYPH_FONT_SURROGATE_HIGH;
+  else
+    font = MAKE_GLYPH_FONT (font_slot_of (cc, lang));
+
+  *g++ = f | font | MAKE_GLYPH_CHAR (cc);
   return g;
 }
 
@@ -1409,7 +1389,7 @@ glyph_bmchar (glyph_t *g, Char bm, lisp ch, int f, int n)
   else if (charp (ch) && char_width (xchar_code (ch)) == 1)
     for (int i = 0; i < n; i++)
       // 埋め草はそれぞれ独立した文字なので、隣どうしを対にしない
-      g = glyph_sbchar (g, g, xchar_code (ch), f, 0);
+      g = glyph_sbchar (g, g, xchar_code (ch), f, 0, ENCODING_LANG_NIL);
   else
     for (int i = 0; i < n; i++)
       *g++ = f | bm;
@@ -1753,6 +1733,7 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
 {
   glyph_t *g = gd->gd_cc;
   glyph_t *const ge = g + w_ch_max.cx;
+  const int lang = w_bufp->char_language ();
 
   if (g < ge)
     *g++ = ' ';
@@ -1847,10 +1828,10 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
                 {
                   if (g + 1 == ge)
                     break;
-                  g = glyph_dbchar (g, cc, 0, 0);
+                  g = glyph_dbchar (g, cc, 0, 0, lang);
                 }
               else
-                g = glyph_sbchar (g, gd->gd_cc, cc, 0, 0);
+                g = glyph_sbchar (g, gd->gd_cc, cc, 0, 0, lang);
             }
         }
       while (g < ge2)
@@ -2233,10 +2214,10 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
                   exceed = 1;
                   break;
                 }
-              g = glyph_dbchar (g, cc, f, wflags);
+              g = glyph_dbchar (g, cc, f, wflags, lang);
             }
           else
-            g = glyph_sbchar (g, g0, cc, f, wflags);
+            g = glyph_sbchar (g, g0, cc, f, wflags, lang);
 
           if (f & GLYPH_SELECTED
               && seltype == Buffer::SELECTION_RECTANGLE
@@ -3086,10 +3067,10 @@ Window::paint_minibuffer_message (lisp string)
         {
           if (g + 1 == ge)
             break;
-          g = glyph_dbchar (g, cc, 0, 0);
+          g = glyph_dbchar (g, cc, 0, 0, ENCODING_LANG_NIL);
         }
       else
-        g = glyph_sbchar (g, (*gr)->gd_cc, cc, 0, 0);
+        g = glyph_sbchar (g, (*gr)->gd_cc, cc, 0, 0, ENCODING_LANG_NIL);
     }
 
   app.minibuffer_prompt_column = g - (*gr)->gd_cc;

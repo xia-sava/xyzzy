@@ -456,6 +456,10 @@ struct Buffer
   lisp lchar_encoding;
 # define Buffer_gc_end lchar_encoding
 
+  // 文字の言語。漢字を統合した符号位置から字形を選ぶ手掛かりになる。
+  // ENCODING_LANG_NIL は「符号が表す言語に従う」を意味する
+  int b_char_language;
+
   lisp lmarkers; // XXX
 
   u_char b_minibufferp;
@@ -690,6 +694,7 @@ struct Buffer
   char *buffer_name (char *, char *) const;
   char *quoted_buffer_name (char *, char *, int, int) const;
   void modify_mode_line () const;
+  int char_language () const;
   void modify_buffer_bar ()
     {
       b_buffer_bar_modified |= BUFFER_BAR_MODIFIED;

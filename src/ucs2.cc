@@ -519,9 +519,36 @@ init_charset_category ()
 #endif
 }
 
+// 桁数の表は文字集合ごとの内部コードで並んでいる。バッファが Unicode を持つように
+// なったので、写し先の符号位置で引けるように組み替える
+// 同じ字が一桁の文字集合と二桁の文字集合の両方にあるとき（ラテン文字は
+// ISO 8859 にも JIS X 0212 にもある）は、一桁として扱う
+static void
+init_char_width ()
+{
+  u_char legacy[CHAR_WIDTH_TABLE_SIZE];
+  memcpy (legacy, char_width_table, sizeof legacy);
+  memset (char_width_table, 0, sizeof char_width_table);
+  for (int cc = 0; cc < CHAR_LIMIT; cc++)
+    if (legacy[cc >> 3] & (1 << (cc & 7)))
+      {
+        ucs2_t wc = i2w (Char (cc));
+        if (wc != CHAR_INVALID)
+          char_width_table[wc >> 3] |= 1 << (wc & 7);
+      }
+  for (int cc = 0; cc < CHAR_LIMIT; cc++)
+    if (!(legacy[cc >> 3] & (1 << (cc & 7))))
+      {
+        ucs2_t wc = i2w (Char (cc));
+        if (wc != CHAR_INVALID)
+          char_width_table[wc >> 3] &= ~(1 << (wc & 7));
+      }
+}
+
 void
 init_ucs2_table ()
 {
+  init_char_width ();
   memcpy (char_columns_table, char_width_table, sizeof char_width_table);
 
   make_wc2cp932_table ();

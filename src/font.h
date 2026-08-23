@@ -177,9 +177,9 @@ public:
     }
 };
 
-// 内部コードを、それを描くフォントの枠へ対応づける。画面・印刷・入力のいずれも
-// ここを通す
-int font_slot_of (Char cc);
+// 符号位置を、それを描くフォントの枠へ対応づける。漢字はどの言語の字形で描くか
+// が符号位置だけでは決まらないので、バッファが持つ言語を渡す
+int font_slot_of (Char cc, int lang = ENCODING_LANG_NIL);
 
 // BMP 外の文字を描くフォント。字送りが二桁に収まるよう高さを抑える
 HFONT create_surrogate_font (const SIZE &cell);

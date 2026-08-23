@@ -69,61 +69,76 @@ const FontSet::fontface FontSet::fs_default_face[] =
   {"BPG Courier New U"},
 };
 
-// 漢字は同じ字が日本・中国・台湾の文字集合に重ねて含まれ、Unicode では同じ符号
-// 位置になる。どの字形で描くかは符号位置だけでは決められないので、内部コードが
-// どの文字集合の区画にあるかで振り分ける
-int
-font_slot_of (Char cc)
+// 漢字は同じ字が日本・中国・台湾・韓国で共通の符号位置になる。どの字形で描くかは
+// 符号位置だけでは決められないので、バッファが持つ言語で振り分ける
+static int
+han_font_slot (int lang)
 {
-  switch (code_charset (cc))
+  switch (lang)
     {
-    case ccs_usascii:
-      return FONT_ASCII;
-
-    case ccs_iso8859_1:
-    case ccs_iso8859_2:
-    case ccs_iso8859_3:
-    case ccs_iso8859_4:
-    case ccs_iso8859_9:
-    case ccs_iso8859_10:
-    case ccs_iso8859_13:
-#ifdef CCS_ULATIN_MIN
-    case ccs_ulatin:
-#endif
-      return FONT_LATIN;
-
-    case ccs_iso8859_5:
-      return FONT_CYRILLIC;
-
-    case ccs_iso8859_7:
-      return FONT_GREEK;
-
-    case ccs_georgian:
-      return FONT_GEORGIAN;
-
-    case ccs_gb2312:
-      return FONT_CN_SIMPLIFIED;
-
-    case ccs_big5:
-      return FONT_CN_TRADITIONAL;
-
-    case ccs_ksc5601:
+    case ENCODING_LANG_KR:
       return FONT_HANGUL;
 
-    case ccs_utf16_surrogate_high:
-    case ccs_utf16_surrogate_low:
-    case ccs_utf16_undef_char_high:
-    case ccs_utf16_undef_char_low:
-      // 対にならなかったサロゲートなどは字が無い。豆腐は ASCII のフォントで出す
-      return FONT_ASCII;
+    case ENCODING_LANG_CN:
+    case ENCODING_LANG_CN_GB:
+      return FONT_CN_SIMPLIFIED;
 
-    case ccs_ipa:
-      // IPA 拡張は専用の枠を持たないので日本語のフォントで描く
-      return FONT_JP;
+    case ENCODING_LANG_CN_BIG5:
+      return FONT_CN_TRADITIONAL;
 
     default:
       return FONT_JP;
     }
+}
+
+// 符号位置がどの文字体系に属するかでフォントの枠を決める。画面・印刷・入力の
+// いずれもここを通す
+int
+font_slot_of (Char cc, int lang)
+{
+  if (cc < 0x80)
+    return FONT_ASCII;
+
+  if (cc < 0x0250)              // ラテン補助・ラテン拡張 A/B
+    return FONT_LATIN;
+  if (cc < 0x0370)              // IPA 拡張・修飾文字・結合分音記号
+    return FONT_JP;
+  if (cc < 0x0400)              // ギリシャ
+    return FONT_GREEK;
+  if (cc < 0x0530)              // キリル
+    return FONT_CYRILLIC;
+  if (cc >= 0x10a0 && cc < 0x1100)
+    return FONT_GEORGIAN;
+  if (cc >= 0x1e00 && cc < 0x1f00)  // ラテン拡張追加
+    return FONT_LATIN;
+  if (cc >= 0x1f00 && cc < 0x2000)  // ギリシャ拡張
+    return FONT_GREEK;
+
+  // ハングル。字母・互換字母・音節
+  if (cc >= 0x1100 && cc < 0x1200
+      || cc >= 0x3130 && cc < 0x3190
+      || cc >= 0xac00 && cc < 0xd7b0
+      || cc >= 0xffa0 && cc < 0xffdd)
+    return FONT_HANGUL;
+
+  // 漢字。部首・康熙部首・統合漢字・互換漢字
+  if (cc >= 0x2e80 && cc < 0x2fe0
+      || cc >= 0x3005 && cc < 0x3006
+      || cc >= 0x3400 && cc < 0x4dc0
+      || cc >= 0x4e00 && cc < 0xa000
+      || cc >= 0xf900 && cc < 0xfb00)
+    return han_font_slot (lang);
+
+  // 注音符号は繁体字の文字集合にしかない
+  if (cc >= 0x3100 && cc < 0x3130 || cc >= 0x31a0 && cc < 0x31c0)
+    return FONT_CN_TRADITIONAL;
+
+  // 対にならなかったサロゲートは字が無い。豆腐は ASCII のフォントで出す
+  if (utf16_surrogate_high_p (cc) || utf16_surrogate_low_p (cc))
+    return FONT_ASCII;
+
+  // 仮名・約物・全角形など、日本語のフォントが受け持つもの
+  return FONT_JP;
 }
 
 // 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
