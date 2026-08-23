@@ -113,10 +113,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="..\src\gen-jisx0212-hash.cc">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="..\src\gen-jisx0212-width.cc">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
@@ -199,13 +195,6 @@
     <Exec Command="&quot;$(TargetPath)&quot; gen-iso2022state &gt; &quot;$(GenIso2022StateOutput)&quot;" WorkingDirectory="$(GenerateWorkingDirectory)" />
   </Target>
   <PropertyGroup>
-    <GenJisX0212HashInputs>..\src\gen-jisx0212-hash.cc;..\src\cdecl.h;..\src\charset.h</GenJisX0212HashInputs>
-    <GenJisX0212HashOutput>$(GenerateDir)jisx0212-hash.h</GenJisX0212HashOutput>
-  </PropertyGroup>
-  <Target Name="GenJisX0212Hash" Inputs="$(GenJisX0212HashInputs)" Outputs="$(GenJisX0212HashOutput)" DependsOnTargets="PrepareGenerate">
-    <Exec Command="&quot;$(TargetPath)&quot; gen-jisx0212-hash &gt; &quot;$(GenJisX0212HashOutput)&quot;" WorkingDirectory="$(GenerateWorkingDirectory)" />
-  </Target>
-  <PropertyGroup>
     <GenKtabInputs>..\src\gen-ktab.cc</GenKtabInputs>
     <GenKtabOutput>$(GenerateDir)kanjitab.h</GenKtabOutput>
   </PropertyGroup>
@@ -235,7 +224,6 @@
     <CallTarget Targets="GenCtab" />
     <CallTarget Targets="GenIbmExt" />
     <CallTarget Targets="GenIso2022State" />
-    <CallTarget Targets="GenJisX0212Hash" />
     <CallTarget Targets="GenKtab" />
     <CallTarget Targets="GenSyms" />
     <CallTarget Targets="GenUtf2Sjis" />

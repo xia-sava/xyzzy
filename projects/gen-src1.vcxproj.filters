@@ -25,9 +25,6 @@
     <ClCompile Include="..\src\gen-iso2022state.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gen-jisx0212-hash.cc">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gen-ktab.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
