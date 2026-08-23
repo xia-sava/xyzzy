@@ -100,7 +100,9 @@ protected:
   static const UINT fs_lang_id[];
   static const lisp *const fs_lang_key[];
   static const char *const fs_regent[];
-  struct fontface {const char *disp, *print; int charset;};
+  // disp が入っていなければ alt を使う。Windows の版によって、入っている
+  // フォントが違うため
+  struct fontface {const char *disp, *alt, *print; int charset;};
   static const fontface fs_default_face[];
   static const ucs2_t fs_sample_char[];
 public:
@@ -160,9 +162,7 @@ public:
   int full_width_slot_p (int slot) const;
 
   static const char *regent (int n) {return fs_regent[n];}
-  static const char *default_face (int n, int print)
-    {return (!print || !fs_default_face[n].print
-             ? fs_default_face[n].disp : fs_default_face[n].print);}
+  static const char *default_face (int n, int print);
   static int default_charset (int n) {return fs_default_face[n].charset;}
   static UINT lang_id (int n) {return fs_lang_id[n];}
   static const lisp lang_key (int n) {return *fs_lang_key[n];}
