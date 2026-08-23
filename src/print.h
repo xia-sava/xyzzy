@@ -134,6 +134,8 @@ struct glyph_width
   HDC hdc;
   const HFONT *hfonts;
   int height;
+  // 漢字をどの言語の字形で描くか
+  int lang;
   short pixel[CHAR_LIMIT];
 };
 

@@ -557,6 +557,7 @@ print_engine::init_font (HDC hdc)
       pe_glyph_width.hdc = hdc;
       pe_glyph_width.hfonts = pe_hfonts;
       pe_glyph_width.height = pe_print_cell.cy;
+      pe_glyph_width.lang = pe_bp->char_language ();
       for (i = 0; i < numberof (pe_glyph_width.pixel); i++)
         pe_glyph_width.pixel[i] = -1;
       for (i = ' '; i < CC_DEL; i++)
@@ -814,7 +815,7 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
 {
   if (cc != ' ')
     {
-      char c = SJISP (cc) ? 0 : char (cc);
+      char c = cc < 0x80 ? char (cc) : 0;
       SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
       ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, &c, 1, 0);
     }
@@ -824,25 +825,16 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
             : get_glyph_width (cc, pe_glyph_width));
 }
 
-// 内部コードを Unicode にして、担当のフォントで描く。二桁の文字は二桁ぶんの
-// 幅に対して字を中央へ寄せる
+// 担当のフォントで描く。二桁の文字は二桁ぶんの幅に対して字を中央へ寄せる
 void
 print_engine::paint_char (PaintCtx &ctx, Char cc) const
 {
   int l = charset_width (cc);
-  ucs2_t wc = i2w (cc);
-  if (wc != CHAR_INVALID)
-    {
-      int f = font_slot_of (cc);
-      SelectObject (ctx.hdc, pe_hfonts[f]);
-      ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? pe_offset2x[f] : pe_offset[f].x),
-                   ctx.y + pe_offset[f].y, 0, 0, &wc, 1, 0);
-    }
-  else
-    {
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "\0\0", l, 0);
-    }
+  ucs2_t wc = ucs2_t (cc);
+  int f = font_slot_of (cc, pe_bp->char_language ());
+  SelectObject (ctx.hdc, pe_hfonts[f]);
+  ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? pe_offset2x[f] : pe_offset[f].x),
+               ctx.y + pe_offset[f].y, 0, 0, &wc, 1, 0);
   ctx.column += l;
   ctx.x += (pe_fixed_pitch
             ? pe_print_cell.cx * l
@@ -873,29 +865,21 @@ print_engine::paint_surrogate_pair (PaintCtx &ctx, ucs4_t lc) const
 void
 print_engine::paint_lucida (PaintCtx &ctx, Char cc) const
 {
-  ucs2_t wc = i2w (cc);
-  if (wc != ucs2_t (-1))
-    {
-      static LOGFONT lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
-      lf.lfHeight = pe_cell.cy;
-      HGDIOBJ of = SelectObject (ctx.hdc, CreateFontIndirect (&lf));
-      int o;
-      if (pe_fixed_pitch)
-        o = (LUCIDA_OFFSET (wc - UNICODE_SMLCDM_MIN)
-             * pe_cell.cy / LUCIDA_BASE_HEIGHT) + pe_print_cell.cx / 2;
-      else
-        {
-          const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
-          o = p->a >= 0 ? 0 : -p->a * pe_cell.cy / LUCIDA_BASE_HEIGHT;
-        }
-      ExtTextOutW (ctx.hdc, ctx.x + o, ctx.y, 0, 0, &wc, 1, 0);
-      DeleteObject (SelectObject (ctx.hdc, of));
-    }
+  ucs2_t wc = ucs2_t (cc);
+  static LOGFONT lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
+  lf.lfHeight = pe_cell.cy;
+  HGDIOBJ of = SelectObject (ctx.hdc, CreateFontIndirect (&lf));
+  int o;
+  if (pe_fixed_pitch)
+    o = (LUCIDA_OFFSET (wc - UNICODE_SMLCDM_MIN)
+         * pe_cell.cy / LUCIDA_BASE_HEIGHT) + pe_print_cell.cx / 2;
   else
     {
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "", 1, 0);
+      const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
+      o = p->a >= 0 ? 0 : -p->a * pe_cell.cy / LUCIDA_BASE_HEIGHT;
     }
+  ExtTextOutW (ctx.hdc, ctx.x + o, ctx.y, 0, 0, &wc, 1, 0);
+  DeleteObject (SelectObject (ctx.hdc, of));
   ctx.column++;
   ctx.x += (pe_fixed_pitch
             ? pe_print_cell.cx
@@ -975,13 +959,12 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
               continue;
             }
         }
-      switch (code_charset (cc))
+      if (cc < 0x80)
         {
-        case ccs_usascii:
           if (cc < ' ')
             {
               if (cc == CC_LFD)
-                break;
+                continue;
               if (cc == CC_TAB)
                 {
                   int goal = ((ctx.column + pe_bp->b_tab_columns) / pe_bp->b_tab_columns
@@ -1003,16 +986,11 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
             }
           else
             paint_ascii (ctx, cc);
-          break;
-
-        case ccs_smlcdm:
-          paint_lucida (ctx, cc);
-          break;
-
-        default:
-          paint_char (ctx, cc);
-          break;
         }
+      else if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
+        paint_lucida (ctx, cc);
+      else
+        paint_char (ctx, cc);
     }
 
   return pe_bp->eobp (cur_point);
@@ -1029,12 +1007,12 @@ print_engine::paint_string (HDC hdc, int x, int y, const char *s, int l) const
   for (const u_char *p = (const u_char *)s, *pe = p + l; p < pe;)
     {
       int c = *p++;
-      if (SJISP (c) && p != pe)
-        paint_char (ctx, (c << 8) | *p++);
-      else if (kana_char_p (c))
-        paint_char (ctx, c);
-      else
+      if (c < 0x80)
         paint_ascii (ctx, c);
+      else if (SJISP (c) && p != pe)
+        paint_char (ctx, s2w_char ((c << 8) | *p++));
+      else
+        paint_char (ctx, s2w_char (c));
     }
 }
 
@@ -1046,9 +1024,9 @@ print_engine::get_extent (const char *s, int l) const
     {
       int c = *p++;
       if (SJISP (c) && p != pe)
-        cx += get_glyph_width ((c << 8) | *p++, pe_glyph_width);
+        cx += get_glyph_width (s2w_char ((c << 8) | *p++), pe_glyph_width);
       else
-        cx += get_glyph_width (c, pe_glyph_width);
+        cx += get_glyph_width (s2w_char (c), pe_glyph_width);
     }
   return cx;
 }
@@ -1957,51 +1935,23 @@ get_glyph_width (Char cc, const glyph_width &gw)
     return gw.pixel[cc];
 
   SIZE sz;
-  switch (code_charset (cc))
+  ucs2_t wc = ucs2_t (cc);
+  if (cc < 0x80)
     {
-    case ccs_usascii:
-      {
-        char c = SJISP (cc) ? 0 : char (cc);
-        SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-        GetTextExtentPoint32 (gw.hdc, &c, 1, &sz);
-        break;
-      }
-
-    case ccs_smlcdm:
-      {
-        ucs2_t wc = i2w (cc);
-        if (wc != ucs2_t (-1))
-          {
-            const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
-            if (p->a >= 0)
-              sz.cx = p->a * 2 + p->b;
-            else
-              sz.cx = LUCIDA_SPACING * 2 + p->b;
-            sz.cx = sz.cx * gw.height / LUCIDA_BASE_HEIGHT;
-          }
-        else
-          {
-            SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-            GetTextExtentPoint32 (gw.hdc, "\0", charset_width (cc), &sz);
-          }
-        break;
-      }
-
-    default:
-      {
-        ucs2_t wc = i2w (cc);
-        if (wc != CHAR_INVALID)
-          {
-            SelectObject (gw.hdc, gw.hfonts[font_slot_of (cc)]);
-            GetTextExtentPoint32W (gw.hdc, &wc, 1, &sz);
-          }
-        else
-          {
-            SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-            GetTextExtentPoint32 (gw.hdc, "\0\0", charset_width (cc), &sz);
-          }
-        break;
-      }
+      char c = char (cc);
+      SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
+      GetTextExtentPoint32 (gw.hdc, &c, 1, &sz);
+    }
+  else if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
+    {
+      const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
+      sz.cx = p->a >= 0 ? p->a * 2 + p->b : LUCIDA_SPACING * 2 + p->b;
+      sz.cx = sz.cx * gw.height / LUCIDA_BASE_HEIGHT;
+    }
+  else
+    {
+      SelectObject (gw.hdc, gw.hfonts[font_slot_of (cc, gw.lang)]);
+      GetTextExtentPoint32W (gw.hdc, &wc, 1, &sz);
     }
 
   const_cast <short *> (gw.pixel)[cc] = (short)sz.cx;
