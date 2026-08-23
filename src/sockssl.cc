@@ -411,9 +411,9 @@ sockssl::verify_certificate (const char *server_name, DWORD cert_flags)
   policy_https.dwAuthType = AUTHTYPE_SERVER;
   policy_https.fdwChecks = cert_flags;
 
-  size_t len = strlen (server_name) + 1;
-  Char *w = (Char *)alloca (len * sizeof (Char));
-  a2w (w, server_name, len);
+  int len = strlen (server_name) + 1;
+  WCHAR *w = (WCHAR *)alloca (len * sizeof (WCHAR));
+  MultiByteToWideChar (CP_ACP, 0, server_name, -1, w, len);
   policy_https.pwszServerName = w;
 
   memset (&policy_para, 0, sizeof (policy_para));

@@ -121,7 +121,7 @@ standard_char_name2Char (const Char *name, int l)
        p < pe; p++)
     if (l == p->l && seql (name, (const u_char *)p->name))
       return p->code;
-  return Char (-1);
+  return CHAR_INVALID;
 }
 
 Char
@@ -132,7 +132,7 @@ function_char_name2Char (const Char *name, int l)
        p < pe; p++)
     if (l == p->l && sequal (name, (const u_char *)p->name))
       return p->code;
-  return Char (-1);
+  return CHAR_INVALID;
 }
 
 Char

@@ -1287,6 +1287,7 @@
 (si::defun-builtin char-encoding-display-name (char-encoding))
 (si::defun-builtin char-encoding-type (char-encoding))
 (si::defun-builtin char-encoding-signature (char-encoding))
+(si::defun-builtin char-encoding-language (char-encoding))
 (si::defun-builtin parse-char-encoding-region (accept-char-encoding from to))
 (si::defun-builtin parse-char-encoding-string (accept-char-encoding string &key :start :end))
 (si::defun-builtin run-hooks (&rest hooks))

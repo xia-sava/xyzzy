@@ -5,6 +5,13 @@
 const char *const buffer_info::b_eol_name[] = {"lf", "crlf", "cr"};
 
 char *
+buffer_info::encoding_lang (char *b, char *be) const
+{
+  lisp lang = from_lang (encoding_language (b_bufp->lchar_encoding));
+  return lang == Qnil ? b : w2s (b, be, xsymbol_name (lang));
+}
+
+char *
 buffer_info::modified (char *b, int pound) const
 {
   if (!pound)
@@ -242,7 +249,7 @@ buffer_info::format (lisp fmt, char *b, char *be) const
         {
         normal_char:
           if (DBCP (c))
-            *b++ = c >> 8;
+            *b++ = char (c >> 8);
           *b++ = char (c);
         }
       else
@@ -304,6 +311,10 @@ buffer_info::format (lisp fmt, char *b, char *be) const
 
             case 'k':
               b = encoding (b, be);
+              break;
+
+            case 'K':
+              b = encoding_lang (b, be);
               break;
 
             case 'l':

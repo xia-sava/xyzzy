@@ -14,7 +14,7 @@ make_char (Char c)
 inline int
 charp (lisp x)
 {
-  return lowbits (pointer_t (x)) == Lchar;
+  return immediate_tag (x) == Lchar;
 }
 
 inline Char

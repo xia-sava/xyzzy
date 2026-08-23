@@ -1123,8 +1123,14 @@ text_drop_target::Drop (IDataObject *data_obj, DWORD key,
           else
             {
               xyzzytext_header *x = (xyzzytext_header *)ptr;
-              bp->insert_chars (app.drop_window->w_point, x->data, x->size);
-              hr = S_OK;
+              if (x->size >= 0
+                  && (GlobalSize (medium.hGlobal)
+                      >= (offsetof (xyzzytext_header, data)
+                          + sizeof (Char) * size_t (x->size))))
+                {
+                  bp->insert_chars (app.drop_window->w_point, x->data, x->size);
+                  hr = S_OK;
+                }
             }
           if (hr == S_OK)
             bp->goto_char (wp->w_point, opoint);

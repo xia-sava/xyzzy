@@ -444,7 +444,7 @@ gen_ibmext (int argc, char **argv)
     w2i[internal2wc_table[i]] = i;
   for (int i = 0xe000; i <= 0xefff; i++)
     w2i[internal2wc_table[i]] = i;
-  w2i[ucs2_t (-1)] = Char (-1);
+  w2i[ucs2_t (-1)] = CHAR_INVALID;
 
   printf ("static const Char ibmext2necext_table[] =\n{");
 

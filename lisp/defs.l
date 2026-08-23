@@ -23,7 +23,7 @@
 	  ))
 
 (or (boundp 'mode-line-format)
-    (setq-default mode-line-format "--%*- %b (%M) [%k:%l] %P %f"))
+    (setq-default mode-line-format "--%*- %b (%M) [%k/%K:%l] %P %f"))
 
 (defvar *auto-mode-alist* '(("\\.c$" . c-mode)
 			    ("\\.h$" . detect-c-or-c++-mode)

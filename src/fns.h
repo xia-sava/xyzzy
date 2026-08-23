@@ -174,6 +174,7 @@ lisp symbol_value_char_encoding (lisp);
 int to_vender_code (lisp);
 int to_lang (lisp);
 lisp from_lang (int);
+int encoding_language (lisp);
 
 /* Window.cc */
 void ForceSetForegroundWindow (HWND);

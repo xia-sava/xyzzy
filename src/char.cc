@@ -327,7 +327,10 @@ Fchar_code (lisp cc)
 lisp
 Fcode_char (lisp code)
 {
-  return make_char (Char (fixnum_value (code)));
+  long n = fixnum_value (code);
+  if (n < 0 || n >= CHAR_LIMIT)
+    return Qnil;
+  return make_char (Char (n));
 }
 
 lisp
@@ -423,10 +426,10 @@ Funicode_char (lisp code)
     {
       Char cc;
       if (xsymbol_value (Vunicode_to_half_width) != Qnil
-          || (cc = wc2cp932 (ucs2_t (wc))) == Char (-1)
+          || (cc = wc2cp932 (ucs2_t (wc))) == CHAR_INVALID
           || ccs_1byte_94_charset_p (code_charset (cc)))
         cc = w2i (ucs2_t (wc));
-      if (cc != Char (-1))
+      if (cc != CHAR_INVALID)
         return make_char (cc);
       b[0] = utf16_ucs2_to_undef_pair_high (ucs2_t (wc));
       b[1] = utf16_ucs2_to_undef_pair_low (ucs2_t (wc));
@@ -612,7 +615,7 @@ Fiso_code_char (lisp code, lisp charset, lisp vender)
     {
       init_cns11643_table ();
       cc = cns11643_1_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)];
-      if (cc != Char (-1))
+      if (cc != CHAR_INVALID)
         return make_char (cc);
       return Qnil;
     }
@@ -620,7 +623,7 @@ Fiso_code_char (lisp code, lisp charset, lisp vender)
     {
       init_cns11643_table ();
       cc = cns11643_2_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)];
-      if (cc != Char (-1))
+      if (cc != CHAR_INVALID)
         return make_char (cc);
       return Qnil;
     }

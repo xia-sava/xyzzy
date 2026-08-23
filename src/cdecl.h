@@ -45,8 +45,11 @@ typedef u_long u_int32_t;
 
 typedef u_long pointer_t;
 
-typedef u_int16_t Char;
+typedef u_int32_t Char;
 # define CHAR_LIMIT 0x10000
+/* 内部コードとして無効であることを表す。Unicode で恒久的に文字を割り当てない
+   符号位置なので、内部表現が変わっても値を保てる */
+# define CHAR_INVALID Char (0xffff)
 typedef u_long lChar;
 const lChar lChar_EOF = lChar (-1);
 

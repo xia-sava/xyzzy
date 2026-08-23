@@ -124,14 +124,15 @@ kbd_queue::peek (int req_mouse_move)
             return lChar_EOF;
           c = cc[head];
           head = (head + 1) % QUEUE_MAX;
-          if (!req_mouse_move && char_mouse_move_p (Char (c)))
+          if (!req_mouse_move && char_mouse_move_p (lchar_to_char (c)))
             return lChar_EOF;
-          if (save_p () && !(c & LCHAR_MENU) && !char_mouse_move_p (Char (c)))
+          if (save_p () && !(c & LCHAR_MENU)
+              && !char_mouse_move_p (lchar_to_char (c)))
             {
               if (nsaved == KBDMACRO_MAX)
                 stop_macro ();
               else
-                saved[nsaved++] = Char (c);
+                saved[nsaved++] = lchar_to_char (c);
             }
         }
     }
@@ -1185,8 +1186,8 @@ store_wcs (Char *b0, const ucs2_t *w, int l, const Char *tab)
   for (const ucs2_t *we = w + l; w < we; w++)
     {
       Char cc;
-      if ((!tab || (cc = tab[*w]) == Char (-1))
-          && (cc = w2i (*w)) == Char (-1))
+      if ((!tab || (cc = tab[*w]) == CHAR_INVALID)
+          && (cc = w2i (*w)) == CHAR_INVALID)
         {
           *b++ = utf16_ucs2_to_undef_pair_high (*w);
           cc = utf16_ucs2_to_undef_pair_low (*w);

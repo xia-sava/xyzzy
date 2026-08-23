@@ -969,7 +969,7 @@ item_string (lisp item, char *buf, int size)
           else if (c < ' ')
             {
               *b++ = '^';
-              *b++ = c + '@';
+              *b++ = char (c + '@');
             }
           else
             *b++ = char (c);

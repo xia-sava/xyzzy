@@ -5,14 +5,13 @@
 inline lisp
 make_message (int n)
 {
-  assert (n < (1 << 16));
-  return make_immediate (Lmessage, u_short (n));
+  return make_immediate (Lmessage, n);
 }
 
 inline int
 messagep (lisp x)
 {
-  return lowbits (pointer_t (x)) == Lmessage;
+  return immediate_tag (x) == Lmessage;
 }
 
 inline int

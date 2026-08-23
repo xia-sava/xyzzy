@@ -18913,7 +18913,7 @@ NUMBER がゼロより小さければ t 、そうでなければ nil を返し�
 モードラインのフォーマットを設定します。
 
 使用例：
-  (setq mode-line-format "--%*- %b (%M) [%k:%l] %P %f")
+  (setq mode-line-format "--%*- %b (%M) [%k/%K:%l] %P %f")
 
 パラメタ：
   %*    変更あり          : **
@@ -18940,6 +18940,7 @@ NUMBER がゼロより小さければ t 、そうでなければ nil を返し�
   %M    モード(マイナーモード含む)
   %m    モード
   %k    エンコーディング
+  %K    エンコーディングが表す言語
   %l    改行コード
   %i    IMEの状態
   %P    カーソル位置
@@ -30131,8 +30132,9 @@ catchで指定されたラベルまで、非局所脱出します。
   %#F   ファイル名。ファイル名がなければバッファ名 
   %M    モード(マイナーモード含む) 
   %m    モード 
-  %k    エンコーディング 
-  %l    改行コード 
+  %k    エンコーディング
+  %K    エンコーディングが表す言語
+  %l    改行コード
   %!    xyzzyが管理者として実行されている場合は "管理者: "
 
 備考：
@@ -33183,6 +33185,52 @@ UTF以外のエンコーディングを指定した場合はnilを返します�
 <seealso>char-encoding-name</seealso>
 <seealso>char-encoding-display-name</seealso>
 <seealso>char-encoding-type</seealso>
+<link></link>
+<section>テキスト</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>char-encoding-language</title>
+<type>Function</type>
+<arguments>char-encoding-language ENCODING</arguments>
+<package>editor</package>
+<description>
+エンコーディングが表す言語をキーワードで返します。表さない場合はnilを返します。
+
+戻り値：
+  :jp       日本語
+  :jp2      日本語(JIS X 0212を使う)
+  :kr       韓国語
+  :cn       中国語(簡体字と繁体字の両方)
+  :cn-gb    中国語(簡体字)
+  :cn-big5  中国語(繁体字)
+
+同じ符号位置を複数の言語が共有するため、Unicodeのエンコーディングは
+どの言語として読むかをエンコーディング自身が持っています。この値は
+読み込んだ文字がどの文字集合になるかを決めます。
+
+実行例：
+  (char-encoding-language *encoding-sjis*)
+  =&gt; :jp
+  (char-encoding-language *encoding-utf8n*)
+  =&gt; :jp
+  (char-encoding-language *encoding-utf8n-gb*)
+  =&gt; :cn-gb
+  (char-encoding-language *encoding-iso-8859-1*)
+  =&gt; nil
+
+  (char-encoding-language (buffer-fileio-encoding))
+  =&gt; :jp
+
+補足：
+  モードラインとタイトルバーのフォーマットの %K で表示できます。
+</description>
+<seealso>char-encoding-p</seealso>
+<seealso>char-encoding-name</seealso>
+<seealso>char-encoding-type</seealso>
+<seealso>buffer-fileio-encoding</seealso>
+<seealso>mode-line-format</seealso>
 <link></link>
 <section>テキスト</section>
 <file>builtin.l</file>

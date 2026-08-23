@@ -2671,6 +2671,7 @@ static symbols ed[] =
   DEFUN3 (char-encoding-display-name, 1, 0, 0),
   DEFUN3 (char-encoding-type, 1, 0, 0),
   DEFUN3 (char-encoding-signature, 1, 0, 0),
+  DEFUN3 (char-encoding-language, 1, 0, 0),
   DEFVAR2 (*encoding-sjis*),
   MAKE_SYMBOL2 (*encoding-euc-jp*),
   MAKE_SYMBOL2 (*encoding-jis*),

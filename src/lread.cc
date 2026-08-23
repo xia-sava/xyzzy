@@ -915,7 +915,7 @@ number_backslash_reader (lisp stream, Char, dispmacro_param &param)
     reader_error (stream, Einvalid_char_code_syntax, token.make_string ());
 
   Char c = function_char_name2Char (p, l);
-  if (c != Char (-1))
+  if (c != CHAR_INVALID)
     {
       if (ctl)
         c |= CCF_CTRL_BIT;
@@ -935,7 +935,7 @@ number_backslash_reader (lisp stream, Char, dispmacro_param &param)
   else
     {
       c = standard_char_name2Char (p, l);
-      if (c == Char (-1))
+      if (c == CHAR_INVALID)
         c = l == 1 ? *p : parse_digit_char (stream, token, p, p + l);
 
       if (shift)

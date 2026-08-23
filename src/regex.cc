@@ -50,9 +50,9 @@ class charclass
   Char hi[256 / NBITS];
   Char lo[256][256 / NBITS];
   static void set (Char *b, int n)
-    {b[n / NBITS] |= 1 << (n % NBITS);}
+    {b[n / NBITS] |= Char (1) << (n % NBITS);}
   static int isset (const Char *b, int n)
-    {return b[n / NBITS] & (1 << (n % NBITS));}
+    {return (b[n / NBITS] & (Char (1) << (n % NBITS))) != 0;}
 public:
   struct cc
     {
@@ -98,7 +98,7 @@ charclass::count_size (cc &f) const
         u++;
         int i;
         for (i = l; i < u; i++)
-          if (lo[h][i] != Char (-1))
+          if (lo[h][i] != CHAR_INVALID)
             break;
         size += 2;
         if (i < u)
@@ -1154,8 +1154,10 @@ regexp_compile::compile_fastmap (char *fastmap, const Char *p, const Char *pe) c
             Char c = p[1];
             if (c < 256)
               fastmap[c] = 1;
-            else
+            else if (c < CHAR_LIMIT)
               fastmap[c >> 8] = 1;
+            else
+              return 0;
             return 1;
           }
 
@@ -1459,7 +1461,7 @@ Regexp::match_char_class (const Char *p, Char c) const
           if ((*p >> 8) == hi)
             {
               int x = lo / NBITS;
-              return x >= (p[1] & 0xff) && x < (p[1] >> 8);
+              return x >= int (p[1] & 0xff) && x < int (p[1] >> 8);
             }
           p += 2;
         }

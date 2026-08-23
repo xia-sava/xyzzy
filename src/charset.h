@@ -176,11 +176,12 @@
 #define CP_KOI8R          878
 #define CP_PSEUDO_KOI8U   100878
 
+/* 文字として扱えない内部コード（鍵盤の符号）は、どの表も引かずに退ける */
 static inline u_char
 code_charset (Char cc)
 {
   extern u_char code_charset_table[];
-  return code_charset_table[cc >> 7];
+  return cc < CHAR_LIMIT ? code_charset_table[cc >> 7] : u_char (ccs_invalid);
 }
 
 static inline u_int
@@ -383,20 +384,22 @@ extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
 static inline int
 charset_width (Char cc)
 {
-  return char_width_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
+  return (cc < CHAR_LIMIT
+          && (char_width_table[cc >> 3] & (1 << (cc & 7)))) ? 2 : 1;
 }
 
 static inline int
 char_width (Char cc)
 {
-  return char_columns_table[cc >> 3] & (1 << (cc & 7)) ? 2 : 1;
+  return (cc < CHAR_LIMIT
+          && (char_columns_table[cc >> 3] & (1 << (cc & 7)))) ? 2 : 1;
 }
 
 static inline const ucs2_t &
 i2w (Char cc)
 {
   extern ucs2_t internal2wc_table[];
-  return internal2wc_table[cc];
+  return internal2wc_table[cc < CHAR_LIMIT ? cc : CHAR_INVALID];
 }
 
 static inline const Char &
@@ -414,19 +417,19 @@ wc2cp932 (ucs2_t wc)
 }
 
 static inline int
-utf16_surrogate_high_p (ucs2_t c)
+utf16_surrogate_high_p (Char c)
 {
   return c >= CCS_UTF16_SURROGATE_HIGH_MIN && c <= CCS_UTF16_SURROGATE_HIGH_MAX;
 }
 
 static inline int
-utf16_surrogate_low_p (ucs2_t c)
+utf16_surrogate_low_p (Char c)
 {
   return c >= CCS_UTF16_SURROGATE_LOW_MIN && c <= CCS_UTF16_SURROGATE_LOW_MAX;
 }
 
 static inline ucs4_t
-utf16_pair_to_ucs4 (ucs2_t hi, ucs2_t lo)
+utf16_pair_to_ucs4 (Char hi, Char lo)
 {
   return (hi * 1024 + lo
           - (CCS_UTF16_SURROGATE_HIGH_MIN * 1024 + CCS_UTF16_SURROGATE_LOW_MIN - 0x10000));
@@ -445,21 +448,22 @@ utf16_ucs4_to_pair_low (ucs4_t c)
 }
 
 static inline int
-utf16_undef_char_high_p (ucs2_t c)
+utf16_undef_char_high_p (Char c)
 {
-  return (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_HIGH;
+  return c < CHAR_LIMIT && (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_HIGH;
 }
 
 static inline int
-utf16_undef_char_low_p (ucs2_t c)
+utf16_undef_char_low_p (Char c)
 {
-  return (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_LOW;
+  return c < CHAR_LIMIT && (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_LOW;
 }
 
 static inline ucs2_t
-utf16_undef_pair_to_ucs2 (ucs2_t hi, ucs2_t lo)
+utf16_undef_pair_to_ucs2 (Char hi, Char lo)
 {
-  return hi * 256 + lo - (CCS_UTF16_UNDEF_CHAR_HIGH * 256 + CCS_UTF16_UNDEF_CHAR_LOW);
+  return ucs2_t (hi * 256 + lo
+                 - (CCS_UTF16_UNDEF_CHAR_HIGH * 256 + CCS_UTF16_UNDEF_CHAR_LOW));
 }
 
 static inline ucs2_t
@@ -498,7 +502,7 @@ lookup_wc2int_hash (const wc2int_hash &hash, ucs2_t wc)
   int n = wc % hash.size;
   if (hash.rep[n].wc == wc)
     return hash.rep[n].cc;
-  return Char (-1);
+  return CHAR_INVALID;
 }
 
 extern wc2int_hash wc2int_iso8859_1_hash;

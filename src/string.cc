@@ -171,7 +171,7 @@ w2s (char *b, const Char *s, size_t size)
   for (const Char *se = s + size; s < se; s++)
     {
       if (DBCP (*s))
-        *b++ = *s >> 8;
+        *b++ = char (*s >> 8);
       *b++ = char (*s);
     }
   *b = 0;
@@ -196,7 +196,7 @@ w2s (char *b, char *be, const Char *s, size_t size)
         {
           if (b == be - 1)
             break;
-          *b++ = *s >> 8;
+          *b++ = char (*s >> 8);
         }
       *b++ = char (*s);
     }
@@ -214,7 +214,7 @@ w2s_quote (char *b, char *be, const Char *s, size_t size, int qc, int qe)
         {
           if (b == be - 1)
             break;
-          *b++ = *s >> 8;
+          *b++ = char (*s >> 8);
         }
       else if (*s == qc)
         {
@@ -282,7 +282,7 @@ w2s_chunk (char *b, char *be, const Char *s, size_t size)
         {
           if (b == be - 1)
             break;
-          *b++ = *s >> 8;
+          *b++ = char (*s >> 8);
         }
       *b++ = char (*s);
     }
