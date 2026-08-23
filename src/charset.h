@@ -121,6 +121,8 @@
 #define UNICODE_SMLCDM_MAX   0x036f
 #define UNICODE_GEORGIAN_MIN 0x10a0
 #define UNICODE_GEORGIAN_MAX 0x10f0
+#define UNICODE_HALFWIDTH_KANA_MIN 0xff61
+#define UNICODE_HALFWIDTH_KANA_MAX 0xff9f
 
 #define ccsf_iso8859_1              (1 << ccs_iso8859_1)
 #define ccsf_iso8859_2              (1 << ccs_iso8859_2)
@@ -380,6 +382,14 @@ mule_b2g (int &ccs, int &c1, int &c2)
 extern u_char char_width_table[CHAR_WIDTH_TABLE_SIZE];
 // 画面で占める桁数。担当するフォントの実測に合わせて書き換わる
 extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
+
+// 半角のカタカナ。折り返しや文字種の判定で、全角のかなと区別する
+static inline int
+halfwidth_kana_p (Char cc)
+{
+  return (cc >= UNICODE_HALFWIDTH_KANA_MIN
+          && cc <= UNICODE_HALFWIDTH_KANA_MAX);
+}
 
 // 符号変換のように、画面の見た目に左右されてはならない処理が使う
 static inline int

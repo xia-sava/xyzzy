@@ -2689,7 +2689,6 @@ static symbols ed[] =
   DEFVAR2 (*char-encoding-list*),
   DEFUN3 (parse-char-encoding-region, 3, 0, 0),
   DEFUN3 (parse-char-encoding-string, 2, 0, FFneed_rest),
-  DEFVAR2 (*unicode-to-half-width*),
   DEFVAR2 (*vender-depend-code-mapping*),
 
   /* listen.cc */

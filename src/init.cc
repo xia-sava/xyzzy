@@ -508,7 +508,6 @@ init_symbol_value_once ()
   xsymbol_value (Vuse_shell_execute_ex) = Qt;
   xsymbol_value (Vshell_execute_disregards_shift_key) = Qt;
   xsymbol_value (Vregexp_keyword_list) = Qnil;
-  xsymbol_value (Vunicode_to_half_width) = Qt;
   xsymbol_value (Vcolor_page_enable_dir_p) = Qnil;
   xsymbol_value (Vcolor_page_enable_subdir_p) = Qnil;
   xsymbol_value (Vchange_clipboard_hook) = Qnil;

@@ -15,22 +15,10 @@ Fgraphic_char_p (lisp cc)
 {
   check_char (cc);
   Char c = xchar_code (cc);
-#if 0
-  return boole ((c >= ' ' && c < CC_DEL)
-                || kana_char_p (c)
-                || (SJISP (c >> 8) && SJIS2P (c & 0xff))
-                || cs_char_charset_bit (c) & (CCSF_ISO8859 | CCSF_JISX0212 \
-                                              | CCSF_KSC5601 | CCSF_GB2312 \
-                                              | CCSF_BIG5));
-#else
-  if ((c >= ' ' && c < CC_DEL) || kana_char_p (c))
-    return Qt;
-  if (c < 0x100)
+  // 制御文字と、単独では字にならないサロゲート以外を字とみなす
+  if (c < ' ' || c == CC_DEL || (c >= 0x80 && c < 0xa0))
     return Qnil;
-  if (code_charset_bit (c) & (ccsf_utf16_undef_char | ccsf_utf16_surrogate))
-    return Qnil;
-  return boole (i2w (c) != ucs2_t (-1));
-#endif
+  return boole (!utf16_surrogate_high_p (c) && !utf16_surrogate_low_p (c));
 }
 
 lisp
@@ -397,14 +385,15 @@ lisp
 Fkanji_char_p (lisp x)
 {
   check_char (x);
-  return boole (kanji_char_p (xchar_code (x)));
+  Char c = xchar_code (x);
+  return boole (c >= 0x80 && !halfwidth_kana_p (c));
 }
 
 lisp
 Fkana_char_p (lisp x)
 {
   check_char (x);
-  return boole (kana_char_p (xchar_code (x)));
+  return boole (halfwidth_kana_p (xchar_code (x)));
 }
 
 lisp
