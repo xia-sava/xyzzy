@@ -65,7 +65,7 @@ sjis_to_internal_stream::refill_internal ()
           if (c2 != eof)
             c1 = (c1 << 8) + c2;
         }
-      put (c1);
+      put (i2w (c1));
     }
 }
 
@@ -84,7 +84,7 @@ fast_sjis_to_internal_stream::refill_internal ()
       int c1 = *s++;
       if (SJISP (c1) && s < se)
         c1 = (c1 << 8) + *s++;
-      *d = c1;
+      *d = i2w (c1);
     }
   s_in.end_direct_input (s);
   end_direct_output (d);
@@ -124,13 +124,34 @@ iso2022_noesc_to_internal_stream::iso2022_noesc_to_internal_stream (xinput_strea
   init_cns11643_table ();
 }
 
+// 文字集合の中での位置は、符号変換の中でだけ内部コードとして扱う。バッファへは
+// Unicode で入れる。写せない符号は元のバイトをそのまま残す
+void
+iso2022_noesc_to_internal_stream::put_legacy (Char cc, int oc1, int oc2)
+{
+  ucs2_t wc = i2w (cc);
+  if (wc != CHAR_INVALID)
+    put (wc);
+  else
+    {
+      put (oc1);
+      put (oc2);
+    }
+}
+
 void
 iso2022_noesc_to_internal_stream::to_internal (u_char ccs, int c1, int oc1)
 {
   if (ccs_1byte_charset_p (ccs))
-    put ((ccs_1byte_94_charset_p (ccs)
-          ? c1 <= ' ' || c1 >= 0x7f : c1 < ' ')
-         ? oc1 : (ccs << 7) | c1);
+    {
+      if ((ccs_1byte_94_charset_p (ccs) ? c1 <= ' ' || c1 >= 0x7f : c1 < ' '))
+        put (oc1);
+      else
+        {
+          ucs2_t wc = i2w ((ccs << 7) | c1);
+          put (wc != CHAR_INVALID ? wc : oc1);
+        }
+    }
   else
     {
       if (c1 <= 0x20 || c1 >= 0x7f)
@@ -155,51 +176,35 @@ iso2022_noesc_to_internal_stream::to_internal (u_char ccs, int c1, int oc1)
               case ccs_jisx0208:
                 if (s_vender == ENCODING_ISO_VENDER_OSFJVC && c1 >= 0x75)
                   c1 += 10;
-                put ((j2sh (c1, c2) << 8) | j2sl (c1, c2));
+                put_legacy ((j2sh (c1, c2) << 8) | j2sl (c1, c2), oc1, oc2);
                 break;
 
               case ccs_jisx0212:
-                put (jisx0212_to_internal (c1, c2, s_vender));
+                put_legacy (jisx0212_to_internal (c1, c2, s_vender), oc1, oc2);
                 break;
 
               case ccs_gb2312:
-                put (gb2312_to_int (c1, c2));
+                put_legacy (gb2312_to_int (c1, c2), oc1, oc2);
                 break;
 
               case ccs_big5_1:
               case ccs_big5_2:
                 mule_g2b (ccs, c1, c2);
-                put (big5_to_int (c1, c2));
+                put_legacy (big5_to_int (c1, c2), oc1, oc2);
                 break;
 
               case ccs_cns11643_1:
-                {
-                  Char cc = cns11643_1_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)];
-                  if (cc != CHAR_INVALID)
-                    put (cc);
-                  else
-                    {
-                      put (oc1);
-                      put (oc2);
-                    }
-                  break;
-                }
+                put_legacy (cns11643_1_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)],
+                            oc1, oc2);
+                break;
 
               case ccs_cns11643_2:
-                {
-                  Char cc = cns11643_2_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)];
-                  if (cc != CHAR_INVALID)
-                    put (cc);
-                  else
-                    {
-                      put (oc1);
-                      put (oc2);
-                    }
-                  break;
-                }
+                put_legacy (cns11643_2_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)],
+                            oc1, oc2);
+                break;
 
               case ccs_ksc5601:
-                put (ksc5601_to_int (c1, c2));
+                put_legacy (ksc5601_to_int (c1, c2), oc1, oc2);
                 break;
 
               default:
@@ -590,7 +595,17 @@ big5_to_internal_stream::refill_internal ()
         {
           int c2 = s_in.get ();
           if (c2 >= 0x40 && c2 <= 0x7e || c2 >= 0xa1 && c2 <= 0xfe)
-            c1 = big5_to_int (c1, c2);
+            {
+              ucs2_t wc = i2w (big5_to_int (c1, c2));
+              if (wc != CHAR_INVALID)
+                {
+                  put (wc);
+                  continue;
+                }
+              // Unicode に対応の無い符号は、元のバイトをそのまま残す
+              put (c1);
+              c1 = c2;
+            }
           else
             s_in.putback (c2);
         }
@@ -610,28 +625,10 @@ binary_to_internal_stream::refill_internal ()
     }
 }
 
-utf_to_internal_stream::putw_t
-utf_to_internal_stream::per_lang_putw (int lang)
-{
-  switch (lang)
-    {
-    default:
-    case ENCODING_LANG_JP:
-    case ENCODING_LANG_JP2:
-      return &putw_jp;
-
-    case ENCODING_LANG_KR:
-    case ENCODING_LANG_CN_GB:
-    case ENCODING_LANG_CN_BIG5:
-      return &putw_gen;
-
-    case ENCODING_LANG_CN:
-      return &putw_cn;
-    }
-}
-
+// バッファには Unicode の符号位置をそのまま入れる。どの文字集合の内部コードを
+// 選ぶかという判断が要らなくなったので、言語ごとの振り分けも要らない
 void
-utf_to_internal_stream::putw_jp (ucs2_t wc)
+utf_to_internal_stream::putw (ucs2_t wc)
 {
   if (s_has_bom < 0)
     {
@@ -639,89 +636,7 @@ utf_to_internal_stream::putw_jp (ucs2_t wc)
       if (s_has_bom)
         return;
     }
-
-  if (!(s_flags & ENCODING_UTF_WINDOWS))
-    {
-      int n = wc % numberof (utf_shiftjis2internal_hash);
-      if (utf_shiftjis2internal_hash[n].wc == wc)
-        {
-          put (utf_shiftjis2internal_hash[n].cc);
-          return;
-        }
-    }
-
-  Char cc;
-  if (s_to_full_width
-      && (cc = wc2cp932 (wc)) != CHAR_INVALID
-      && !ccs_1byte_94_charset_p (code_charset (cc)))
-    put (cc);
-  else
-    {
-      cc = w2i (wc);
-      if (cc != CHAR_INVALID)
-        put (cc);
-      else
-        {
-          put (utf16_ucs2_to_undef_pair_high (wc));
-          put (utf16_ucs2_to_undef_pair_low (wc));
-        }
-    }
-}
-
-void
-utf_to_internal_stream::putw_gen (ucs2_t wc)
-{
-  if (s_has_bom < 0)
-    {
-      s_has_bom = wc == UNICODE_BOM;
-      if (s_has_bom)
-        return;
-    }
-
-  Char cc = w2i (wc);
-  if (cc != CHAR_INVALID)
-    {
-      if (!ccs_1byte_94_charset_p (code_charset (cc)))
-        {
-          Char t = s_cjk_translate[wc];
-          if (t != CHAR_INVALID)
-            cc = t;
-        }
-      put (cc);
-    }
-  else
-    {
-      put (utf16_ucs2_to_undef_pair_high (wc));
-      put (utf16_ucs2_to_undef_pair_low (wc));
-    }
-}
-
-void
-utf_to_internal_stream::putw_cn (ucs2_t wc)
-{
-  if (s_has_bom < 0)
-    {
-      s_has_bom = wc == UNICODE_BOM;
-      if (s_has_bom)
-        return;
-    }
-
-  Char cc = w2i (wc);
-  if (cc != CHAR_INVALID)
-    {
-      if (!ccs_1byte_94_charset_p (code_charset (cc)))
-        {
-          Char t = wc2gb2312_table[wc];
-          if (t != CHAR_INVALID || (t = wc2big5_table[wc]) != CHAR_INVALID)
-            cc = t;
-        }
-      put (cc);
-    }
-  else
-    {
-      put (utf16_ucs2_to_undef_pair_high (wc));
-      put (utf16_ucs2_to_undef_pair_low (wc));
-    }
+  put (wc);
 }
 
 inline void
@@ -993,7 +908,11 @@ iso8859_to_internal_stream::refill_internal ()
       if (c == eof)
         break;
       if (c >= 0xa0)
-        c = s_charset | (c & 127);
+        {
+          ucs2_t wc = i2w (s_charset | (c & 127));
+          if (wc != CHAR_INVALID)
+            c = wc;
+        }
       put (c);
     }
 }
@@ -1007,7 +926,11 @@ windows_codepage_to_internal_stream::refill_internal ()
       if (c == eof)
         break;
       if (c >= 0x80 && s_translate[c - 0x80] != CHAR_INVALID)
-        c = s_translate[c - 0x80];
+        {
+          ucs2_t wc = i2w (s_translate[c - 0x80]);
+          if (wc != CHAR_INVALID)
+            c = wc;
+        }
       put (c);
     }
 }
@@ -1040,13 +963,8 @@ internal_to_sjis_stream::refill ()
       Char cc = c;
       if (cc >= 0x80)
         {
-          if (code_charset_bit (cc) & ccsf_possible_cp932)
-            {
-              cc = wc2cp932 (i2w (cc));
-              if (cc == CHAR_INVALID)
-                cc = DEFCHAR;
-            }
-          else if (code_charset_bit (cc) & ccsf_not_cp932)
+          cc = cc < CHAR_LIMIT ? wc2cp932 (ucs2_t (cc)) : CHAR_INVALID;
+          if (cc == CHAR_INVALID)
             cc = DEFCHAR;
 
           if (DBCP (cc))
@@ -1075,7 +993,7 @@ internal_to_big5_stream::refill ()
       if (c == eof)
         break;
 
-      Char cc = wc2big5_table[i2w (c)];
+      Char cc = c < CHAR_LIMIT ? wc2big5_table[c] : CHAR_INVALID;
       if (cc == CHAR_INVALID)
         cc = DEFCHAR;
       if (cc >= 0x100)
@@ -1376,32 +1294,30 @@ internal_to_iso2022_stream::refill ()
           break;
         }
 
+      // バッファは Unicode を持つ。ISO-2022 は文字集合を切り替えて書くので、
+      // ここでその文字集合の中での位置へ移す
       Char cc = c;
-      u_int ccsf = code_charset_bit (cc);
-      if (ccsf & (ccsf_utf16_surrogate | ccsf_utf16_undef_char))
-        cc = DEFCHAR;
-      else
+      if (cc >= 0x80)
         {
-          if (s_lang_cn)
+          Char t = CHAR_INVALID;
+          if (cc < CHAR_LIMIT)
             {
-              if (!(ccsf & (ccsf_gb2312 | ccsf_big5)))
+              // 同じ字が複数の文字集合にあるとき、符号の言語に合うものを選ぶ
+              if (s_lang_cn)
                 {
-                  wchar_t wc = i2w (cc);
-                  Char t = wc2gb2312_table[wc];
-                  if (t != CHAR_INVALID || (t = wc2big5_table[wc]) != CHAR_INVALID)
-                    cc = t;
+                  t = wc2gb2312_table[cc];
+                  if (t == CHAR_INVALID)
+                    t = wc2big5_table[cc];
                 }
+              else if (s_cjk_translate)
+                t = s_cjk_translate[cc];
+              if (t == CHAR_INVALID)
+                t = w2i (ucs2_t (cc));
             }
+          if (t == CHAR_INVALID)
+            cc = DEFCHAR;
           else
-            {
-              if (s_cjk_translate)
-                {
-                  Char t = s_cjk_translate[i2w (cc)];
-                  if (t != CHAR_INVALID)
-                    cc = t;
-                }
-            }
-          cc = (*s_vender_code_mapper)(cc);
+            cc = (*s_vender_code_mapper)(t);
         }
 
       int ccs = code_charset (cc);
@@ -1552,29 +1468,8 @@ internal_to_utf_stream::getw () const
   if (c == eof)
     return eof;
 
-  Char cc = Char (c);
-
-  if (!(s_flags & ENCODING_UTF_WINDOWS) && cc != CHAR_INVALID)
-    {
-      int n = cc % numberof (utf_internal2shiftjis_hash);
-      if (utf_internal2shiftjis_hash[n].cc == cc)
-        return utf_internal2shiftjis_hash[n].wc;
-    }
-
-  ucs2_t wc = i2w (cc);
-  if (wc != ucs2_t (-1))
-    return wc;
-  if (utf16_undef_char_high_p (ucs2_t (cc)))
-    {
-      int c2 = s_in.get ();
-      if (c2 != eof)
-        {
-          if (utf16_undef_char_low_p (ucs2_t (c2)))
-            return utf16_undef_pair_to_ucs2 (ucs2_t (cc), ucs2_t (c2));
-          s_in.putback (c2);
-        }
-    }
-  return DEFCHAR;
+  // バッファが持っているのが Unicode の符号位置そのものなので、写し替えは要らない
+  return c;
 }
 
 int
@@ -1942,13 +1837,9 @@ internal_to_iso8859_stream::refill ()
       Char cc = c;
       if (cc >= 0xa0)
         {
-          if (code_charset (cc) == s_charset)
-            cc = int_to_iso8859 (cc);
-          else
-            {
-              cc = lookup_wc2int_hash (s_hash, i2w (cc));
-              cc = cc != CHAR_INVALID ? int_to_iso8859 (cc) : DEFCHAR;
-            }
+          Char lc = cc < CHAR_LIMIT ? lookup_wc2int_hash (s_hash, ucs2_t (cc))
+                                    : CHAR_INVALID;
+          cc = lc != CHAR_INVALID ? int_to_iso8859 (lc) : DEFCHAR;
           if (cc >= 0x80 && cc < 0xa0)
             cc = DEFCHAR;
         }
@@ -1974,7 +1865,8 @@ internal_to_windows_codepage_stream::refill ()
       Char cc = c;
       if (cc >= 128)
         {
-          cc = lookup_wc2int_hash (s_hash, i2w (cc));
+          cc = cc < CHAR_LIMIT ? lookup_wc2int_hash (s_hash, ucs2_t (cc))
+                               : CHAR_INVALID;
           if (cc == CHAR_INVALID)
             cc = DEFCHAR;
         }

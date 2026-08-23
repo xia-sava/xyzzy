@@ -195,6 +195,7 @@ class iso2022_noesc_to_internal_stream: public xbuffered_read_stream
 protected:
   u_char s_g[4];
   const int s_vender;
+  void put_legacy (Char, int, int);
   void to_internal (u_char, int, int);
   virtual void refill_internal ();
 public:
@@ -252,25 +253,14 @@ public:
 class utf_to_internal_stream: public xbuffered_read_stream
 {
 protected:
-  typedef void (utf_to_internal_stream::*putw_t)(ucs2_t);
   const int s_flags;
   int s_has_bom;
-  const int s_to_full_width;
-  const putw_t s_putw;
-  const Char *const s_cjk_translate;
-  void putw_jp (ucs2_t);
-  void putw_cn (ucs2_t);
-  void putw_gen (ucs2_t);
   void putl (ucs4_t);
-  void putw (ucs2_t c) {(this->*s_putw)(c);}
-  static putw_t per_lang_putw (int);
+  void putw (ucs2_t);
 public:
-  utf_to_internal_stream (xinput_stream <u_char> &in, int flags, int lang)
+  utf_to_internal_stream (xinput_stream <u_char> &in, int flags, int)
        : xbuffered_read_stream (in), s_flags (flags),
-         s_has_bom (flags & ENCODING_UTF_SIGNATURE ? -1 : 0),
-         s_to_full_width (xsymbol_value (Vunicode_to_half_width) == Qnil),
-         s_putw (per_lang_putw (lang)),
-         s_cjk_translate (cjk_translate_table (lang)) {}
+         s_has_bom (flags & ENCODING_UTF_SIGNATURE ? -1 : 0) {}
   int has_bom_p () const {return s_has_bom > 0;}
 };
 
