@@ -941,7 +941,7 @@ item_string (lisp item, char *buf, int size)
       const Char *p = xstring_contents (item), *pe = p + xstring_length (item);
       for (; p < pe && b < be; p++)
         {
-          Char c = *p;
+          Char c = w2s_char (*p);
           if (DBCP (c))
             {
               *b++ = char (c >> 8);

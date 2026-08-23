@@ -248,9 +248,12 @@ buffer_info::format (lisp fmt, char *b, char *be) const
       if (c != '%')
         {
         normal_char:
-          if (DBCP (c))
-            *b++ = char (c >> 8);
-          *b++ = char (c);
+          {
+            Char cc = w2s_char (c);
+            if (DBCP (cc))
+              *b++ = char (cc >> 8);
+            *b++ = char (cc);
+          }
         }
       else
         {

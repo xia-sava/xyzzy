@@ -286,25 +286,25 @@ streq (const Char *p, int l, const char *s)
   return 1;
 }
 
+// CP932 のバイト列から文字ひとつを取り出して、その先へ進める
+static inline Char
+getc_sjis (const char *&cp)
+{
+  if (SJISP (u_char (*cp)) && cp[1])
+    {
+      Char c = s2w_char ((u_char (*cp) << 8) | u_char (cp[1]));
+      cp += 2;
+      return c;
+    }
+  return s2w_char (u_char (*cp++));
+}
+
 int
 strequal (const char *cp, const Char *Cp)
 {
   while (*cp)
-    {
-      Char c = *Cp++;
-      if (DBCP (c))
-        {
-          if (!cp[1] || c != Char ((u_char (*cp) << 8) | u_char (cp[1])))
-            return 0;
-          cp += 2;
-        }
-      else
-        {
-          if (char_downcase (c) != char_downcase (u_char (*cp)))
-            return 0;
-          cp++;
-        }
-    }
+    if (char_downcase (getc_sjis (cp)) != char_downcase (*Cp++))
+      return 0;
   return 1;
 }
 
@@ -312,21 +312,8 @@ int
 strequal (const char *cp, const Char *Cp, int l)
 {
   for (const Char *Ce = Cp + l; Cp < Ce; Cp++)
-    {
-      Char c = *Cp;
-      if (DBCP (c))
-        {
-          if (c != Char ((u_char (*cp) << 8) | u_char (cp[1])))
-            return 0;
-          cp += 2;
-        }
-      else
-        {
-          if (char_downcase (c) != char_downcase (u_char (*cp)))
-            return 0;
-          cp++;
-        }
-    }
+    if (char_downcase (getc_sjis (cp)) != char_downcase (*Cp))
+      return 0;
   return 1;
 }
 

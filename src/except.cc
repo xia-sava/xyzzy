@@ -357,9 +357,10 @@ print_object (FILE *fp, lisp object, int f)
                   else
                     for (; p < pe; p++)
                       {
-                        if (DBCP (*p))
-                          putc (*p >> 8, fp);
-                        putc (*p, fp);
+                        Char c = w2s_char (*p);
+                        if (DBCP (c))
+                          putc (c >> 8, fp);
+                        putc (c, fp);
                       }
                 }
               else
