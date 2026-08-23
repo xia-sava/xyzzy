@@ -824,110 +824,28 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
             : get_glyph_width (cc, pe_glyph_width));
 }
 
+// 内部コードを Unicode にして、担当のフォントで描く。二桁の文字は二桁ぶんの
+// 幅に対して字を中央へ寄せる
 void
-print_engine::paint_kana (PaintCtx &ctx, Char cc) const
-{
-  char c = char (cc);
-  SelectObject (ctx.hdc, pe_hfonts[FONT_JP]);
-  ExtTextOut (ctx.hdc, ctx.x + pe_offset[FONT_JP].x,
-              ctx.y + pe_offset[FONT_JP].y, 0, 0, &c, 1, 0);
-  ctx.column++;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx
-            : get_glyph_width (cc, pe_glyph_width));
-}
-
-void
-print_engine::paint_kanji (PaintCtx &ctx, Char cc) const
-{
-  if (charset_width (cc) == 2)
-    {
-      char b[2];
-      b[0] = char (cc >> 8);
-      b[1] = char (cc);
-      if (!b[1] || !SJISP (b[0] & 255))
-        b[0] = char (0x81), b[1] = char (0x45);
-      SelectObject (ctx.hdc, pe_hfonts[FONT_JP]);
-      ExtTextOut (ctx.hdc, ctx.x + pe_offset2x[FONT_JP],
-                  ctx.y + pe_offset[FONT_JP].y, 0, 0, b, 2, 0);
-      ctx.column += 2;
-      ctx.x += (pe_fixed_pitch
-                ? pe_print_cell.cx * 2
-                : get_glyph_width (cc, pe_glyph_width));
-    }
-  else
-    {
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "", 1, 0);
-      ctx.column++;
-      ctx.x += (pe_fixed_pitch
-                ? pe_print_cell.cx
-                : get_glyph_width (cc, pe_glyph_width));
-    }
-}
-
-void
-print_engine::paint_jisx0212 (PaintCtx &ctx, Char cc) const
+print_engine::paint_char (PaintCtx &ctx, Char cc) const
 {
   int l = charset_width (cc);
   ucs2_t wc = i2w (cc);
-  if (wc != ucs2_t (-1))
+  if (wc != CHAR_INVALID)
     {
-      int o = l == 2 ? pe_offset2x[FONT_JP] : pe_offset[FONT_JP].x;
-      SelectObject (ctx.hdc, pe_hfonts[FONT_JP]);
-      ExtTextOutW (ctx.hdc, ctx.x + o, ctx.y + pe_offset[FONT_JP].y,
-                   0, 0, &wc, 1, 0);
+      int f = font_slot_of (cc);
+      SelectObject (ctx.hdc, pe_hfonts[f]);
+      ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? pe_offset2x[f] : pe_offset[f].x),
+                   ctx.y + pe_offset[f].y, 0, 0, &wc, 1, 0);
     }
   else
     {
       SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "\0", l, 0);
+      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "\0\0", l, 0);
     }
   ctx.column += l;
   ctx.x += (pe_fixed_pitch
             ? pe_print_cell.cx * l
-            : get_glyph_width (cc, pe_glyph_width));
-}
-
-void
-print_engine::paint_full_width (PaintCtx &ctx, Char cc, int f) const
-{
-  ucs2_t wc = i2w (cc);
-  if (wc != ucs2_t (-1))
-    {
-      SelectObject (ctx.hdc, pe_hfonts[f]);
-      ExtTextOutW (ctx.hdc, ctx.x + pe_offset[f].x, ctx.y + pe_offset[f].y,
-                   0, 0, &wc, 1, 0);
-    }
-  else
-    {
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "\0", 2, 0);
-    }
-  ctx.column += 2;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx * 2
-            : get_glyph_width (cc, pe_glyph_width));
-}
-
-void
-print_engine::paint_latin (PaintCtx &ctx, Char cc, int f) const
-{
-  ucs2_t wc = i2w (cc);
-  if (wc != ucs2_t (-1))
-    {
-      SelectObject (ctx.hdc, pe_hfonts[f]);
-      ExtTextOutW (ctx.hdc, ctx.x + pe_offset[f].x, ctx.y + pe_offset[f].y,
-                   0, 0, &wc, 1, 0);
-    }
-  else
-    {
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, "", 1, 0);
-    }
-  ctx.column++;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx
             : get_glyph_width (cc, pe_glyph_width));
 }
 
@@ -1087,46 +1005,12 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
             paint_ascii (ctx, cc);
           break;
 
-        case ccs_jisx0201_kana:
-          paint_kana (ctx, cc);
-          break;
-
-        case ccs_jisx0212:
-#ifdef CCS_UJP_MIN
-        case ccs_ujp:
-#endif
-          paint_jisx0212 (ctx, cc);
-          break;
-
-        case ccs_gb2312:
-        case ccs_ksc5601:
-        case ccs_big5:
-          paint_full_width (ctx, cc, font_slot_of (cc));
-          break;
-
-        case ccs_iso8859_1:
-        case ccs_iso8859_2:
-        case ccs_iso8859_3:
-        case ccs_iso8859_4:
-        case ccs_iso8859_9:
-        case ccs_iso8859_10:
-        case ccs_iso8859_13:
-#ifdef CCS_ULATIN_MIN
-        case ccs_ulatin:
-#endif
-        case ccs_iso8859_5:
-        case ccs_iso8859_7:
-        case ccs_georgian:
-        case ccs_ipa:
-          paint_latin (ctx, cc, font_slot_of (cc));
-          break;
-
         case ccs_smlcdm:
           paint_lucida (ctx, cc);
           break;
 
         default:
-          paint_kanji (ctx, cc);
+          paint_char (ctx, cc);
           break;
         }
     }
@@ -1146,9 +1030,9 @@ print_engine::paint_string (HDC hdc, int x, int y, const char *s, int l) const
     {
       int c = *p++;
       if (SJISP (c) && p != pe)
-        paint_kanji (ctx, (c << 8) | *p++);
+        paint_char (ctx, (c << 8) | *p++);
       else if (kana_char_p (c))
-        paint_kana (ctx, c);
+        paint_char (ctx, c);
       else
         paint_ascii (ctx, c);
     }
@@ -2073,7 +1957,6 @@ get_glyph_width (Char cc, const glyph_width &gw)
     return gw.pixel[cc];
 
   SIZE sz;
-  int f;
   switch (code_charset (cc))
     {
     case ccs_usascii:
@@ -2083,38 +1966,6 @@ get_glyph_width (Char cc, const glyph_width &gw)
         GetTextExtentPoint32 (gw.hdc, &c, 1, &sz);
         break;
       }
-
-    case ccs_jisx0201_kana:
-      {
-        char c = char (cc);
-        SelectObject (gw.hdc, gw.hfonts[FONT_JP]);
-        GetTextExtentPoint32 (gw.hdc, &c, 1, &sz);
-        break;
-      }
-
-    case ccs_jisx0212:
-#ifdef CCS_UJP_MIN
-    case ccs_ujp:
-#endif
-    case ccs_gb2312:
-    case ccs_ksc5601:
-    case ccs_big5:
-    case ccs_iso8859_1:
-    case ccs_iso8859_2:
-    case ccs_iso8859_3:
-    case ccs_iso8859_4:
-    case ccs_iso8859_9:
-    case ccs_iso8859_10:
-    case ccs_iso8859_13:
-#ifdef CCS_ULATIN_MIN
-    case ccs_ulatin:
-#endif
-    case ccs_iso8859_5:
-    case ccs_iso8859_7:
-    case ccs_georgian:
-    case ccs_ipa:
-      f = font_slot_of (cc);
-      goto unicode_char;
 
     case ccs_smlcdm:
       {
@@ -2136,39 +1987,21 @@ get_glyph_width (Char cc, const glyph_width &gw)
         break;
       }
 
-    unicode_char:
+    default:
       {
         ucs2_t wc = i2w (cc);
-        if (wc != ucs2_t (-1))
+        if (wc != CHAR_INVALID)
           {
-            SelectObject (gw.hdc, gw.hfonts[f]);
+            SelectObject (gw.hdc, gw.hfonts[font_slot_of (cc)]);
             GetTextExtentPoint32W (gw.hdc, &wc, 1, &sz);
           }
         else
           {
             SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-            GetTextExtentPoint32 (gw.hdc, "\0", charset_width (cc), &sz);
+            GetTextExtentPoint32 (gw.hdc, "\0\0", charset_width (cc), &sz);
           }
         break;
       }
-
-    default:
-      if (charset_width (cc) == 2)
-        {
-          char b[2];
-          b[0] = char (cc >> 8);
-          b[1] = char (cc);
-          if (!b[1] || !SJISP (b[0] & 255))
-            b[0] = char (0x81), b[1] = char (0x45);
-          SelectObject (gw.hdc, gw.hfonts[FONT_JP]);
-          GetTextExtentPoint32 (gw.hdc, b, 2, &sz);
-        }
-      else
-        {
-          SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-          GetTextExtentPoint32 (gw.hdc, "", 1, &sz);
-        }
-      break;
     }
 
   const_cast <short *> (gw.pixel)[cc] = (short)sz.cx;

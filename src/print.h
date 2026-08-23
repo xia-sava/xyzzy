@@ -233,11 +233,7 @@ private:
   int form_feed_p (const Point &) const;
 
   void paint_ascii (PaintCtx &, Char) const;
-  void paint_kana (PaintCtx &, Char) const;
-  void paint_kanji (PaintCtx &, Char) const;
-  void paint_latin (PaintCtx &, Char, int) const;
-  void paint_jisx0212 (PaintCtx &, Char) const;
-  void paint_full_width (PaintCtx &, Char, int) const;
+  void paint_char (PaintCtx &, Char) const;
   void paint_surrogate_pair (PaintCtx &, ucs4_t) const;
   void paint_lucida (PaintCtx &, Char) const;
   int paint_line (HDC, int, int, Point &, long &) const;
