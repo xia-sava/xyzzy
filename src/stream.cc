@@ -581,7 +581,7 @@ Fsi_detect_stream_encoding (lisp stream)
   return boole (detect_utf8_stream (stream));
 }
 
-// UTF-8 の後続バイトを読んで内部表現へ直す。内部表現 2 つになる文字は
+// UTF-8 の後続バイトを読んで符号位置にする。BMP の外の文字はサロゲート対にして、
 // 後半をストリームへ預けて、次の読み出しで返す
 static lChar
 readc_utf8 (lisp stream, int c)
@@ -613,11 +613,7 @@ readc_utf8 (lisp stream, int c)
       return utf16_ucs4_to_pair_high (lc);
     }
 
-  Char cc = w2i (ucs2_t (lc));
-  if (cc != CHAR_INVALID)
-    return cc;
-  xstream_deferred (stream) = utf16_ucs2_to_undef_pair_low (ucs2_t (lc));
-  return utf16_ucs2_to_undef_pair_high (ucs2_t (lc));
+  return lc;
 }
 
 lisp
@@ -1529,10 +1525,15 @@ readc_stream (lisp stream)
                     if (c >= 0x80)
                       return readc_utf8 (stream, c);
                   }
-                else if (SJISP (c))
+                else if (c >= 0x80)
                   {
-                    int c2 = getc (xfile_stream_input (stream));
-                    return c2 == EOF ? c : ((c << 8) | c2);
+                    if (SJISP (c))
+                      {
+                        int c2 = getc (xfile_stream_input (stream));
+                        if (c2 != EOF)
+                          return s2w_char ((c << 8) | c2);
+                      }
+                    return s2w_char (c);
                   }
                 if (xfile_stream_encoding (stream) == lstream::ENCODE_CANON
                     && c == '\r')
@@ -1623,10 +1624,15 @@ readc_stream (lisp stream)
                 return lChar_EOF;
               if (xsocket_stream_encoding (stream) != lstream::ENCODE_BINARY)
                 {
-                  if (SJISP (c))
+                  if (c >= 0x80)
                     {
-                      int c2 = xsocket_stream_sock (stream)->sgetc ();
-                      return c2 == sock::eof ? c : ((c << 8) | c2);
+                      if (SJISP (c))
+                        {
+                          int c2 = xsocket_stream_sock (stream)->sgetc ();
+                          if (c2 != sock::eof)
+                            return s2w_char ((c << 8) | c2);
+                        }
+                      return s2w_char (c);
                     }
                   else if (xsocket_stream_encoding (stream) == lstream::ENCODE_CANON
                            && c == '\r')
@@ -1875,26 +1881,35 @@ stream_linenum (lisp stream)
     return xstream_linenum (stream);
 }
 
+// 書き出す符号。バイトを並べるストリームは 0x00〜0xFF をそのまま通す
+static inline Char
+stream_out_char (Char cc, int encoding)
+{
+  return encoding == lstream::ENCODE_BINARY ? w2b_char (cc) : w2s_char (cc);
+}
+
 static void
 putc_file_stream (lisp stream, Char cc)
 {
-  if (DBCP (cc))
-    putc (cc >> 8, xfile_stream_output (stream));
+  Char c = stream_out_char (cc, xfile_stream_encoding (stream));
+  if (DBCP (c))
+    putc (c >> 8, xfile_stream_output (stream));
   else if (xfile_stream_encoding (stream) == lstream::ENCODE_CANON
-           && cc == '\n')
+           && c == '\n')
     putc ('\r', xfile_stream_output (stream));
-  putc (cc, xfile_stream_output (stream));
+  putc (c, xfile_stream_output (stream));
 }
 
 static void
 putc_sock_stream (lisp stream, Char cc)
 {
-  if (DBCP (cc))
-    xsocket_stream_sock (stream)->sputc (cc >> 8);
+  Char c = stream_out_char (cc, xsocket_stream_encoding (stream));
+  if (DBCP (c))
+    xsocket_stream_sock (stream)->sputc (c >> 8);
   else if (xsocket_stream_encoding (stream) == lstream::ENCODE_CANON
-           && cc == '\n')
+           && c == '\n')
     xsocket_stream_sock (stream)->sputc ('\r');
-  xsocket_stream_sock (stream)->sputc (cc);
+  xsocket_stream_sock (stream)->sputc (c);
 }
 
 void
