@@ -18913,7 +18913,7 @@ NUMBER がゼロより小さければ t 、そうでなければ nil を返し�
 モードラインのフォーマットを設定します。
 
 使用例：
-  (setq mode-line-format "--%*- %b (%M) [%k:%l] %P %f")
+  (setq mode-line-format "--%*- %b (%M) [%k/%K:%l] %P %f")
 
 パラメタ：
   %*    変更あり          : **
