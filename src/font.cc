@@ -502,12 +502,15 @@ ambiguous_width_slot_p (int slot)
 }
 
 int
+FontSet::full_width_slot_p (int slot) const
+{
+  return ambiguous_width_slot_p (slot) && fs_font[slot].columns () == 2;
+}
+
+int
 FontSet::full_width_p (Char cc) const
 {
-  int slot = font_slot_of (cc);
-  return (charset_width (cc) == 1
-          && ambiguous_width_slot_p (slot)
-          && fs_font[slot].columns () == 2);
+  return charset_width (cc) == 1 && full_width_slot_p (font_slot_of (cc));
 }
 
 // 半角として並べている文字を、担当のフォントが全角で描くなら二桁として扱う。

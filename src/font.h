@@ -156,6 +156,8 @@ public:
   int ambiguous_width () const {return fs_ambiguous_width;}
   // 半角として並べている文字を、担当のフォントが全角の字形で描くか
   int full_width_p (Char cc) const;
+  // その枠のフォントが、半角の升目に並べる文字を全角の字形で描くか
+  int full_width_slot_p (int slot) const;
 
   static const char *regent (int n) {return fs_regent[n];}
   static const char *default_face (int n, int print)

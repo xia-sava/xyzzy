@@ -27,7 +27,7 @@ typedef unsigned long long glyph_t;
                 \   \    \ \ \__________________ italic (yet)
                  \   \    \ \___________________ underline
                   \   \    \____________________ strikeout
-                   \   \________________________ charset
+                   \   \________________________ font
                     \___________________________ category
                                                    0: SBCS   2: DBCS lead
                                                    1: JUNK   3: DBCS trail
@@ -96,51 +96,23 @@ typedef unsigned long long glyph_t;
 # define GLYPH_UNDERLINE         0x00800000
 # define GLYPH_STRIKEOUT         0x01000000
 
-# define GLYPH_CHARSET_MASK      0x3e000000
-# define GLYPH_CHARSET_SHIFT_BIT 25
-# define GLYPH_CHARSET(X)        ((X) & GLYPH_CHARSET_MASK)
+/* 升目を描くフォントの枠。走査はこの単位で束ねる。値は font_slot_of の返す
+   FONT_* をそのまま使い、フォントだけでは描き方が決まらないものを後ろへ置く */
+# define GLYPH_FONT_MASK         0x3e000000
+# define GLYPH_FONT_SHIFT_BIT    25
+# define GLYPH_FONT(X)           ((X) & GLYPH_FONT_MASK)
 
-# define MAKE_GLYPH_CHARSET(X)        ((X) << GLYPH_CHARSET_SHIFT_BIT)
-# define GLYPH_CHARSET_USASCII        MAKE_GLYPH_CHARSET (0)
-# define GLYPH_CHARSET_JISX0201_KANA  MAKE_GLYPH_CHARSET (1)
-# define GLYPH_CHARSET_JISX0208       MAKE_GLYPH_CHARSET (2)
-# define GLYPH_CHARSET_JISX0212       MAKE_GLYPH_CHARSET (3)
-# define GLYPH_CHARSET_JISX0212_HALF  MAKE_GLYPH_CHARSET (4)
-# define GLYPH_CHARSET_KSC5601        MAKE_GLYPH_CHARSET (5)
-# define GLYPH_CHARSET_GB2312         MAKE_GLYPH_CHARSET (6)
-# define GLYPH_CHARSET_BIG5           MAKE_GLYPH_CHARSET (7)
-# define GLYPH_CHARSET_ISO8859_1_2    MAKE_GLYPH_CHARSET (8)
-# define GLYPH_CHARSET_ISO8859_3_4    MAKE_GLYPH_CHARSET (9)
-# define GLYPH_CHARSET_ISO8859_5      MAKE_GLYPH_CHARSET (10)
-# define GLYPH_CHARSET_ISO8859_7      MAKE_GLYPH_CHARSET (11)
-# define GLYPH_CHARSET_ISO8859_9_10   MAKE_GLYPH_CHARSET (12)
-# define GLYPH_CHARSET_ISO8859_13     MAKE_GLYPH_CHARSET (13)
-# define GLYPH_CHARSET_IPA            MAKE_GLYPH_CHARSET (14)
-# define GLYPH_CHARSET_SMLCDM         MAKE_GLYPH_CHARSET (15)
-# ifdef CCS_UJP_MIN
-#  if (CCS_UJP_HALF_MAX - CCS_UJP_HALF_MIN) != 0x2ff
-#   error "wrong GLYPH_CHARSET_UJP"
-#  endif
-#  define GLYPH_CHARSET_UJP           MAKE_GLYPH_CHARSET (16)
-#  define GLYPH_CHARSET_UJP_H1        MAKE_GLYPH_CHARSET (17)
-#  define GLYPH_CHARSET_UJP_H2        MAKE_GLYPH_CHARSET (18)
-#  define GLYPH_CHARSET_UJP_H3        MAKE_GLYPH_CHARSET (19)
+# define MAKE_GLYPH_FONT(X)          (glyph_t (X) << GLYPH_FONT_SHIFT_BIT)
+# define GLYPH_FONT_ASCII            MAKE_GLYPH_FONT (FONT_ASCII)
+// 修飾文字と結合分音記号。専用のフォントを作り、字ごとに横へずらして描く
+# define GLYPH_FONT_SMLCDM           MAKE_GLYPH_FONT (FONT_MAX)
+// 対になったサロゲート。二つの升目で一文字を表す
+# define GLYPH_FONT_SURROGATE        MAKE_GLYPH_FONT (FONT_MAX + 1)
+// 対にならなかった上位サロゲート。字が無いので ASCII のフォントで描く
+# define GLYPH_FONT_SURROGATE_HIGH   MAKE_GLYPH_FONT (FONT_MAX + 2)
+# if FONT_MAX + 2 > 31
+#  error "wrong GLYPH_FONT_MASK"
 # endif
-# ifdef CCS_ULATIN_MIN
-#  if (CCS_ULATIN_MAX - CCS_ULATIN_MIN) != 0x1ff
-#   error "wrong GLYPH_CHARSET_ULATIN"
-#  endif
-#  define GLYPH_CHARSET_ULATIN1       MAKE_GLYPH_CHARSET (20)
-#  define GLYPH_CHARSET_ULATIN2       MAKE_GLYPH_CHARSET (21)
-# endif
-# define GLYPH_CHARSET_GEORGIAN       MAKE_GLYPH_CHARSET (22)
-// 対になったサロゲート。ペイロードには文字そのものではなく登録表の番号が入る
-# define GLYPH_CHARSET_SURROGATE_PAIR MAKE_GLYPH_CHARSET (23)
-// 対にならなかった上位サロゲート。値の上位 2bit を文字集合の番号で表す
-# define GLYPH_CHARSET_SURROGATE_H1   MAKE_GLYPH_CHARSET (24)
-# define GLYPH_CHARSET_SURROGATE_H2   MAKE_GLYPH_CHARSET (25)
-# define GLYPH_CHARSET_SURROGATE_H3   MAKE_GLYPH_CHARSET (26)
-# define GLYPH_CHARSET_SURROGATE_H4   MAKE_GLYPH_CHARSET (27)
 
 /* 補数を取ったときに上位の文字を巻き込まないよう、升目と同じ幅で持つ */
 # define GLYPH_CATEGORY_MASK     glyph_t (0xc0000000)
@@ -151,6 +123,8 @@ typedef unsigned long long glyph_t;
 /* 下位 8bit のペイロードに収まらない文字は、上位へそのまま持たせる */
 # define GLYPH_CHAR_SHIFT 32
 # define GLYPH_CHAR_BITS 21
+# define GLYPH_CHAR_MASK \
+   (((glyph_t (1) << GLYPH_CHAR_BITS) - 1) << GLYPH_CHAR_SHIFT)
 # define MAKE_GLYPH_CHAR(C) (glyph_t (ucs4_t (C)) << GLYPH_CHAR_SHIFT)
 # define GLYPH_CHAR(G) \
    (ucs4_t ((G) >> GLYPH_CHAR_SHIFT) & ((1 << GLYPH_CHAR_BITS) - 1))
