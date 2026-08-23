@@ -76,14 +76,14 @@ s2w (Char *b, size_t size, const char **string)
         {
           if (!s[1])
             {
-              *b++ = *s++;
+              *b++ = s2w_char (*s++);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   *string = (const char *)s;
   return b;
@@ -99,14 +99,14 @@ s2w (Char *b, const char *string)
         {
           if (!s[1])
             {
-              *b = *s;
+              *b = s2w_char (*s);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   return b;
 }
@@ -160,7 +160,7 @@ w2sl (const Char *s, size_t size)
 {
   size_t l = 0;
   for (const Char *se = s + size; s < se; s++)
-    if (DBCP (*s))
+    if (DBCP (w2s_char (*s)))
       l++;
   return size + l;
 }
@@ -170,9 +170,10 @@ w2s (char *b, const Char *s, size_t size)
 {
   for (const Char *se = s + size; s < se; s++)
     {
-      if (DBCP (*s))
-        *b++ = char (*s >> 8);
-      *b++ = char (*s);
+      Char c = w2s_char (*s);
+      if (DBCP (c))
+        *b++ = char (c >> 8);
+      *b++ = char (c);
     }
   *b = 0;
   return b;
@@ -192,13 +193,14 @@ w2s (char *b, char *be, const Char *s, size_t size)
   be--;
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      *b++ = char (*s);
+      *b++ = char (c);
     }
   *b = 0;
   return b;
@@ -210,19 +212,20 @@ w2s_quote (char *b, char *be, const Char *s, size_t size, int qc, int qe)
   be--;
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      else if (*s == qc)
+      else if (c == qc)
         {
           if (b == be - 1)
             break;
           *b++ = qe;
         }
-      *b++ = char (*s);
+      *b++ = char (c);
     }
   *b = 0;
   return b;
@@ -261,14 +264,14 @@ s2w (Char *b, const char *string, const char *se, int zero_term)
         {
           if (s + 1 >= (const u_char *)se || (zero_term && !s[1]))
             {
-              *b = *s;
+              *b = s2w_char (*s);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   return b;
 }
@@ -278,13 +281,14 @@ w2s_chunk (char *b, char *be, const Char *s, size_t size)
 {
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      *b++ = char (*s);
+      *b++ = char (c);
     }
   if (b < be)
     *b = 0;

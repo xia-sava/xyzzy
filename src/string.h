@@ -87,6 +87,29 @@ lisp parse_integer (lisp, int, int &, int, int);
 int update_column (int, Char);
 int update_column (int, const Char *, int);
 int update_column (int, Char, int);
+
+/* Windows とやりとりするバイト列は CP932。文字ひとつと符号ひとつを対応させる。
+   写せないものは '?' にする */
+inline Char
+s2w_char (Char cc)
+{
+  if (cc < 0x80)
+    return cc;
+  Char c = i2w (cc);
+  return c != CHAR_INVALID ? c : DEFCHAR;
+}
+
+/* 桁数を数える処理と書き込む処理で判定がずれるとバッファを溢れるので、
+   どちらもこれを通す */
+inline Char
+w2s_char (Char cc)
+{
+  if (cc < 0x80)
+    return cc;
+  Char c = cc < CHAR_LIMIT ? wc2cp932 (ucs2_t (cc)) : CHAR_INVALID;
+  return c != CHAR_INVALID ? c : DEFCHAR;
+}
+
 size_t s2wl (const char *);
 Char *s2w (Char *, size_t, const char **);
 Char *s2w (Char *, const char *);
