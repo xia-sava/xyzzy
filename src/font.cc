@@ -58,16 +58,31 @@ const ucs2_t FontSet::fs_sample_char[] =
 
 const FontSet::fontface FontSet::fs_default_face[] =
 {
-  {"FixedSys", "ＭＳ ゴシック", SHIFTJIS_CHARSET},
-  {"FixedSys", "ＭＳ ゴシック", SHIFTJIS_CHARSET},
-  {"Courier New"},
-  {"Courier New"},
-  {"Courier New"},
-  {"MS Hei", 0, GB2312_CHARSET},
-  {"MingLiu", 0, CHINESEBIG5_CHARSET},
-  {"GulimChe", 0, HANGEUL_CHARSET},
-  {"BPG Courier New U"},
+  {"BIZ UDGothic", "ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
+  {"BIZ UDGothic", "ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
+  {"Courier New", 0},
+  {"Courier New", 0},
+  {"Courier New", 0},
+  {"Microsoft YaHei", "SimSun", 0, GB2312_CHARSET},
+  {"Microsoft JhengHei", "MingLiu", 0, CHINESEBIG5_CHARSET},
+  {"Malgun Gothic", "GulimChe", 0, HANGEUL_CHARSET},
+  {"BPG Courier New U", "Sylfaen"},
 };
+
+// 挙げた順に、実際に入っているものを使う
+const char *
+FontSet::default_face (int n, int print)
+{
+  const fontface &f = fs_default_face[n];
+  if (print && f.print)
+    return f.print;
+  if (!f.alt)
+    return f.disp;
+  HDC hdc = GetDC (0);
+  const char *face = font_exist_p (hdc, f.disp, f.charset) ? f.disp : f.alt;
+  ReleaseDC (0, hdc);
+  return face;
+}
 
 // 漢字は同じ字が日本・中国・台湾の文字集合に重ねて含まれ、Unicode では同じ符号
 // 位置になる。どの字形で描くかは符号位置だけでは決められないので、内部コードが
