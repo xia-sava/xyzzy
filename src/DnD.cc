@@ -1112,8 +1112,7 @@ text_drop_target::Drop (IDataObject *data_obj, DWORD key,
           if (etc.cfFormat == CF_TEXT || etc.cfFormat == CF_UNICODETEXT)
             {
               lisp x = make_simple_string ();
-              if (make_string_from_clipboard_text (x, ptr, etc.cfFormat,
-                                                   ENCODING_LANG_NIL))
+              if (make_string_from_clipboard_text (x, ptr, etc.cfFormat))
                 {
                   bp->insert_chars (app.drop_window->w_point,
                                     xstring_contents (x), xstring_length (x));

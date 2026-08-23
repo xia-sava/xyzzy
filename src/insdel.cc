@@ -1066,7 +1066,7 @@ make_cf_text_sjis (CLIPBOARDTEXT &clp, lisp string)
 
   int extra;
   for (extra = 0; s < se; s++)
-    if (*s == '\n' || DBCP (*s))
+    if (*s == '\n' || DBCP (w2s_char (*s)))
       extra++;
 
   clp.fmt = CF_TEXT;
@@ -1076,24 +1076,9 @@ make_cf_text_sjis (CLIPBOARDTEXT &clp, lisp string)
 
   for (s = xstring_contents (string); s < se; s++)
     {
-      Char cc = *s;
+      Char cc = w2s_char (*s);
       if (DBCP (cc))
-        {
-          if (code_charset (cc) == ccs_cp932)
-            *b++ = char (cc >> 8);
-          else
-            {
-              Char c2 = wc2cp932 (i2w (cc));
-              if (c2 != CHAR_INVALID)
-                {
-                  cc = c2;
-                  if (DBCP (cc))
-                    *b++ = char (cc >> 8);
-                }
-              else
-                cc = '?';
-            }
-        }
+        *b++ = char (cc >> 8);
       else if (cc == '\n')
         *b++ = '\r';
       *b++ = char (cc);
@@ -1347,21 +1332,16 @@ count_cf_wtext_length (const ucs2_t *string)
   int l = 0;
   const ucs2_t *s;
   for (s = string; *s; s++)
-    if (*s == '\r')
+    if (*s == '\r' && s[1] == '\n')
       {
-        if (s[1] == '\n')
-          {
-            l--;
-            s++;
-          }
+        l--;
+        s++;
       }
-    else if (w2i (*s) == CHAR_INVALID)
-      l++;
   return s - string + l;
 }
 
 static int
-make_string_from_cf_wtext (lisp lstring, const ucs2_t *s, int lang)
+make_string_from_cf_wtext (lisp lstring, const ucs2_t *s)
 {
   int l = count_cf_wtext_length (s);
   Char *b = (Char *)malloc (l * sizeof *b);
@@ -1370,88 +1350,15 @@ make_string_from_cf_wtext (lisp lstring, const ucs2_t *s, int lang)
   xstring_contents (lstring) = b;
   xstring_length (lstring) = l;
 
-  const Char *const translate = cjk_translate_table (lang);
+  for (; *s; s++)
+    if (*s != '\r' || s[1] != '\n')
+      *b++ = *s;
 
-  switch (lang)
-    {
-    case ENCODING_LANG_JP:
-    case ENCODING_LANG_JP2:
-    default:
-      {
-        int to_half = xsymbol_value (Vunicode_to_half_width) != Qnil;
-        for (; *s; s++)
-          if (*s != '\r' || s[1] != '\n')
-            {
-              Char cc;
-              if (to_half
-                  || (cc = wc2cp932 (*s)) == CHAR_INVALID
-                  || ccs_1byte_94_charset_p (code_charset (cc)))
-                cc = w2i (*s);
-              if (cc == CHAR_INVALID)
-                {
-                  *b++ = utf16_ucs2_to_undef_pair_high (*s);
-                  *b++ = utf16_ucs2_to_undef_pair_low (*s);
-                }
-              else
-                *b++ = cc;
-            }
-      }
-      break;
-
-    case ENCODING_LANG_KR:
-    case ENCODING_LANG_CN_GB:
-    case ENCODING_LANG_CN_BIG5:
-      for (; *s; s++)
-        if (*s != '\r' || s[1] != '\n')
-          {
-            Char cc = w2i (*s);
-            if (cc == CHAR_INVALID)
-              {
-                *b++ = utf16_ucs2_to_undef_pair_high (*s);
-                *b++ = utf16_ucs2_to_undef_pair_low (*s);
-              }
-            else
-              {
-                if (!ccs_1byte_94_charset_p (code_charset (cc)))
-                  {
-                    Char t = translate[*s];
-                    if (t != CHAR_INVALID)
-                      cc = t;
-                  }
-                *b++ = cc;
-              }
-          }
-      break;
-
-    case ENCODING_LANG_CN:
-      for (; *s; s++)
-        if (*s != '\r' || s[1] != '\n')
-          {
-            Char cc = w2i (*s);
-            if (cc == CHAR_INVALID)
-              {
-                *b++ = utf16_ucs2_to_undef_pair_high (*s);
-                *b++ = utf16_ucs2_to_undef_pair_low (*s);
-              }
-            else
-              {
-                if (!ccs_1byte_94_charset_p (code_charset (cc)))
-                  {
-                    Char t = wc2gb2312_table[*s];
-                    if (t != CHAR_INVALID || (t = wc2big5_table[*s]) != CHAR_INVALID)
-                      cc = t;
-                  }
-                *b++ = cc;
-              }
-          }
-      break;
-    }
-  
   return 1;
 }
 
 int
-make_string_from_clipboard_text (lisp lstring, const void *data, UINT fmt, int lang)
+make_string_from_clipboard_text (lisp lstring, const void *data, UINT fmt)
 {
   switch (fmt)
     {
@@ -1459,7 +1366,7 @@ make_string_from_clipboard_text (lisp lstring, const void *data, UINT fmt, int l
       return make_string_from_cf_text (lstring, (const u_char *)data);
 
     case CF_UNICODETEXT:
-      return make_string_from_cf_wtext (lstring, (const ucs2_t *)data, lang);
+      return make_string_from_cf_wtext (lstring, (const ucs2_t *)data);
 
     default:
       assert (0);
@@ -1468,7 +1375,7 @@ make_string_from_clipboard_text (lisp lstring, const void *data, UINT fmt, int l
 }
 
 static int
-get_clipboatd_data (UINT fmt, lisp lstring, int lang)
+get_clipboatd_data (UINT fmt, lisp lstring)
 {
   HGLOBAL hgl = GetClipboardData (fmt);
   if (!hgl)
@@ -1476,7 +1383,7 @@ get_clipboatd_data (UINT fmt, lisp lstring, int lang)
   void *data = GlobalLock (hgl);
   if (!data)
     return 0;
-  int r = make_string_from_clipboard_text (lstring, data, fmt, lang);
+  int r = make_string_from_clipboard_text (lstring, data, fmt);
   GlobalUnlock (hgl);
   return r;
 }
@@ -1491,15 +1398,14 @@ Fget_clipboard_data ()
       lisp encoding = symbol_value (Vclipboard_char_encoding,
                                     selected_buffer ());
       if (encoding_utf16_p (encoding))
-        result = get_clipboatd_data (CF_UNICODETEXT, lstring,
-                                     xchar_encoding_utf_cjk (encoding));
+        result = get_clipboatd_data (CF_UNICODETEXT, lstring);
       if (result == -1)
         {
           UINT fmt = 0;
           while ((fmt = EnumClipboardFormats (fmt)))
             if (fmt == CF_TEXT || fmt == CF_UNICODETEXT)
               {
-                result = get_clipboatd_data (fmt, lstring, ENCODING_LANG_NIL);
+                result = get_clipboatd_data (fmt, lstring);
                 break;
               }
         }

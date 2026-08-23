@@ -151,7 +151,7 @@ struct CLIPBOARDTEXT
 };
 
 int make_clipboard_text (CLIPBOARDTEXT &, lisp, int);
-int make_string_from_clipboard_text (lisp, const void *, UINT, int);
+int make_string_from_clipboard_text (lisp, const void *, UINT);
 
 /* popup.cc */
 void erase_popup (int, int);
