@@ -482,6 +482,56 @@ Fchar_encoding_signature (lisp encoding)
     }
 }
 
+/* 符号が表す言語。同じ符号位置を複数の言語が共有するとき、どの字形を選ぶかの
+   手掛かりになる */
+int
+encoding_language (lisp encoding)
+{
+  switch (xchar_encoding_type (encoding))
+    {
+    case encoding_sjis:
+      return ENCODING_LANG_JP;
+
+    case encoding_big5:
+      return ENCODING_LANG_CN_BIG5;
+
+    case encoding_iso2022:
+    case encoding_iso2022_noesc:
+      return xchar_encoding_iso_cjk (encoding);
+
+    case encoding_utf5:
+    case encoding_utf7:
+    case encoding_utf8:
+    case encoding_utf16:
+      return xchar_encoding_utf_cjk (encoding);
+
+    case encoding_windows_codepage:
+      switch (xchar_encoding_windows_codepage (encoding))
+        {
+        case 932:
+          return ENCODING_LANG_JP;
+        case 936:
+          return ENCODING_LANG_CN_GB;
+        case 949:
+          return ENCODING_LANG_KR;
+        case 950:
+          return ENCODING_LANG_CN_BIG5;
+        default:
+          return ENCODING_LANG_NIL;
+        }
+
+    default:
+      return ENCODING_LANG_NIL;
+    }
+}
+
+lisp
+Fchar_encoding_language (lisp encoding)
+{
+  check_char_encoding (encoding);
+  return from_lang (encoding_language (encoding));
+}
+
 lisp
 find_char_encoding (lisp name)
 {

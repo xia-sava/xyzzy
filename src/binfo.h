@@ -28,6 +28,7 @@ public:
   char *mode_name (char *, char *, int) const;
   char *encoding (char *b, char *be) const
     {return w2s (b, be, xchar_encoding_name (b_bufp->lchar_encoding));}
+  char *encoding_lang (char *, char *) const;
   char *eol_code (char *b, char *be) const
     {return stpncpy (b, b_eol_name[b_bufp->b_eol_code], be - b);}
   char *ime_mode (char *, char *) const;
