@@ -4151,8 +4151,8 @@ print_stack_trace (lisp lstream, lisp cc)
         {
         case stack_trace::special_form:
         case stack_trace::macro:
-          if (p->fn == Ssi_byte_code)
-            stream.add ("(system:*byte-code ...)\n");
+          if (p->fn == Ssi_byte_code_2)
+            stream.add ("(system:*byte-code-2 ...)\n");
           else
             {
               stream.add ('(');

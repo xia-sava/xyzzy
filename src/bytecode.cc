@@ -1562,7 +1562,7 @@ ByteCode::ByteCode (lisp *frame, int nframe, lisp *stack, int nstack,
 }
 
 lisp
-Fsi_byte_code (lisp arg, lex_env &lex)
+Fsi_byte_code_2 (lisp arg, lex_env &lex)
 {
   if (!consp (arg))
     FEtoo_few_arguments ();

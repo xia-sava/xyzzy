@@ -783,7 +783,7 @@ static symbols sys[] =
   SI_DEFUN3 (*set-function-name, 2, 0, 0),
 
   /* bytecode.cc */
-  SI_DEFSF3 (*byte-code),
+  SI_DEFSF3 (*byte-code-2),
 
   /* backquote.cc */
   SI_DEFUN3 (*bq-completely-process, 1, 0, 0),
