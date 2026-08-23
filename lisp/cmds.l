@@ -861,11 +861,13 @@
 	 (char (if (= point end)
 		   ""
 		 (let ((c (following-char)))
-		   (multiple-value-bind (code charset)
-		       (iso-char-code c)
-		   (format nil "Char: ~:c (0x~x~@[ / U+~4,'0X~]~@[ / 0x~2,'0X[~A]~])  "
-			   c (char-code c) (char-unicode c) code charset
-		   ))))))
+		   (multiple-value-bind (code encoding)
+		       (char-external-code c)
+		     (format nil "Char: ~:c (U+~4,'0X~@[ / 0x~A[~A]~])  "
+			     c (char-code c)
+			     (and code (format nil "~{~2,'0X~}"
+					       (map 'list #'char-code code)))
+			     (and code (char-encoding-name encoding))))))))
     (if (or (/= begin 0) (/= end size))
 	(message "~Apoint=~D of ~D(~D%) <~D - ~D>  column ~D"
 		 char point size ratio begin end column)

@@ -2362,9 +2362,8 @@ static symbols ed[] =
   DEFUN3 (kana-char-p, 1, 0, 0),
   DEFUN3 (char-unicode, 1, 0, 0),
   DEFUN3 (unicode-char, 1, 0, 0),
-  DEFUN3 (iso-char-code, 1, 1, 0),
+  DEFUN3 (char-external-code, 1, 1, 0),
   DEFUN3 (iso-code-char, 2, 1, 0),
-  DEFUN3 (iso-char-charset, 1, 1, 0),
   DEFUN3 (word-char-p, 1, 0, 0),
 
   /* pathname.cc */
