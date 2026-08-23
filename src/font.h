@@ -181,6 +181,9 @@ public:
 // ここを通す
 int font_slot_of (Char cc);
 
+// BMP 外の文字を描くフォント。字送りが二桁に収まるよう高さを抑える
+HFONT create_surrogate_font (const SIZE &cell);
+
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const char *face, BYTE charset);
 

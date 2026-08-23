@@ -126,6 +126,19 @@ font_slot_of (Char cc)
     }
 }
 
+// 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
+// して掛かり、全角を基準に持つ漢字のフォントが倍の幅に引き伸ばされる
+HFONT
+create_surrogate_font (const SIZE &cell)
+{
+  LOGFONT lf;
+  bzero (&lf, sizeof lf);
+  lf.lfHeight = min (long (cell.cy), cell.cx * 2);
+  lf.lfCharSet = DEFAULT_CHARSET;
+  strcpy (lf.lfFaceName, "Segoe UI Emoji");
+  return CreateFontIndirect (&lf);
+}
+
 int
 FontObject::create (const char *face, int h, int charset)
 {

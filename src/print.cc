@@ -482,7 +482,7 @@ printer_device::get_dev_copies (print_settings &ps)
 print_engine::print_engine (Buffer *bp, const printer_device &dev,
                             print_settings &settings)
      : pe_bp (bp), pe_dev (dev), pe_settings (settings),
-       pe_hbm (0)
+       pe_surrogate_font (0), pe_hbm (0)
 {
   for (int i = 0; i < FONT_MAX; i++)
     pe_hfonts[i] = 0;
@@ -497,6 +497,11 @@ print_engine::cleanup ()
         DeleteObject (pe_hfonts[i]);
         pe_hfonts[i] = 0;
       }
+  if (pe_surrogate_font)
+    {
+      DeleteObject (pe_surrogate_font);
+      pe_surrogate_font = 0;
+    }
   if (pe_hbm)
     {
       DeleteObject (pe_hbm);
@@ -525,6 +530,10 @@ print_engine::init_font (HDC hdc)
 
   pe_print_cell = pe_cell;
   pe_print_cell.cy += pe_settings.ps_line_spacing_pxl;
+
+  if (pe_surrogate_font)
+    DeleteObject (pe_surrogate_font);
+  pe_surrogate_font = create_surrogate_font (pe_cell);
 
   pe_fixed_pitch = 1;
 
@@ -922,6 +931,27 @@ print_engine::paint_latin (PaintCtx &ctx, Char cc, int f) const
             : get_glyph_width (cc, pe_glyph_width));
 }
 
+// 対になったサロゲート。二桁を占める一文字として、専用のフォントで描く
+void
+print_engine::paint_surrogate_pair (PaintCtx &ctx, ucs4_t lc) const
+{
+  ucs2_t w[2];
+  w[0] = utf16_ucs4_to_pair_high (lc);
+  w[1] = utf16_ucs4_to_pair_low (lc);
+  HGDIOBJ of = SelectObject (ctx.hdc, pe_surrogate_font);
+  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, w, 2, 0);
+  ctx.column += 2;
+  if (pe_fixed_pitch)
+    ctx.x += pe_print_cell.cx * 2;
+  else
+    {
+      SIZE sz;
+      GetTextExtentPoint32W (ctx.hdc, w, 2, &sz);
+      ctx.x += sz.cx;
+    }
+  SelectObject (ctx.hdc, of);
+}
+
 void
 print_engine::paint_lucida (PaintCtx &ctx, Char cc) const
 {
@@ -1014,6 +1044,19 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
   for (; point.p_point < cur_point.p_point && !pe_bp->eobp (point); pe_bp->next_char (point))
     {
       Char cc = point.ch ();
+      // 対になったサロゲートは二つ合わせて一文字。次の文字まで見て判定する
+      if (utf16_surrogate_high_p (cc))
+        {
+          Point next = point;
+          pe_bp->next_char (next);
+          if (next.p_point < cur_point.p_point && !pe_bp->eobp (next)
+              && utf16_surrogate_low_p (next.ch ()))
+            {
+              paint_surrogate_pair (ctx, utf16_pair_to_ucs4 (cc, next.ch ()));
+              point = next;
+              continue;
+            }
+        }
       switch (code_charset (cc))
         {
         case ccs_usascii:

@@ -157,6 +157,7 @@ class print_engine
   SIZE pe_print_cell;
   int pe_fixed_pitch;
   HFONT pe_hfonts[FONT_MAX];
+  HFONT pe_surrogate_font;
   POINT pe_offset[FONT_MAX];
   int pe_offset2x[FONT_MAX];
   glyph_width pe_glyph_width;
@@ -237,6 +238,7 @@ private:
   void paint_latin (PaintCtx &, Char, int) const;
   void paint_jisx0212 (PaintCtx &, Char) const;
   void paint_full_width (PaintCtx &, Char, int) const;
+  void paint_surrogate_pair (PaintCtx &, ucs4_t) const;
   void paint_lucida (PaintCtx &, Char) const;
   int paint_line (HDC, int, int, Point &, long &) const;
   void paint_header (HDC);

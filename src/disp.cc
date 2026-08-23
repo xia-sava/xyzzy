@@ -345,11 +345,6 @@ Window::update_caret () const
     }
 }
 
-#define SURROGATE_FACE_NAME "Segoe UI Emoji"
-
-// BMP 外の文字を描くフォント。字送りが 2 セルに収まるよう高さを抑える。
-// 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
-// して掛かり、全角を基準に持つ漢字のフォントが倍の幅に引き伸ばされる
 static HFONT
 surrogate_font ()
 {
@@ -360,12 +355,7 @@ surrogate_font ()
     {
       if (hfont)
         DeleteObject (hfont);
-      LOGFONT lf;
-      bzero (&lf, sizeof lf);
-      lf.lfHeight = min (sz.cy, sz.cx * 2);
-      lf.lfCharSet = DEFAULT_CHARSET;
-      strcpy (lf.lfFaceName, SURROGATE_FACE_NAME);
-      hfont = CreateFontIndirect (&lf);
+      hfont = create_surrogate_font (sz);
       size = sz;
     }
   return hfont;
