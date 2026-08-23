@@ -7,7 +7,7 @@ const char *const buffer_info::b_eol_name[] = {"lf", "crlf", "cr"};
 char *
 buffer_info::encoding_lang (char *b, char *be) const
 {
-  lisp lang = from_lang (encoding_language (b_bufp->lchar_encoding));
+  lisp lang = from_lang (b_bufp->char_language ());
   return lang == Qnil ? b : w2s (b, be, xsymbol_name (lang));
 }
 

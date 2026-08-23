@@ -716,6 +716,15 @@ Window::invalidate_glyphs ()
   w_cursor_line.ypixel = -1;
 }
 
+// その文字列を映している窓の升目を捨てて、描き直させる
+void
+Window::invalidate_glyphs (const Buffer *bp)
+{
+  for (Window *wp = app.active_frame.windows; wp; wp = wp->w_next)
+    if (wp->w_bufp == bp)
+      wp->invalidate_glyphs ();
+}
+
 void
 Window::change_parameters (const FontSetParam &param)
 {

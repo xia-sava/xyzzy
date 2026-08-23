@@ -1786,6 +1786,8 @@ static symbols ed[] =
   DEFUN3 (buffer-eol-code, 0, 1, 0),
   DEFUN3 (set-buffer-fileio-encoding, 1, 1, 0),
   DEFUN3 (set-buffer-eol-code, 1, 1, 0),
+  DEFUN3 (buffer-char-language, 0, 1, 0),
+  DEFUN3 (set-buffer-char-language, 1, 1, 0),
   DEFUN3 (buffer-list, 0, 0, FFneed_rest),
   DEFUN3 (enum-buffers, 1, 0, 0),
   DEFUN3 (find-name-buffer, 1, 0, 0),

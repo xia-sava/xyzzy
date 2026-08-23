@@ -669,6 +669,7 @@ struct Window
                                  const XCOLORREF *, const XCOLORREF *,
                                  bool change_color_p = true);
   void invalidate_glyphs ();
+  static void invalidate_glyphs (const Buffer *);
 
   void discard_invalid_region (const PAINTSTRUCT &, RECT &);
 

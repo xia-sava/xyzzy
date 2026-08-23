@@ -1086,6 +1086,32 @@ Buffer::char_language () const
           ? b_char_language : encoding_language (lchar_encoding));
 }
 
+// 言語を変えると字形を選び直すので、この文字列を映している窓を描き直す
+void
+Buffer::change_char_language (int lang)
+{
+  if (b_char_language == lang)
+    return;
+  b_char_language = lang;
+  Window::invalidate_glyphs (this);
+  modify_mode_line ();
+}
+
+lisp
+Fbuffer_char_language (lisp buffer)
+{
+  return from_lang (Buffer::coerce_to_buffer (buffer)->b_char_language);
+}
+
+lisp
+Fset_buffer_char_language (lisp lang, lisp buffer)
+{
+  if (lang != Qnil && to_lang (lang) == ENCODING_LANG_NIL)
+    FEtype_error (lang, Qsymbol);
+  Buffer::coerce_to_buffer (buffer)->change_char_language (to_lang (lang));
+  return Qt;
+}
+
 lisp
 Fset_buffer_fileio_encoding (lisp encoding, lisp buffer)
 {

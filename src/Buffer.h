@@ -695,6 +695,7 @@ struct Buffer
   char *quoted_buffer_name (char *, char *, int, int) const;
   void modify_mode_line () const;
   int char_language () const;
+  void change_char_language (int);
   void modify_buffer_bar ()
     {
       b_buffer_bar_modified |= BUFFER_BAR_MODIFIED;

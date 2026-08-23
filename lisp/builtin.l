@@ -719,6 +719,8 @@
 (si::defun-builtin buffer-eol-code (&optional buffer))
 (si::defun-builtin set-buffer-fileio-encoding (code &optional buffer))
 (si::defun-builtin set-buffer-eol-code (code &optional buffer))
+(si::defun-builtin buffer-char-language (&optional buffer))
+(si::defun-builtin set-buffer-char-language (lang &optional buffer))
 (si::defun-builtin buffer-list (&key :buffer-bar-order))
 (si::defun-builtin enum-buffers (fn))
 (si::defun-builtin find-name-buffer (buffer-name))
