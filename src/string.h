@@ -110,6 +110,14 @@ w2s_char (Char cc)
   return c != CHAR_INVALID ? c : DEFCHAR;
 }
 
+/* 符号変換や base64 のように、文字列がバイト列を表すことがある。その並びは
+   一文字が一バイト。それ以外の文字は CP932 の符号にしてから渡す */
+inline Char
+w2b_char (Char cc)
+{
+  return cc < 0x100 ? cc : w2s_char (cc);
+}
+
 size_t s2wl (const char *);
 Char *s2w (Char *, size_t, const char **);
 Char *s2w (Char *, const char *);
@@ -123,6 +131,8 @@ char *w2s (char *, const Char *, size_t);
 char *w2s (const Char *, size_t);
 char *w2s (char *, char *, const Char *, size_t);
 char *w2s_quote (char *, char *, const Char *, size_t, int, int);
+size_t w2bl (const Char *, size_t);
+char *w2b (char *, const Char *, size_t);
 
 size_t s2wl (const char *string, const char *se, int zero_term);
 Char *s2w (Char *b, const char *string, const char *se, int zero_term);
@@ -181,6 +191,18 @@ inline size_t
 w2sl (lisp l)
 {
   return w2sl (xstring_contents (l), xstring_length (l));
+}
+
+inline size_t
+w2bl (lisp l)
+{
+  return w2bl (xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2b (char *b, lisp l)
+{
+  return w2b (b, xstring_contents (l), xstring_length (l));
 }
 
 inline char *

@@ -232,6 +232,30 @@ w2s_quote (char *b, char *be, const Char *s, size_t size, int qc, int qe)
 }
 
 size_t
+w2bl (const Char *s, size_t size)
+{
+  size_t l = 0;
+  for (const Char *se = s + size; s < se; s++)
+    if (DBCP (w2b_char (*s)))
+      l++;
+  return size + l;
+}
+
+char *
+w2b (char *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    {
+      Char c = w2b_char (*s);
+      if (DBCP (c))
+        *b++ = char (c >> 8);
+      *b++ = char (c);
+    }
+  *b = 0;
+  return b;
+}
+
+size_t
 s2wl (const char *string, const char *se, int zero_term)
 {
   size_t l = 0;
@@ -1290,7 +1314,7 @@ Fsi_octet_length (lisp string, lisp keys)
                     find_keyword (Kend, keys, Qnil));
   lisp encoding = find_keyword (Kencoding, keys);
   if (encoding == Qnil)
-    return make_fixnum (w2sl (xstring_contents (string) + start, end - start));
+    return make_fixnum (w2bl (xstring_contents (string) + start, end - start));
 
   check_char_encoding (encoding);
   if (xchar_encoding_type (encoding) == encoding_auto_detect)
