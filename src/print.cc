@@ -48,7 +48,7 @@ print_settings::init_faces ()
   for (int i = 0; i < FONT_MAX; i++)
     if (!*ps_font[i].face)
       {
-        strcpy (ps_font[i].face, FontSet::default_face (i, 1));
+        wcscpy (ps_font[i].face, FontSet::default_face (i, 1));
         ps_font[i].charset = FontSet::default_charset (i);
         ps_font[i].point = 100;
         ps_font[i].bold = 0;
@@ -153,7 +153,7 @@ print_settings::calc_pxl (const printer_device &dev)
 }
 
 int CALLBACK
-print_settings::check_valid_font (const ENUMLOGFONT *, const NEWTEXTMETRIC *,
+print_settings::check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
                                   DWORD, LPARAM lparam)
 {
   *(int *)lparam = 1;
@@ -166,23 +166,23 @@ print_settings::make_font (HDC hdc, int charset, int height) const
   if (charset != FONT_ASCII)
     {
       int exists = 0;
-      EnumFontFamilies (hdc, ps_font[charset].face,
-                        FONTENUMPROC (check_valid_font),
-                        LPARAM (&exists));
+      EnumFontFamiliesW (hdc, ps_font[charset].face,
+                         FONTENUMPROCW (check_valid_font),
+                         LPARAM (&exists));
       if (!exists)
         charset = FONT_ASCII;
     }
 
-  LOGFONT lf;
+  LOGFONTW lf;
   bzero (&lf, sizeof lf);
-  strcpy (lf.lfFaceName, ps_font[charset].face);
+  wcscpy (lf.lfFaceName, ps_font[charset].face);
   lf.lfHeight = height;
   lf.lfCharSet = ps_font[charset].charset;
   lf.lfItalic = ps_font[charset].italic;
   if (ps_font[charset].bold)
     lf.lfWeight = 700;
 
-  return CreateFontIndirect (&lf);
+  return CreateFontIndirectW (&lf);
 }
 
 printer_device::printer_device ()
@@ -883,9 +883,9 @@ void
 print_engine::paint_lucida (PaintCtx &ctx, Char cc) const
 {
   ucs2_t wc = ucs2_t (cc);
-  static LOGFONT lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
+  static LOGFONTW lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
   lf.lfHeight = pe_cell.cy;
-  HGDIOBJ of = SelectObject (ctx.hdc, CreateFontIndirect (&lf));
+  HGDIOBJ of = SelectObject (ctx.hdc, CreateFontIndirectW (&lf));
   int o;
   if (pe_fixed_pitch)
     o = (LUCIDA_OFFSET (wc - UNICODE_SMLCDM_MIN)

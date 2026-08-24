@@ -148,14 +148,14 @@ Sysdep::Sysdep ()
   hfont_ui90 = 0;
   hfont_ui270 = 0;
 
-  LOGFONT lf;
+  LOGFONTW lf;
   memset (&lf, 0, sizeof lf);
   lf.lfHeight = dpi_scale (12);
-  strcpy (lf.lfFaceName, "Arial");
-  hfont_ruler = CreateFontIndirect (&lf);
+  wcscpy (lf.lfFaceName, L"Arial");
+  hfont_ruler = CreateFontIndirectW (&lf);
   HDC hdc = GetDC (0);
   HGDIOBJ of = SelectObject (hdc, hfont_ruler);
-  GetTextExtentPoint32 (hdc, "0", 1, &ruler_ext);
+  GetTextExtentPoint32W (hdc, L"0", 1, &ruler_ext);
   SelectObject (hdc, of);
 }
 
@@ -292,21 +292,21 @@ HFONT
 Sysdep::create_ui_font (int e)
 {
   // システムの UI フォントを使う。DPI に応じた大きさで返ってくる
-  LOGFONT lf;
-  NONCLIENTMETRICS cm;
+  LOGFONTW lf;
+  NONCLIENTMETRICSW cm;
   cm.cbSize = sizeof cm;
-  if (SystemParametersInfo (SPI_GETNONCLIENTMETRICS, 0, &cm, 0))
+  if (SystemParametersInfoW (SPI_GETNONCLIENTMETRICS, 0, &cm, 0))
     lf = cm.lfMessageFont;
   else
     {
       bzero (&lf, sizeof lf);
       lf.lfHeight = MulDiv (9, screen_dpi (), 72);
-      strcpy (lf.lfFaceName, "MS UI Gothic");
+      wcscpy (lf.lfFaceName, L"MS UI Gothic");
     }
-  // バーの文字列は CP932 のバイト列のまま描画される
-  lf.lfCharSet = SHIFTJIS_CHARSET;
+  // 文字は符号位置で渡すので、字形はどの文字集合からでも選ばせる
+  lf.lfCharSet = DEFAULT_CHARSET;
   lf.lfEscapement = e;
-  return CreateFontIndirect (&lf);
+  return CreateFontIndirectW (&lf);
 }
 
 HFONT

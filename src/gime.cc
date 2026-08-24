@@ -133,13 +133,13 @@ GlobalIME::ImmSetCompositionWindow (HIMC himc, COMPOSITIONFORM *cf)
 }
 
 BOOL
-GlobalIME::ImmSetCompositionFont (HIMC himc, LOGFONT *lf)
+GlobalIME::ImmSetCompositionFontW (HIMC himc, LOGFONTW *lf)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->SetCompositionFontA (himc, lf) == S_OK;
+    return gi_app->SetCompositionFontW (himc, lf) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmSetCompositionFont (himc, lf);
+  return ::ImmSetCompositionFontW (himc, lf);
 }
 
 LONG

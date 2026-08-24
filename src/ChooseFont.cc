@@ -29,7 +29,7 @@ ChooseFontP::add_lang (HWND hwnd)
 }
 
 int CALLBACK
-ChooseFontP::enum_font_name_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, LPARAM lparam)
+ChooseFontP::enum_font_name_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type, LPARAM lparam)
 {
   if (*elf->elfLogFont.lfFaceName != '@'
       && (elf->elfLogFont.lfPitchAndFamily & 3) == FIXED_PITCH)
@@ -52,7 +52,7 @@ ChooseFontP::add_font_name (HWND hwnd, HDC hdc)
 }
 
 int CALLBACK
-ChooseFontP::enum_font_size_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, LPARAM lparam)
+ChooseFontP::enum_font_size_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type, LPARAM lparam)
 {
   HWND hwnd = ((xdpi *)lparam)->hwnd;
   int dpi = ((xdpi *)lparam)->dpi;
@@ -215,27 +215,27 @@ ChooseFontP::notify_font_size (HWND hwnd, int code)
   int i = SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETCURSEL, 0, 0);
   if (i == LB_ERR)
     return;
-  char name[LF_FACESIZE];
-  if (SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETTEXT, i, LPARAM (name)) == LB_ERR)
+  WCHAR name[LF_FACESIZE];
+  if (SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_GETTEXT, i, LPARAM (name)) == LB_ERR)
     return;
 
   int j = SendDlgItemMessage (hwnd, IDC_SIZELIST, LB_GETCURSEL, 0, 0);
   if (j == LB_ERR)
     return;
-  char b[16];
-  if (SendDlgItemMessage (hwnd, IDC_SIZELIST, LB_GETTEXT, j, LPARAM (b)) == LB_ERR)
+  WCHAR b[16];
+  if (SendDlgItemMessageW (hwnd, IDC_SIZELIST, LB_GETTEXT, j, LPARAM (b)) == LB_ERR)
     return;
 
   BYTE charset = BYTE (SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETITEMDATA, i, 0) >> 8);
-  LOGFONT lf;
+  LOGFONTW lf;
   bzero (&lf, sizeof lf);
-  lf.lfHeight = cf_param.fs_size_pixel ? atoi (b) : MulDiv (atoi (b), cf_dpi, 72);
+  lf.lfHeight = cf_param.fs_size_pixel ? _wtoi (b) : MulDiv (_wtoi (b), cf_dpi, 72);
   lf.lfCharSet = charset;
-  strcpy (lf.lfFaceName, name);
+  wcscpy (lf.lfFaceName, name);
 
   cf_param.fs_logfont[lang] = lf;
 
-  HFONT hfont = CreateFontIndirect (&lf);
+  HFONT hfont = CreateFontIndirectW (&lf);
   HFONT hfdlg = HFONT (SendMessage (hwnd, WM_GETFONT, 0, 0));
   HFONT hfctl = HFONT (SendDlgItemMessage (hwnd, IDC_SAMPLE, WM_GETFONT, 0, 0));
   SendDlgItemMessage (hwnd, IDC_SAMPLE, WM_SETFONT, WPARAM (hfont), MAKELPARAM (0, 0));

@@ -345,7 +345,7 @@ set_ime_caret ()
       cf.ptCurrentPos = pt;
       app.kbdq.gime.ImmSetCompositionWindow (hIMC, &cf);
 
-      app.kbdq.gime.ImmSetCompositionFont (hIMC, (LOGFONT *)&font.logfont ());
+      app.kbdq.gime.ImmSetCompositionFontW (hIMC, (LOGFONTW *)&font.logfont ());
       app.kbdq.gime.ImmReleaseContext (app.toplev, hIMC);
     }
 }

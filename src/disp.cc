@@ -514,9 +514,9 @@ static inline void
 paint_smlcdm_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                     const glyph_t *g, int len)
 {
-  static LOGFONT lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
+  static LOGFONTW lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
   lf.lfHeight = app.text_font.font (FONT_ASCII).size ().cy;
-  HGDIOBJ of = SelectObject (hdc, CreateFontIndirect (&lf));
+  HGDIOBJ of = SelectObject (hdc, CreateFontIndirectW (&lf));
   paint_chars_ctx ctx (x, y, r);
   for (int i = 0; i < len; i++)
     ctx.paint_lucida (hdc, ucs2_t (GLYPH_CHAR (g[i])), flags);

@@ -153,9 +153,9 @@ ModelineParam::init (HFONT hf)
     m_hfont = HFONT (GetStockObject (SYSTEM_FONT));
   else
     {
-      LOGFONT lf;
-      GetObject (hf, sizeof lf, &lf);
-      m_hfont = CreateFontIndirect (&lf);
+      LOGFONTW lf;
+      GetObjectW (hf, sizeof lf, &lf);
+      m_hfont = CreateFontIndirectW (&lf);
     }
   TEXTMETRIC tm;
   HDC hdc = GetDC (0);

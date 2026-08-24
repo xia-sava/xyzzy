@@ -13,12 +13,12 @@ protected:
   SIZE fo_size;
   int fo_ascent;
   int fo_columns;
-  LOGFONT fo_logfont;
+  LOGFONTW fo_logfont;
 public:
   FontObject () : fo_hfont (0), fo_columns (1) {}
   ~FontObject () {if (fo_hfont) DeleteObject (fo_hfont);}
-  int create (const LOGFONT &);
-  int create (const char *, int, int);
+  int create (const LOGFONTW &);
+  int create (const WCHAR *, int, int);
   operator HFONT () const {return fo_hfont;}
   const HFONT hfont () const {return fo_hfont;}
   void get_metrics ();
@@ -29,8 +29,8 @@ public:
   int columns () const {return fo_columns;}
   const POINT &offset () const {return fo_offset;}
   int ascent () const {return fo_ascent;}
-  const LOGFONT &logfont () const {return fo_logfont;}
-  static const bool update (LOGFONT &lf, const lisp keys, const bool recommend_size_p);
+  const LOGFONTW &logfont () const {return fo_logfont;}
+  static const bool update (LOGFONTW &lf, const lisp keys, const bool recommend_size_p);
   static const int dpi ()
     {
       return screen_dpi ();
@@ -73,7 +73,7 @@ enum
 
 struct FontSetParam
 {
-  LOGFONT fs_logfont[FONT_MAX];
+  LOGFONTW fs_logfont[FONT_MAX];
   int fs_use_backsl;
   int fs_line_spacing;
   int fs_recommend_size;
@@ -102,7 +102,7 @@ protected:
   static const WCHAR *const fs_regent[];
   // disp が入っていなければ alt を使う。Windows の版によって、入っている
   // フォントが違うため
-  struct fontface {const char *disp, *alt, *print; int charset;};
+  struct fontface {const WCHAR *disp, *alt, *print; int charset;};
   static const fontface fs_default_face[];
   static const ucs2_t fs_sample_char[];
 public:
@@ -162,7 +162,7 @@ public:
   int full_width_slot_p (int slot) const;
 
   static const WCHAR *regent (int n) {return fs_regent[n];}
-  static const char *default_face (int n, int print);
+  static const WCHAR *default_face (int n, int print);
   static int default_charset (int n) {return fs_default_face[n].charset;}
   static UINT lang_id (int n) {return fs_lang_id[n];}
   static const lisp lang_key (int n) {return *fs_lang_key[n];}
@@ -185,11 +185,11 @@ int font_slot_of (Char cc, int lang = ENCODING_LANG_NIL);
 HFONT create_surrogate_font (const SIZE &cell);
 
 int get_font_height (HWND hwnd);
-bool font_exist_p (const HDC hdc, const char *face, BYTE charset);
+bool font_exist_p (const HDC hdc, const WCHAR *face, BYTE charset);
 
 // フォントの寸法を記録する節の名前。画面の DPI ごとに分かれる
 const WCHAR *font_conf_section ();
-// 上の節から LOGFONT を読む。無ければ [Font] 節を読んで DPI に合わせて換算する
-int read_font_conf (const WCHAR *name, LOGFONT &lf);
+// 上の節から LOGFONTW を読む。無ければ [Font] 節を読んで DPI に合わせて換算する
+int read_font_conf (const WCHAR *name, LOGFONTW &lf);
 
 #endif /* _font_h_ */

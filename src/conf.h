@@ -95,7 +95,7 @@ void write_conf (const WCHAR *, const WCHAR *, const WCHAR *);
 void write_conf (const WCHAR *, const WCHAR *, long, int = 0);
 void write_conf (const WCHAR *, const WCHAR *, const int *, int, int = 0);
 void write_conf (const WCHAR *, const WCHAR *, const RECT &);
-void write_conf (const WCHAR *, const WCHAR *, const LOGFONT &);
+void write_conf (const WCHAR *, const WCHAR *, const LOGFONTW &);
 void write_conf (const WCHAR *, const WCHAR *, const PRLOGFONT &);
 void write_conf (const WCHAR *, const WCHAR *, const WINDOWPLACEMENT &);
 int read_conf (const WCHAR *, const WCHAR *, WCHAR *, int);
@@ -111,7 +111,7 @@ read_conf (const WCHAR *section, const WCHAR *name, u_long &value)
 #endif
 int read_conf (const WCHAR *, const WCHAR *, int *, int);
 int read_conf (const WCHAR *, const WCHAR *, RECT &);
-int read_conf (const WCHAR *, const WCHAR *, LOGFONT &);
+int read_conf (const WCHAR *, const WCHAR *, LOGFONTW &);
 int read_conf (const WCHAR *, const WCHAR *, PRLOGFONT &);
 int read_conf (const WCHAR *, const WCHAR *, WINDOWPLACEMENT &);
 void flush_conf ();

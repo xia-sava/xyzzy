@@ -22,21 +22,6 @@ ini ()
   return ini_file;
 }
 
-/* フォントの名前は LOGFONT が CP932 で持つ。設定へ出し入れするときだけ移す */
-static void
-face2u (WCHAR *b, const char *face)
-{
-  if (!MultiByteToWideChar (CP_ACP, 0, face, -1, b, LF_FACESIZE))
-    *b = 0;
-}
-
-static void
-u2face (char *face, const WCHAR *b)
-{
-  if (!WideCharToMultiByte (CP_ACP, 0, b, -1, face, LF_FACESIZE, 0, 0))
-    *face = 0;
-}
-
 void
 write_conf (const WCHAR *section, const WCHAR *name, const WCHAR *str)
 {
@@ -69,22 +54,18 @@ write_conf (const WCHAR *section, const WCHAR *name, const RECT &r)
 }
 
 void
-write_conf (const WCHAR *section, const WCHAR *name, const LOGFONT &lf)
+write_conf (const WCHAR *section, const WCHAR *name, const LOGFONTW &lf)
 {
-  WCHAR face[LF_FACESIZE];
-  face2u (face, lf.lfFaceName);
   WCHAR buf[128];
-  wsprintfW (buf, L"%d,\"%s\",%d", lf.lfHeight, face, lf.lfCharSet);
+  wsprintfW (buf, L"%d,\"%s\",%d", lf.lfHeight, lf.lfFaceName, lf.lfCharSet);
   ini ().set (section, name, buf);
 }
 
 void
 write_conf (const WCHAR *section, const WCHAR *name, const PRLOGFONT &lf)
 {
-  WCHAR face[LF_FACESIZE];
-  face2u (face, lf.face);
   WCHAR buf[128];
-  wsprintfW (buf, L"%d,\"%s\",%d,%d,%d", lf.point, face, lf.charset, lf.bold, lf.italic);
+  wsprintfW (buf, L"%d,\"%s\",%d,%d,%d", lf.point, lf.face, lf.charset, lf.bold, lf.italic);
   ini ().set (section, name, buf);
 }
 
@@ -190,18 +171,16 @@ read_conf (const WCHAR *section, const WCHAR *name, RECT &rr)
 }
 
 int
-read_conf (const WCHAR *section, const WCHAR *name, LOGFONT &lf)
+read_conf (const WCHAR *section, const WCHAR *name, LOGFONTW &lf)
 {
   WCHAR buf[128];
   int l = read_conf (section, name, buf, numberof (buf));
   if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   memset (&lf, 0, sizeof lf);
-  WCHAR face[LF_FACESIZE];
   int h, cs;
-  if (swscanf (buf, L"%d,\"%31[^\"]\",%d", &h, face, &cs) != 3)
+  if (swscanf (buf, L"%d,\"%31[^\"]\",%d", &h, lf.lfFaceName, &cs) != 3)
     return 0;
-  u2face (lf.lfFaceName, face);
   lf.lfHeight = h;
   lf.lfCharSet = cs;
   return 1;
@@ -214,12 +193,10 @@ read_conf (const WCHAR *section, const WCHAR *name, PRLOGFONT &lf)
   int l = read_conf (section, name, buf, numberof (buf));
   if (!l || l >= int (numberof (buf)) - 1)
     return 0;
-  WCHAR face[LF_FACESIZE];
   int point, cs, bold, italic;
   if (swscanf (buf, L"%d,\"%31[^\"]\",%d,%d,%d",
-               &point, face, &cs, &bold, &italic) != 5)
+               &point, lf.face, &cs, &bold, &italic) != 5)
     return 0;
-  u2face (lf.face, face);
   lf.point = point;
   lf.charset = cs;
   lf.bold = bold;
@@ -502,17 +479,38 @@ reg2ini_int (const WCHAR *key, ReadRegistry &r, const conf &cf, int l)
 static void
 reg2ini_logfont (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
-  LOGFONT lf;
-  if (r.get (cf.name, &lf, sizeof lf) == sizeof lf)
-    write_conf (key, cf.name, lf);
+  // 古い版がレジストリへ書いた形は CP932 の LOGFONTA
+  LOGFONTA old;
+  if (r.get (cf.name, &old, sizeof old) != sizeof old)
+    return;
+  LOGFONTW lf;
+  memcpy (&lf, &old, offsetof (LOGFONTA, lfFaceName));
+  if (!MultiByteToWideChar (CP_ACP, 0, old.lfFaceName, -1,
+                            lf.lfFaceName, LF_FACESIZE))
+    *lf.lfFaceName = 0;
+  write_conf (key, cf.name, lf);
 }
 
 static void
 reg2ini_print_font (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
+  // 古い版がレジストリへ書いた形は、名前が CP932
+  struct
+    {
+      int point;
+      u_char charset, bold, italic;
+      char face[LF_FACESIZE];
+    } old;
+  if (r.get (cf.name, &old, sizeof old) != sizeof old)
+    return;
   PRLOGFONT lf;
-  if (r.get (cf.name, &lf, sizeof lf) == sizeof lf)
-    write_conf (key, cf.name, lf);
+  lf.point = old.point;
+  lf.charset = old.charset;
+  lf.bold = old.bold;
+  lf.italic = old.italic;
+  if (!MultiByteToWideChar (CP_ACP, 0, old.face, -1, lf.face, LF_FACESIZE))
+    *lf.face = 0;
+  write_conf (key, cf.name, lf);
 }
 
 static void
