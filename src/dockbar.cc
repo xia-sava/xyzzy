@@ -273,6 +273,13 @@ dock_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
         }
       break;
 
+    /* ツールチップは、道具を登録した窓、つまりこの窓へ文字を求めてくる */
+    case WM_NOTIFY:
+      if (((NMHDR *)lparam)->code == TTN_NEEDTEXTW
+          && need_text (*(TOOLTIPTEXTW *)lparam))
+        return 0;
+      break;
+
     case WM_NCDESTROY:
       sendmsg (msg, wparam, lparam);
       unsubclass ();
@@ -2248,18 +2255,6 @@ dock_frame::draw_item (DRAWITEMSTRUCT *dis)
 int
 dock_frame::notify (NMHDR *nm, LRESULT &result)
 {
-  if (nm->code == TTN_NEEDTEXTW)
-    {
-      TOOLINFOW ti;
-      ti.cbSize = sizeof ti;
-      if (SendMessage (nm->hwndFrom, TTM_GETCURRENTTOOLW, 0, LPARAM (&ti))
-          && ti.lpszText == LPSTR_TEXTCALLBACKW)
-        {
-          dock_bar *bar = dock_bar::from_hwnd (ti.hwnd);
-          return bar ? bar->need_text (*(TOOLTIPTEXTW *)nm) : 0;
-        }
-    }
-
   dock_bar *bar = dock_bar::from_hwnd (nm->hwndFrom);
   return bar ? bar->notify (nm, result) : 0;
 }
