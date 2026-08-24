@@ -4,7 +4,7 @@
 class WINFS
 {
 protected:
-  typedef BOOL (WINAPI *GETDISKFREESPACEEX)(LPCTSTR, PULARGE_INTEGER,
+  typedef BOOL (WINAPI *GETDISKFREESPACEEX)(LPCWSTR, PULARGE_INTEGER,
                                             PULARGE_INTEGER, PULARGE_INTEGER);
   static const GETDISKFREESPACEEX GetDiskFreeSpaceEx;
 
