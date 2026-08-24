@@ -1138,8 +1138,6 @@ const internal_to_iso2022_stream::ccs_data internal_to_iso2022_stream::s_ccs_dat
   {'C', ctype94n},           // ccs_ksc5601
   {'0', ctype94n},           // ccs_big5_1
   {'1', ctype94n},           // ccs_big5_2
-  {0},                       // ccs_utf16_undef_char_high
-  {0},                       // ccs_utf16_undef_char_low
   {0},                       // ccs_utf16_surrogate_high
   {0},                       // ccs_utf16_surrogate_low
   {'G', ctype94n},           // ccs_cns11643_1

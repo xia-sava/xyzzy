@@ -496,11 +496,6 @@ init_charset_category ()
   SET_CCS_RANGE (CCS_GB2312_MIN, CCS_GB2312_MAX, ccs_gb2312);
   SET_CCS_RANGE (CCS_BIG5_MIN, CCS_BIG5_MAX, ccs_big5);
 
-  code_charset_table[CCS_UTF16_UNDEF_CHAR_HIGH >> 7] = ccs_utf16_undef_char_high;
-  code_charset_table[(CCS_UTF16_UNDEF_CHAR_HIGH >> 7) + 1] = ccs_utf16_undef_char_high;
-  code_charset_table[CCS_UTF16_UNDEF_CHAR_LOW >> 7] = ccs_utf16_undef_char_low;
-  code_charset_table[(CCS_UTF16_UNDEF_CHAR_LOW >> 7) + 1] = ccs_utf16_undef_char_low;
-
   SET_CCS_RANGE (CCS_UTF16_SURROGATE_HIGH_MIN, CCS_UTF16_SURROGATE_HIGH_MAX,
                  ccs_utf16_surrogate_high);
   SET_CCS_RANGE (CCS_UTF16_SURROGATE_LOW_MIN, CCS_UTF16_SURROGATE_LOW_MAX,
@@ -606,37 +601,3 @@ init_ucs2_table ()
 #endif
 }
 
-static wc2int_hash *to_half_width_hashtabs[] =
-{
-  &wc2int_iso8859_1_hash,
-  &wc2int_iso8859_2_hash,
-  &wc2int_iso8859_3_hash,
-  &wc2int_iso8859_4_hash,
-  &wc2int_iso8859_5_hash,
-  &wc2int_iso8859_7_hash,
-  &wc2int_iso8859_9_hash,
-  &wc2int_iso8859_10_hash,
-  &wc2int_iso8859_13_hash,
-  &wc2int_windows_latin1_hash,
-  &wc2int_windows_latin2_hash,
-  &wc2int_windows_cyrillic_hash,
-  &wc2int_windows_greek_hash,
-  &wc2int_windows_turkish_hash,
-  &wc2int_windows_baltic_hash,
-  &wc2int_koi8r_hash,
-  &wc2int_koi8u_hash,
-};
-
-Char
-w2i_half_width (ucs2_t wc)
-{
-  Char cc = w2i (wc);
-  if (cc != CHAR_INVALID && charset_width (cc) != 1)
-    for (int i = 0; i < numberof (to_half_width_hashtabs); i++)
-      {
-        Char t = lookup_wc2int_hash (*to_half_width_hashtabs[i], wc);
-        if (t != CHAR_INVALID)
-          return t;
-      }
-  return cc;
-}

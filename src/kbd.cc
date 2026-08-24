@@ -1180,26 +1180,15 @@ ime_comp_queue::push (const char *comp, int compl, const char *read, int readl)
 }
 
 static int
-store_wcs (Char *b0, const ucs2_t *w, int l, const Char *tab)
+store_wcs (Char *b0, const ucs2_t *w, int l)
 {
-  Char *b = b0;
-  for (const ucs2_t *we = w + l; w < we; w++)
-    {
-      Char cc;
-      if ((!tab || (cc = tab[*w]) == CHAR_INVALID)
-          && (cc = w2i (*w)) == CHAR_INVALID)
-        {
-          *b++ = utf16_ucs2_to_undef_pair_high (*w);
-          cc = utf16_ucs2_to_undef_pair_low (*w);
-        }
-      *b++ = cc;
-    }
-  return b - b0;
+  for (int i = 0; i < l; i++)
+    b0[i] = w[i];
+  return l;
 }
 
 void
-ime_comp_queue::push (const ucs2_t *comp, int compl, const ucs2_t *read, int readl,
-                      const Char *tab)
+ime_comp_queue::push (const ucs2_t *comp, int compl, const ucs2_t *read, int readl)
 {
   Char *b = (Char *)malloc ((compl + readl) * (sizeof (Char) * 2));
   if (!b)
@@ -1207,9 +1196,9 @@ ime_comp_queue::push (const ucs2_t *comp, int compl, const ucs2_t *read, int rea
   qindex = (qindex + 1) % MAX_QUEUE;
   xfree (qbuf[qindex].comp);
   qbuf[qindex].comp = b;
-  qbuf[qindex].compl = store_wcs (qbuf[qindex].comp, comp, compl, tab);
+  qbuf[qindex].compl = store_wcs (qbuf[qindex].comp, comp, compl);
   qbuf[qindex].read = b + compl * 2;
-  qbuf[qindex].readl = store_wcs (qbuf[qindex].read, read, readl, tab);
+  qbuf[qindex].readl = store_wcs (qbuf[qindex].read, read, readl);
 }
 
 const ime_comp_queue::pair *

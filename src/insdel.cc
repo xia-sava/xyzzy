@@ -1132,19 +1132,7 @@ make_cf_wtext (CLIPBOARDTEXT &clp, lisp string)
     {
       if (*s == '\n')
         *b++ = '\r';
-      ucs2_t c = i2w (*s);
-      if (c == ucs2_t (-1))
-        {
-          if (utf16_undef_char_high_p (*s) && s < se - 1
-              && utf16_undef_char_low_p (s[1]))
-            {
-              c = utf16_undef_pair_to_ucs2 (*s, s[1]);
-              s++;
-            }
-          else
-            c = DEFCHAR;
-        }
-      *b++ = c;
+      *b++ = ucs2_t (*s);
     }
   *b = 0;
 

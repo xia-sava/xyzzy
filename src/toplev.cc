@@ -413,48 +413,9 @@ ime_composition (HWND hwnd, LPARAM lparam)
               ucs2_t *s = (ucs2_t *)alloca (l + sizeof (ucs2_t));
               if (app.kbdq.gime.ImmGetCompositionStringW (hIMC, GCS_RESULTSTR, s, l) == l)
                 {
-                  const Char *tab = 0;
-                  switch (PRIMARYLANGID (app.kbdq.kbd_langid ()))
-                    {
-                    case LANG_JAPANESE:
-                      tab = wc2cp932_table;
-                      break;
-
-                    case LANG_KOREAN:
-                      init_wc2ksc5601_table ();
-                      tab = wc2ksc5601_table;
-                      break;
-
-                    case LANG_CHINESE:
-                      switch (SUBLANGID (app.kbdq.kbd_langid ()))
-                        {
-                        case SUBLANG_CHINESE_TRADITIONAL:
-                        case SUBLANG_CHINESE_HONGKONG:
-                          init_wc2big5_table ();
-                          tab = wc2big5_table;
-                          break;
-
-                        case SUBLANG_CHINESE_SIMPLIFIED:
-                        case SUBLANG_CHINESE_SINGAPORE:
-                          init_wc2gb2312_table ();
-                          tab = wc2gb2312_table;
-                          break;
-                        }
-                      break;
-                    }
-
                   l /= sizeof (ucs2_t);
                   for (ucs2_t *sp = s, *se = s + l; sp < se; sp++)
-                    {
-                      Char cc;
-                      if ((!tab || (cc = tab[*sp]) == CHAR_INVALID)
-                          && (cc = w2i (*sp)) == CHAR_INVALID)
-                        {
-                          app.kbdq.putc (utf16_ucs2_to_undef_pair_high (*sp));
-                          cc = utf16_ucs2_to_undef_pair_low (*sp);
-                        }
-                      app.kbdq.putc (cc);
-                    }
+                    app.kbdq.putc (*sp);
                   lparam &= ~GCS_RESULTSTR;
 
                   int rl = app.kbdq.gime.ImmGetCompositionStringW (hIMC, GCS_RESULTREADSTR, 0, 0);
@@ -466,7 +427,7 @@ ime_composition (HWND hwnd, LPARAM lparam)
                         {
                           rl /= sizeof (ucs2_t);
                           s[l] = rs[rl] = 0;
-                          app.ime_compq.push (s, l, rs, rl, tab);
+                          app.ime_compq.push (s, l, rs, rl);
                         }
                     }
                 }
@@ -819,15 +780,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_PRIVATE_WCHAR:
       {
-        ucs2_t wc = ucs2_t (wparam);
-        Char cc = w2i_half_width (wc);
-        if (cc != CHAR_INVALID)
-          app.kbdq.putc (decode_chars (cc));
-        else
-          {
-            app.kbdq.putc (utf16_ucs2_to_undef_pair_high (wc));
-            app.kbdq.putc (utf16_ucs2_to_undef_pair_low (wc));
-          }
+        app.kbdq.putc (decode_chars (Char (ucs2_t (wparam))));
         return 0;
       }
 
