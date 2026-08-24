@@ -1708,12 +1708,12 @@ Fcall_menu (lisp ln)
   int n = GetMenuItemCount (hmenu);
   if (req < 0 || req >= n)
     return Qnil;
-  char buf[1024], *b = buf;
-  if (!GetMenuString (hmenu, req, buf, sizeof buf, MF_BYPOSITION))
+  WCHAR buf[1024], *b = buf;
+  if (!GetMenuStringW (hmenu, req, buf, numberof (buf), MF_BYPOSITION))
     return Qnil;
   while (1)
     {
-      b = jindex (b, '&');
+      b = wcschr (b, '&');
       if (!b || !b[1])
         return Qnil;
       if (b[1] == '&')
