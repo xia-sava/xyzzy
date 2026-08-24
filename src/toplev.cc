@@ -1000,11 +1000,12 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_NULL:
       break;
 
+    /* やりとりする文字の幅は窓に従うので、Unicode の窓には UTF-16 で返す */
     case WM_IME_REQUEST:
       if (wparam == IMR_RECONVERTSTRING)
-        return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 0);
+        return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 1);
       if (wparam == IMR_DOCUMENTFEED)
-        return app.kbdq.documentfeed ((RECONVERTSTRING *)lparam, 0);
+        return app.kbdq.documentfeed ((RECONVERTSTRING *)lparam, 1);
       break;
 
     case WM_DRAWITEM:

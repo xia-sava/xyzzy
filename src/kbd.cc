@@ -913,15 +913,18 @@ kbd_queue::documentfeed (RECONVERTSTRING *rsbuf, int unicode_p)
 
       check_string (c);
       check_string (b);
-      long len, offset;
+      /* 長さは文字数で、位置はバイト数で数える */
+      long nchar, len, offset;
       if (unicode_p)
         {
-          len = (w2ul (c) + 1) * sizeof (WCHAR);
+          nchar = w2ul (c);
+          len = (nchar + 1) * sizeof (WCHAR);
           offset = w2ul (b) * sizeof (WCHAR);
         }
       else
         {
-          len = w2sl (c);
+          nchar = w2sl (c);
+          len = nchar;
           offset = w2sl (b);
         }
       long size = sizeof *rsbuf + len;
@@ -931,7 +934,7 @@ kbd_queue::documentfeed (RECONVERTSTRING *rsbuf, int unicode_p)
 
       rsbuf->dwSize = size;
       rsbuf->dwVersion = 0;
-      rsbuf->dwStrLen = len;
+      rsbuf->dwStrLen = nchar;
       rsbuf->dwStrOffset = sizeof *rsbuf;
       rsbuf->dwCompStrLen = 0;
       rsbuf->dwCompStrOffset = 0;
