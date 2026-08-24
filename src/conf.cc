@@ -3,127 +3,161 @@
 #include "environ.h"
 #include "print.h"
 #include "monitor.h"
+#include "inifile.h"
 
-#define DECLARE_CONF(NAME, VALUE) char NAME[] = VALUE;
+#define DECLARE_CONF(NAME, VALUE) WCHAR NAME[] = L"" VALUE;
 #include "conf.h"
 
-void
-write_conf (const char *section, const char *name, const char *str)
+static IniFile ini_file;
+
+static IniFile &
+ini ()
 {
-  WritePrivateProfileString (section, name, str, app.ini_file_path);
+  if (!ini_file.loaded () && app.ini_file_path)
+    {
+      WCHAR path[PATH_MAX];
+      s2u (path, app.ini_file_path);
+      ini_file.open (path);
+    }
+  return ini_file;
+}
+
+/* フォントの名前は LOGFONT が CP932 で持つ。設定へ出し入れするときだけ移す */
+static void
+face2u (WCHAR *b, const char *face)
+{
+  if (!MultiByteToWideChar (CP_ACP, 0, face, -1, b, LF_FACESIZE))
+    *b = 0;
+}
+
+static void
+u2face (char *face, const WCHAR *b)
+{
+  if (!WideCharToMultiByte (CP_ACP, 0, b, -1, face, LF_FACESIZE, 0, 0))
+    *face = 0;
 }
 
 void
-write_conf (const char *section, const char *name, long value, int hex)
+write_conf (const WCHAR *section, const WCHAR *name, const WCHAR *str)
 {
-  char buf[32];
-  sprintf (buf, hex ? "#%lx" : "%ld", value);
-  WritePrivateProfileString (section, name, buf, app.ini_file_path);
+  ini ().set (section, name, str);
 }
 
 void
-write_conf (const char *section, const char *name, const int *value, int n, int hex)
+write_conf (const WCHAR *section, const WCHAR *name, long value, int hex)
 {
-  char *buf = (char *)alloca (16 * n), *b = buf;
+  WCHAR buf[32];
+  wsprintfW (buf, hex ? L"#%lx" : L"%ld", value);
+  ini ().set (section, name, buf);
+}
+
+void
+write_conf (const WCHAR *section, const WCHAR *name, const int *value, int n, int hex)
+{
+  WCHAR *buf = (WCHAR *)alloca (16 * n * sizeof (WCHAR)), *b = buf;
   for (int i = 0; i < n; i++)
-    b += sprintf (b, hex ? ",#%x" : ",%d", *value++);
-  WritePrivateProfileString (section, name, buf + 1, app.ini_file_path);
+    b += wsprintfW (b, hex ? L",#%x" : L",%d", *value++);
+  ini ().set (section, name, buf + 1);
 }
 
 void
-write_conf (const char *section, const char *name, const RECT &r)
+write_conf (const WCHAR *section, const WCHAR *name, const RECT &r)
 {
-  char buf[128];
-  sprintf (buf, "(%d,%d)-(%d,%d)", r.left, r.top, r.right, r.bottom);
-  WritePrivateProfileString (section, name, buf, app.ini_file_path);
+  WCHAR buf[128];
+  wsprintfW (buf, L"(%d,%d)-(%d,%d)", r.left, r.top, r.right, r.bottom);
+  ini ().set (section, name, buf);
 }
 
 void
-write_conf (const char *section, const char *name, const LOGFONT &lf)
+write_conf (const WCHAR *section, const WCHAR *name, const LOGFONT &lf)
 {
-  char buf[128];
-  sprintf (buf, "%d,\"%s\",%d", lf.lfHeight, lf.lfFaceName, lf.lfCharSet);
-  WritePrivateProfileString (section, name, buf, app.ini_file_path);
+  WCHAR face[LF_FACESIZE];
+  face2u (face, lf.lfFaceName);
+  WCHAR buf[128];
+  wsprintfW (buf, L"%d,\"%s\",%d", lf.lfHeight, face, lf.lfCharSet);
+  ini ().set (section, name, buf);
 }
 
 void
-write_conf (const char *section, const char *name, const PRLOGFONT &lf)
+write_conf (const WCHAR *section, const WCHAR *name, const PRLOGFONT &lf)
 {
-  char buf[128];
-  sprintf (buf, "%d,\"%s\",%d,%d,%d", lf.point, lf.face, lf.charset, lf.bold, lf.italic);
-  WritePrivateProfileString (section, name, buf, app.ini_file_path);
+  WCHAR face[LF_FACESIZE];
+  face2u (face, lf.face);
+  WCHAR buf[128];
+  wsprintfW (buf, L"%d,\"%s\",%d,%d,%d", lf.point, face, lf.charset, lf.bold, lf.italic);
+  ini ().set (section, name, buf);
 }
 
 void
-write_conf (const char *section, const char *name, const WINDOWPLACEMENT &w)
+write_conf (const WCHAR *section, const WCHAR *name, const WINDOWPLACEMENT &w)
 {
-  char buf[128];
-  sprintf (buf, "(%d,%d)-(%d,%d),%d",
-           w.rcNormalPosition.left,
-           w.rcNormalPosition.top,
-           w.rcNormalPosition.right,
-           w.rcNormalPosition.bottom,
-           w.showCmd);
-  WritePrivateProfileString (section, name, buf, app.ini_file_path);
+  WCHAR buf[128];
+  wsprintfW (buf, L"(%d,%d)-(%d,%d),%d",
+             w.rcNormalPosition.left,
+             w.rcNormalPosition.top,
+             w.rcNormalPosition.right,
+             w.rcNormalPosition.bottom,
+             w.showCmd);
+  ini ().set (section, name, buf);
 }
 
 void
 flush_conf ()
 {
-  WritePrivateProfileString (0, 0, 0, app.ini_file_path);
+  ini ().flush ();
 }
 
 int
-read_conf (const char *section, const char *name, char *buf, int size)
+read_conf (const WCHAR *section, const WCHAR *name, WCHAR *buf, int size)
 {
-  return GetPrivateProfileString (section, name, "", buf, size, app.ini_file_path);
+  return ini ().get (section, name, buf, size);
 }
 
 void
-delete_conf (const char *section)
+delete_conf (const WCHAR *section)
 {
-  WritePrivateProfileString (section, 0, 0, app.ini_file_path);
+  ini ().erase (section);
 }
 
 static int
-parse_int (const char *s, int &v)
+parse_int (const WCHAR *s, int &v)
 {
-  return sscanf (s, *s == '#' ? "#%x" : "%d", &v) == 1;
+  return swscanf (s, *s == '#' ? L"#%x" : L"%d", &v) == 1;
 }
 
 int
-read_conf (const char *section, const char *name, int &value)
+read_conf (const WCHAR *section, const WCHAR *name, int &value)
 {
-  char buf[32];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[32];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   return parse_int (buf, value);
 }
 
 #if INT_MAX != LONG_MAX
 static int
-parse_long (const char *s, u_long &v)
+parse_long (const WCHAR *s, u_long &v)
 {
-  return sscanf (s, *s == '#' ? "#%lx" : "%ld", &v) == 1;
+  return swscanf (s, *s == '#' ? L"#%lx" : L"%ld", &v) == 1;
 }
 
 int
-read_conf (const char *section, const char *name, u_long &value)
+read_conf (const WCHAR *section, const WCHAR *name, u_long &value)
 {
-  char buf[32];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[32];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   return parse_long (buf, value);
 }
 #endif /* INT_MAX != LONG_MAX */
 
 int
-read_conf (const char *section, const char *name, int *value, int n)
+read_conf (const WCHAR *section, const WCHAR *name, int *value, int n)
 {
   int size = 16 * n;
-  char *buf = (char *)alloca (size);
+  WCHAR *buf = (WCHAR *)alloca (size * sizeof (WCHAR));
   int l = read_conf (section, name, buf, size);
   if (!l || l >= size - 1)
     return 0;
@@ -131,7 +165,7 @@ read_conf (const char *section, const char *name, int *value, int n)
     {
       if (!parse_int (buf, *value))
         return 0;
-      buf = strchr (buf, ',');
+      buf = wcschr (buf, ',');
       if (!buf)
         return 0;
     }
@@ -139,14 +173,14 @@ read_conf (const char *section, const char *name, int *value, int n)
 }
 
 int
-read_conf (const char *section, const char *name, RECT &rr)
+read_conf (const WCHAR *section, const WCHAR *name, RECT &rr)
 {
-  char buf[128];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[128];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   int t, r, b;
-  if (sscanf (buf, "(%d,%d)-(%d,%d)", &l, &t, &r, &b) != 4)
+  if (swscanf (buf, L"(%d,%d)-(%d,%d)", &l, &t, &r, &b) != 4)
     return 0;
   rr.left = l;
   rr.top = t;
@@ -156,32 +190,36 @@ read_conf (const char *section, const char *name, RECT &rr)
 }
 
 int
-read_conf (const char *section, const char *name, LOGFONT &lf)
+read_conf (const WCHAR *section, const WCHAR *name, LOGFONT &lf)
 {
-  char buf[128];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[128];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   memset (&lf, 0, sizeof lf);
+  WCHAR face[LF_FACESIZE];
   int h, cs;
-  if (sscanf (buf, "%d,\"%31[^\"]\",%d", &h, lf.lfFaceName, &cs) != 3)
+  if (swscanf (buf, L"%d,\"%31[^\"]\",%d", &h, face, &cs) != 3)
     return 0;
+  u2face (lf.lfFaceName, face);
   lf.lfHeight = h;
   lf.lfCharSet = cs;
   return 1;
 }
 
 int
-read_conf (const char *section, const char *name, PRLOGFONT &lf)
+read_conf (const WCHAR *section, const WCHAR *name, PRLOGFONT &lf)
 {
-  char buf[128];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[128];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
+  WCHAR face[LF_FACESIZE];
   int point, cs, bold, italic;
-  if (sscanf (buf, "%d,\"%31[^\"]\",%d,%d,%d",
-              &point, lf.face, &cs, &bold, &italic) != 5)
+  if (swscanf (buf, L"%d,\"%31[^\"]\",%d,%d,%d",
+               &point, face, &cs, &bold, &italic) != 5)
     return 0;
+  u2face (lf.face, face);
   lf.point = point;
   lf.charset = cs;
   lf.bold = bold;
@@ -190,14 +228,14 @@ read_conf (const char *section, const char *name, PRLOGFONT &lf)
 }
 
 int
-read_conf (const char *section, const char *name, WINDOWPLACEMENT &w)
+read_conf (const WCHAR *section, const WCHAR *name, WINDOWPLACEMENT &w)
 {
-  char buf[128];
-  int l = read_conf (section, name, buf, sizeof buf);
-  if (!l || l >= sizeof buf - 1)
+  WCHAR buf[128];
+  int l = read_conf (section, name, buf, numberof (buf));
+  if (!l || l >= int (numberof (buf)) - 1)
     return 0;
   int t, r, b, s;
-  if (sscanf (buf, "(%d,%d)-(%d,%d),%d", &l, &t, &r, &b, &s) != 5)
+  if (swscanf (buf, L"(%d,%d)-(%d,%d),%d", &l, &t, &r, &b, &s) != 5)
     return 0;
   w.rcNormalPosition.left = l;
   w.rcNormalPosition.top = t;
@@ -208,12 +246,12 @@ read_conf (const char *section, const char *name, WINDOWPLACEMENT &w)
 }
 
 void
-conf_write_string (const char *section, const char *name, const char *string)
+conf_write_string (const WCHAR *section, const WCHAR *name, const WCHAR *string)
 {
-  int l = strlen (string);
-  char *b = (char *)alloca (l + 3);
+  int l = wcslen (string);
+  WCHAR *b = (WCHAR *)alloca ((l + 3) * sizeof (WCHAR));
   *b = '"';
-  memcpy (b + 1, string, l);
+  memcpy (b + 1, string, l * sizeof (WCHAR));
   b[l + 1] = '"';
   b[l + 2] = 0;
   write_conf (section, name, b);
@@ -237,8 +275,8 @@ adjust_geometry (RECT &r, const RECT &or, int posp, int sizep)
 }
 
 int
-conf_load_geometry (HWND hwnd, const char *section,
-                    const char *prefix, int posp, int sizep)
+conf_load_geometry (HWND hwnd, const WCHAR *section,
+                    const WCHAR *prefix, int posp, int sizep)
 {
   if (!posp && !sizep)
     return 0;
@@ -250,8 +288,8 @@ conf_load_geometry (HWND hwnd, const char *section,
 
   RECT cr (w.rcNormalPosition);
 
-  char b[64];
-  make_geometry_key (b, sizeof b, prefix);
+  WCHAR b[64];
+  make_geometry_key (b, numberof (b), prefix);
   if (!read_conf (section, b, w))
     return 0;
 
@@ -264,8 +302,8 @@ conf_load_geometry (HWND hwnd, const char *section,
 }
 
 void
-conf_save_geometry (HWND hwnd, const char *section,
-                    const char *prefix, int posp, int sizep)
+conf_save_geometry (HWND hwnd, const WCHAR *section,
+                    const WCHAR *prefix, int posp, int sizep)
 {
   if (!posp && !sizep)
     return;
@@ -277,8 +315,8 @@ conf_save_geometry (HWND hwnd, const char *section,
   if (xsymbol_value (Vfiler_save_window_snap_size) != Qnil)
     adjust_snap_window_size (hwnd, w);
 
-  char b[64];
-  make_geometry_key (b, sizeof b, prefix);
+  WCHAR b[64];
+  make_geometry_key (b, numberof (b), prefix);
 
   if (!posp || !sizep)
     {
@@ -316,12 +354,12 @@ adjust_snap_window_size (HWND hwnd, WINDOWPLACEMENT &w)
 }
 
 void
-make_geometry_key (char* buf, size_t bufsize, const char *prefix)
+make_geometry_key (WCHAR *buf, size_t bufsize, const WCHAR *prefix)
 {
-  _snprintf_s (buf, bufsize, _TRUNCATE,
-               "%s%dx%d", prefix ? prefix : "",
-               GetSystemMetrics (SM_CXSCREEN),
-               GetSystemMetrics (SM_CYSCREEN));
+  _snwprintf_s (buf, bufsize, _TRUNCATE,
+                L"%s%dx%d", prefix ? prefix : L"",
+                GetSystemMetrics (SM_CXSCREEN),
+                GetSystemMetrics (SM_CYSCREEN));
 }
 
 #define CONF_SZ           0x10000
@@ -332,7 +370,7 @@ make_geometry_key (char* buf, size_t bufsize, const char *prefix)
 
 struct conf
 {
-  const char *name;
+  const WCHAR *name;
   DWORD reg_type;
   int type;
 };
@@ -431,20 +469,21 @@ static const conf preview[] =
 };
 
 static void
-reg2ini_str (const char *key, ReadRegistry &r, const conf &cf)
+reg2ini_str (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
   DWORD type;
   int l = r.query (cf.name, &type);
   if (l > 0 && type == REG_SZ)
     {
-      char *v = (char *)alloca (l + 1);
-      if (r.get (cf.name, v, l + 1) == l)
+      int n = l / sizeof (WCHAR) + 1;
+      WCHAR *v = (WCHAR *)alloca (n * sizeof (WCHAR));
+      if (r.get (cf.name, v, n) == l)
         conf_write_string (key, cf.name, v);
     }
 }
 
 static void
-reg2ini_int (const char *key, ReadRegistry &r, const conf &cf)
+reg2ini_int (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
   int v;
   if (r.get (cf.name, &v))
@@ -452,7 +491,7 @@ reg2ini_int (const char *key, ReadRegistry &r, const conf &cf)
 }
 
 static void
-reg2ini_int (const char *key, ReadRegistry &r, const conf &cf, int l)
+reg2ini_int (const WCHAR *key, ReadRegistry &r, const conf &cf, int l)
 {
   int sz = sizeof (int) * l;
   int *v = (int *)alloca (sz);
@@ -461,7 +500,7 @@ reg2ini_int (const char *key, ReadRegistry &r, const conf &cf, int l)
 }
 
 static void
-reg2ini_logfont (const char *key, ReadRegistry &r, const conf &cf)
+reg2ini_logfont (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
   LOGFONT lf;
   if (r.get (cf.name, &lf, sizeof lf) == sizeof lf)
@@ -469,7 +508,7 @@ reg2ini_logfont (const char *key, ReadRegistry &r, const conf &cf)
 }
 
 static void
-reg2ini_print_font (const char *key, ReadRegistry &r, const conf &cf)
+reg2ini_print_font (const WCHAR *key, ReadRegistry &r, const conf &cf)
 {
   PRLOGFONT lf;
   if (r.get (cf.name, &lf, sizeof lf) == sizeof lf)
@@ -477,15 +516,16 @@ reg2ini_print_font (const char *key, ReadRegistry &r, const conf &cf)
 }
 
 static void
-reg2ini (const char *rkey, const char *ikey, const conf *cf, int n)
+reg2ini (const WCHAR *rkey, const WCHAR *ikey, const conf *cf, int n)
 {
-  char *key;
+  WCHAR *key;
   if (!*rkey)
-    key = (char *)Registry::Settings;
+    key = (WCHAR *)Registry::Settings;
   else
     {
-      key = (char *)alloca (strlen (Registry::Settings) + strlen (rkey) + 2);
-      sprintf (key, "%s\\%s", Registry::Settings, rkey);
+      key = (WCHAR *)alloca ((wcslen (Registry::Settings) + wcslen (rkey) + 2)
+                             * sizeof (WCHAR));
+      wsprintfW (key, L"%s\\%s", Registry::Settings, rkey);
     }
 
   if (!ikey)
@@ -523,8 +563,9 @@ reg2ini (const char *rkey, const char *ikey, const conf *cf, int n)
 static void
 reg2ini_colors ()
 {
-  char *key = (char *)alloca (strlen (Registry::Settings) + strlen (cfgColors) + 2);
-  sprintf (key, "%s\\%s", Registry::Settings, cfgColors);
+  WCHAR *key = (WCHAR *)alloca ((wcslen (Registry::Settings) + wcslen (cfgColors) + 2)
+                                * sizeof (WCHAR));
+  wsprintfW (key, L"%s\\%s", Registry::Settings, cfgColors);
 
   ReadRegistry r (key);
   if (r.fail ())
@@ -532,42 +573,43 @@ reg2ini_colors ()
 
   conf cf;
   cf.type = CONF_HEX;
-  char name[16];
+  WCHAR name[16];
   cf.name = name;
   for (int i = 1; i <= 16; i++)
     {
-      sprintf (name, "%s%d", cfgFg, i);
+      wsprintfW (name, L"%s%d", cfgFg, i);
       reg2ini_int (cfgColors, r, cf);
-      sprintf (name, "%s%d", cfgBg, i);
+      wsprintfW (name, L"%s%d", cfgBg, i);
       reg2ini_int (cfgColors, r, cf);
     }
 
   COLORREF c[16];
-  if (r.get ("CustColors", c, sizeof c) == sizeof c)
+  if (r.get (L"CustColors", c, sizeof c) == sizeof c)
     for (int i = 0; i < 16; i++)
       {
-        sprintf (name, "%s%d", cfgCustColor, i);
+        wsprintfW (name, L"%s%d", cfgCustColor, i);
         write_conf (cfgColors, name, long (c[i]), 1);
       }
 }
 
 static void
-reg2ini_geometry (const char *rkey)
+reg2ini_geometry (const WCHAR *rkey)
 {
-  char *key = (char *)alloca (strlen (Registry::Settings) + strlen (rkey) + 2);
-  sprintf (key, "%s\\%s", Registry::Settings, rkey);
+  WCHAR *key = (WCHAR *)alloca ((wcslen (Registry::Settings) + wcslen (rkey) + 2)
+                                * sizeof (WCHAR));
+  wsprintfW (key, L"%s\\%s", Registry::Settings, rkey);
   EnumRegistry er (key);
   if (er.fail ())
     return;
 
   for (int i = 0;; i++)
     {
-      char name[128];
-      DWORD namel = sizeof name;
+      WCHAR name[128];
+      DWORD namel = numberof (name);
       WINDOWPLACEMENT w;
       DWORD wl = sizeof w;
       DWORD type;
-      int e = RegEnumValue (er, i, name, &namel, 0, &type, (BYTE *)&w, &wl);
+      int e = RegEnumValueW (er, i, name, &namel, 0, &type, (BYTE *)&w, &wl);
       if (e == ERROR_SUCCESS)
         {
           if (type == REG_BINARY && wl == sizeof w && w.length == sizeof w)
@@ -581,24 +623,25 @@ reg2ini_geometry (const char *rkey)
 static void
 reg2ini_geometry ()
 {
-  const char *rkey = cfgGeometry;
-  char *key = (char *)alloca (strlen (Registry::Settings) + strlen (rkey) + 2);
-  sprintf (key, "%s\\%s", Registry::Settings, rkey);
+  const WCHAR *rkey = cfgGeometry;
+  WCHAR *key = (WCHAR *)alloca ((wcslen (Registry::Settings) + wcslen (rkey) + 2)
+                                * sizeof (WCHAR));
+  wsprintfW (key, L"%s\\%s", Registry::Settings, rkey);
   EnumRegistry er (key);
   if (er.fail ())
     return;
 
   for (int i = 0;; i++)
     {
-      char name[128];
-      DWORD namel = sizeof name;
+      WCHAR name[128];
+      DWORD namel = numberof (name);
       FILETIME ft;
-      int e = RegEnumKeyEx (er, i, name, &namel, 0, 0, 0, &ft);
+      int e = RegEnumKeyExW (er, i, name, &namel, 0, 0, 0, &ft);
       if (e == ERROR_SUCCESS)
         {
           WINDOWPLACEMENT w;
-          char key[256];
-          sprintf (key, "%s\\%s\\%s", Registry::Settings, cfgGeometry, name);
+          WCHAR key[256];
+          wsprintfW (key, L"%s\\%s\\%s", Registry::Settings, cfgGeometry, name);
           ReadRegistry r (key);
           if (!r.fail ()
               && r.get (cfgShowCmd, (int *)&w.showCmd)
@@ -625,7 +668,7 @@ reg2ini ()
       return 0;
   }
 
-  reg2ini ("", cfgMisc, misc, numberof (misc));
+  reg2ini (L"", cfgMisc, misc, numberof (misc));
   reg2ini (cfgBufferSelector, 0, buffer_selector, numberof (buffer_selector));
   reg2ini (cfgColors, 0, colors, numberof (colors));
   reg2ini_colors ();
@@ -641,18 +684,18 @@ reg2ini ()
 static int
 reg_empty_tree_p (HKEY hkey)
 {
-  char cls[1024];
-  DWORD clsl = sizeof clsl;
+  WCHAR cls[1024];
+  DWORD clsl = numberof (cls);
   DWORD nkeys, keyl, xclsl, nvals, naml, datal, desc;
   FILETIME ft;
-  if (RegQueryInfoKey (hkey, cls, &clsl, 0, &nkeys, &keyl, &xclsl,
-                       &nvals, &naml, &datal, &desc, &ft) != ERROR_SUCCESS)
+  if (RegQueryInfoKeyW (hkey, cls, &clsl, 0, &nkeys, &keyl, &xclsl,
+                        &nvals, &naml, &datal, &desc, &ft) != ERROR_SUCCESS)
     return 0;
   return !(nkeys + nvals);
 }
 
 static int
-delete_sub_tree (HKEY hkey, const char *name)
+delete_sub_tree (HKEY hkey, const WCHAR *name)
 {
   {
     EnumRegistry r (hkey, name);
@@ -661,33 +704,33 @@ delete_sub_tree (HKEY hkey, const char *name)
         for (int i = 0; i < 100; i++)
           {
             FILETIME ft;
-            char buf[256];
-            DWORD sz = sizeof buf;
-            if (RegEnumKeyEx (r, 0, buf, &sz, 0, 0, 0, &ft) != ERROR_SUCCESS
+            WCHAR buf[256];
+            DWORD sz = numberof (buf);
+            if (RegEnumKeyExW (r, 0, buf, &sz, 0, 0, 0, &ft) != ERROR_SUCCESS
                 || !delete_sub_tree (r, buf))
               break;
           }
       }
   }
-  return RegDeleteKey (hkey, name) == ERROR_SUCCESS;
+  return RegDeleteKeyW (hkey, name) == ERROR_SUCCESS;
 }
 
 void
 reg_delete_tree ()
 {
   {
-    EnumRegistry r (HKEY_CURRENT_USER, "Software\\Free Software");
+    EnumRegistry r (HKEY_CURRENT_USER, L"Software\\Free Software");
     if (r.fail ())
       return;
     if (sysdep.WinNTp ())
-      delete_sub_tree (r, "xyzzy");
+      delete_sub_tree (r, L"xyzzy");
     else
-      RegDeleteKey (r, "xyzzy");
+      RegDeleteKeyW (r, L"xyzzy");
     if (!reg_empty_tree_p (r))
       return;
   }
 
-  EnumRegistry r (HKEY_CURRENT_USER, "Software");
+  EnumRegistry r (HKEY_CURRENT_USER, L"Software");
   if (!r.fail ())
-    RegDeleteKey (r, "Free Software");
+    RegDeleteKeyW (r, L"Free Software");
 }

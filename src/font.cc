@@ -28,17 +28,17 @@ const lisp *const FontSet::fs_lang_key[] =
   &Kgeorgian,
 };
 
-const char *const FontSet::fs_regent[] =
+const WCHAR *const FontSet::fs_regent[] =
 {
-  "Ascii",
-  "Japanese",
-  "Latin",
-  "Cyrillic",
-  "Greek",
-  "GB2312",
-  "BIG5",
-  "KSC5601",
-  "Georgian",
+  L"Ascii",
+  L"Japanese",
+  L"Latin",
+  L"Cyrillic",
+  L"Greek",
+  L"GB2312",
+  L"BIG5",
+  L"KSC5601",
+  L"Georgian",
 };
 
 // 各スロットの送り幅を測るための文字。受け持つ文字体系の中から、その体系を
@@ -573,18 +573,18 @@ FontSet::update_char_columns () const
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに
 // 別の節へ記録し、その節が無ければ従来の [Font] 節を BASE_SCREEN_DPI のものと
 // みなして換算する。DPI に依存しない設定は [Font] 節に置いたままにする。
-const char *
+const WCHAR *
 font_conf_section ()
 {
-  static char section[32];
+  static WCHAR section[32];
   if (!*section)
-    _snprintf_s (section, sizeof section, _TRUNCATE,
-                 "%s@%d", cfgFont, screen_dpi ());
+    _snwprintf_s (section, numberof (section), _TRUNCATE,
+                  L"%s@%d", cfgFont, screen_dpi ());
   return section;
 }
 
 int
-read_font_conf (const char *name, LOGFONT &lf)
+read_font_conf (const WCHAR *name, LOGFONT &lf)
 {
   if (read_conf (font_conf_section (), name, lf))
     return 1;
@@ -595,7 +595,7 @@ read_font_conf (const char *name, LOGFONT &lf)
 }
 
 static int
-read_font_conf (const char *name, int &value)
+read_font_conf (const WCHAR *name, int &value)
 {
   if (read_conf (font_conf_section (), name, value))
     return 1;

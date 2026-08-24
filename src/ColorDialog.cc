@@ -77,8 +77,8 @@ SelectColor::SelectColor ()
       initialized = 1;
       for (int i = 0; i < numberof (cust); i++)
         {
-          char name[16];
-          sprintf (name, "%s%d", cfgCustColor, i);
+          WCHAR name[16];
+          wsprintfW (name, L"%s%d", cfgCustColor, i);
           if (!read_conf (cfgColors, name, cust[i]))
             cust[i] = RGB (255, 255, 255);
         }
@@ -93,8 +93,8 @@ SelectColor::~SelectColor ()
 {
   for (int i = 0; i < numberof (cust); i++)
     {
-      char name[16];
-      sprintf (name, "%s%d", cfgCustColor, i);
+      WCHAR name[16];
+      wsprintfW (name, L"%s%d", cfgCustColor, i);
       write_conf (cfgColors, name, cust[i], 1);
     }
   flush_conf ();

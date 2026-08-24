@@ -16,12 +16,12 @@ public:
 class Registry
 {
 protected:
-  static const char base[];
+  static const WCHAR base[];
   HKEY hkey;
   Registry ();
   ~Registry ();
 public:
-  static const char Settings[];
+  static const WCHAR Settings[];
   int fail () const;
 };
 
@@ -47,44 +47,44 @@ Registry::fail () const
 class ReadRegistry: public Registry
 {
 protected:
-  void open_local (const char *);
+  void open_local (const WCHAR *);
 public:
-  int get (const char *, void *, DWORD, DWORD) const;
-  int get (const char *, int *) const;
-  int get (const char *, long *) const;
-  int get (const char *, char *, int) const;
-  int get (const char *, void *, int) const;
-  int query (const char *, DWORD *) const;
-  ReadRegistry (const char *);
-  ReadRegistry (HKEY, const char *);
+  int get (const WCHAR *, void *, DWORD, DWORD) const;
+  int get (const WCHAR *, int *) const;
+  int get (const WCHAR *, long *) const;
+  int get (const WCHAR *, WCHAR *, int) const;
+  int get (const WCHAR *, void *, int) const;
+  int query (const WCHAR *, DWORD *) const;
+  ReadRegistry (const WCHAR *);
+  ReadRegistry (HKEY, const WCHAR *);
 };
 
 inline
-ReadRegistry::ReadRegistry (const char *subkey)
+ReadRegistry::ReadRegistry (const WCHAR *subkey)
 {
   open_local (subkey);
 }
 
 inline int
-ReadRegistry::get (const char *key, int *x) const
+ReadRegistry::get (const WCHAR *key, int *x) const
 {
   return get (key, x, sizeof *x, REG_DWORD) == sizeof *x;
 }
 
 inline int
-ReadRegistry::get (const char *key, long *x) const
+ReadRegistry::get (const WCHAR *key, long *x) const
 {
   return get (key, x, sizeof *x, REG_DWORD) == sizeof *x;
 }
 
 inline int
-ReadRegistry::get (const char *key, char *buf, int size) const
+ReadRegistry::get (const WCHAR *key, WCHAR *buf, int size) const
 {
-  return get (key, buf, size, REG_SZ);
+  return get (key, buf, size * sizeof (WCHAR), REG_SZ);
 }
 
 inline int
-ReadRegistry::get (const char *key, void *buf, int size) const
+ReadRegistry::get (const WCHAR *key, void *buf, int size) const
 {
   return get (key, buf, size, REG_BINARY);
 }
@@ -92,35 +92,35 @@ ReadRegistry::get (const char *key, void *buf, int size) const
 class WriteRegistry: public Registry
 {
 public:
-  int set (const char *, DWORD, const void *, int) const;
-  int set (const char *, long) const;
-  int set (const char *, const char *) const;
-  int set (const char *, const char *, int) const;
-  int set (const char *, const void *, int) const;
-  int remove (const char *) const;
-  WriteRegistry (const char *);
+  int set (const WCHAR *, DWORD, const void *, int) const;
+  int set (const WCHAR *, long) const;
+  int set (const WCHAR *, const WCHAR *) const;
+  int set (const WCHAR *, const WCHAR *, int) const;
+  int set (const WCHAR *, const void *, int) const;
+  int remove (const WCHAR *) const;
+  WriteRegistry (const WCHAR *);
 };
 
 inline int
-WriteRegistry::set (const char *key, long val) const
+WriteRegistry::set (const WCHAR *key, long val) const
 {
   return set (key, REG_DWORD, &val, sizeof val);
 }
 
 inline int
-WriteRegistry::set (const char *key, const char *val) const
+WriteRegistry::set (const WCHAR *key, const WCHAR *val) const
 {
-  return set (key, REG_SZ, val, strlen (val) + 1);
+  return set (key, REG_SZ, val, (wcslen (val) + 1) * sizeof (WCHAR));
 }
 
 inline int
-WriteRegistry::set (const char *key, const char *val, int size) const
+WriteRegistry::set (const WCHAR *key, const WCHAR *val, int size) const
 {
-  return set (key, REG_SZ, val, size);
+  return set (key, REG_SZ, val, size * sizeof (WCHAR));
 }
 
 inline int
-WriteRegistry::set (const char *key, const void *val, int size) const
+WriteRegistry::set (const WCHAR *key, const void *val, int size) const
 {
   return set (key, REG_BINARY, val, size);
 }
@@ -128,8 +128,8 @@ WriteRegistry::set (const char *key, const void *val, int size) const
 class EnumRegistry: public ReadRegistry
 {
 public:
-  EnumRegistry (const char *subkey) : ReadRegistry (subkey) {}
-  EnumRegistry (HKEY h, const char *subkey) : ReadRegistry (h, subkey) {}
+  EnumRegistry (const WCHAR *subkey) : ReadRegistry (subkey) {}
+  EnumRegistry (HKEY h, const WCHAR *subkey) : ReadRegistry (h, subkey) {}
   operator HKEY () const {return hkey;}
 };
 

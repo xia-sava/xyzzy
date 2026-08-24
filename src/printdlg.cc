@@ -368,38 +368,36 @@ print_dialog::get_copies ()
 }
 
 void
-print_dialog::init_history (UINT id_combo, const char *section)
+print_dialog::init_history (UINT id_combo, const WCHAR *section)
 {
   HWND hwnd_combo = GetDlgItem (m_hwnd, id_combo);
-  SendMessage (hwnd_combo, CB_ADDSTRING, 0, LPARAM (""));
-  char kbuf[4096];
+  SendMessageW (hwnd_combo, CB_ADDSTRING, 0, LPARAM (L""));
+  WCHAR kbuf[4096];
   memset (kbuf, 0, sizeof kbuf);
-  read_conf (section, 0, kbuf, sizeof kbuf);
-  for (const char *key = kbuf; *key; key += strlen (key) + 1)
+  read_conf (section, 0, kbuf, numberof (kbuf));
+  for (const WCHAR *key = kbuf; *key; key += wcslen (key) + 1)
     {
-      char buf[MAX_HEADER_LENGTH];
-      if (read_conf (section, key, buf, sizeof buf))
-        SendMessage (hwnd_combo, CB_ADDSTRING, 0, LPARAM (buf));
+      WCHAR buf[MAX_HEADER_LENGTH];
+      if (read_conf (section, key, buf, numberof (buf)))
+        SendMessageW (hwnd_combo, CB_ADDSTRING, 0, LPARAM (buf));
     }
 }
 
 void
-print_dialog::save_history (UINT id_combo, const char *section)
+print_dialog::save_history (UINT id_combo, const WCHAR *section)
 {
   HWND hwnd_combo = GetDlgItem (m_hwnd, id_combo);
   delete_conf (section);
   int n = SendMessage (hwnd_combo, CB_GETCOUNT, 0, 0);
   for (int i = 0; i < n; i++)
     {
-      // WinME の CB_GETLBTEXTLEN は文字数を返すらしいので(ただし未確認)、
-      // バッファを倍にしておく。
-      char buf[MAX_HEADER_LENGTH * 2 + 2];
-      int l = SendMessage (hwnd_combo, CB_GETLBTEXTLEN, i, 0);
+      WCHAR buf[MAX_HEADER_LENGTH + 1];
+      int l = SendMessageW (hwnd_combo, CB_GETLBTEXTLEN, i, 0);
       if (l > 0 && l < MAX_HEADER_LENGTH
-          && SendMessage (hwnd_combo, CB_GETLBTEXT, i, LPARAM (buf)) > 0)
+          && SendMessageW (hwnd_combo, CB_GETLBTEXT, i, LPARAM (buf)) > 0)
         {
-          char key[32];
-          sprintf (key, "%d", i);
+          WCHAR key[32];
+          wsprintfW (key, L"%d", i);
           conf_write_string (section, key, buf);
         }
     }

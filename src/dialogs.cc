@@ -46,7 +46,7 @@ center_window (HWND hwnd)
 
 void
 init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
-                  int id_start, const char *entry, const char *key)
+                  int id_start, const WCHAR *entry, const WCHAR *key)
 {
   int *v = (int *)alloca (sizeof *v * ncolumns);
   if (read_conf (entry, key, v, ncolumns))
@@ -75,7 +75,7 @@ init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
 }
 
 void
-save_list_column_width (HWND list, int ncolumns, const char *entry, const char *key)
+save_list_column_width (HWND list, int ncolumns, const WCHAR *entry, const WCHAR *key)
 {
   if (!IsWindow (list))
     return;
@@ -444,7 +444,6 @@ resize_child_window (HWND dlg, UINT id, int dx, int dy)
 static BOOL CALLBACK
 select_buffer_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  static const char cfgBufferSelector[] = "BufferSelector";
   static RECT init_rect;
   static RECT last_rect;
   select_buffer_comparator *comparator = nullptr;

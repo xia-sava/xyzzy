@@ -56,6 +56,23 @@ print_settings::init_faces ()
       }
 }
 
+/* 見出しの書式は CP932 のバイト列で持つ。設定へ出し入れするときだけ移す */
+static int
+read_conf_str (const WCHAR *section, const WCHAR *name, char *buf, int size)
+{
+  WCHAR b[MAX_HEADER_LENGTH];
+  return (read_conf (section, name, b, numberof (b))
+          && WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0) > 0);
+}
+
+static void
+write_conf_str (const WCHAR *section, const WCHAR *name, const char *buf)
+{
+  WCHAR b[MAX_HEADER_LENGTH];
+  if (MultiByteToWideChar (CP_ACP, 0, buf, -1, b, numberof (b)))
+    conf_write_string (section, name, b);
+}
+
 void
 print_settings::load_conf ()
 {
@@ -78,9 +95,9 @@ print_settings::load_conf ()
     ps_multi_column = x;
   if (read_conf (cfgPrint, cfgFoldColumns, x) && x >= 0)
     ps_fold_width = x;
-  if (!read_conf (cfgPrint, cfgHeader, ps_header, sizeof ps_header))
+  if (!read_conf_str (cfgPrint, cfgHeader, ps_header, sizeof ps_header))
     strcpy (ps_header, default_header);
-  if (!read_conf (cfgPrint, cfgFooter, ps_footer, sizeof ps_footer))
+  if (!read_conf_str (cfgPrint, cfgFooter, ps_footer, sizeof ps_footer))
     strcpy (ps_footer, default_footer);
   if (read_conf (cfgPrint, cfgHeaderOn, x))
     ps_header_on = x ? 1 : 0;
@@ -109,8 +126,8 @@ print_settings::save_conf ()
   write_conf (cfgPrint, cfgLineNumber, ps_print_linenum);
   write_conf (cfgPrint, cfgColumns, ps_multi_column);
   write_conf (cfgPrint, cfgFoldColumns, ps_fold_width);
-  conf_write_string (cfgPrint, cfgHeader, ps_header);
-  conf_write_string (cfgPrint, cfgFooter, ps_footer);
+  write_conf_str (cfgPrint, cfgHeader, ps_header);
+  write_conf_str (cfgPrint, cfgFooter, ps_footer);
   write_conf (cfgPrint, cfgHeaderOn, ps_header_on);
   write_conf (cfgPrint, cfgFooterOn, ps_footer_on);
   write_conf (cfgPrint, cfgRecommendSize, ps_recommend_size);

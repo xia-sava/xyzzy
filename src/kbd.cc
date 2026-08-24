@@ -1403,12 +1403,15 @@ Fenable_global_ime (lisp f)
 static int
 get_kbd_layout_name (HKL hkl, char *buf, int size)
 {
-  char k[256];
-  sprintf (k, "SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts\\%08x",
-           reinterpret_cast <UINT_PTR> (hkl));
+  WCHAR k[256];
+  wsprintfW (k, L"SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts\\%08x",
+             reinterpret_cast <UINT_PTR> (hkl));
   ReadRegistry r (HKEY_LOCAL_MACHINE, k);
-  return ((!r.fail () && r.get ("Layout Text", buf, size) > 0)
-          || app.kbdq.gime.ImmGetDescription (hkl, buf, size) > 0);
+  WCHAR b[256];
+  if (!r.fail () && r.get (L"Layout Text", b, numberof (b)) > 0
+      && WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0) > 0)
+    return 1;
+  return app.kbdq.gime.ImmGetDescription (hkl, buf, size) > 0;
 }
 
 typedef UINT (WINAPI *GETKEYBOARDLAYOUTLIST)(int, HKL *);

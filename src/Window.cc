@@ -698,10 +698,10 @@ Window::init_colors (const XCOLORREF *colors, const XCOLORREF *mlcolors,
   write_conf (cfgColors, cfgModeLineBg, modeline_xcolors[MLCI_BACKGROUND].rgb, 1);
   for (i = 1; i < numberof (w_textprop_forecolor); i++)
     {
-      char b[32];
-      sprintf (b, "%s%d", cfgFg, i);
+      WCHAR b[32];
+      wsprintfW (b, L"%s%d", cfgFg, i);
       write_conf (cfgColors, b, w_textprop_xforecolor[i].rgb, 1);
-      sprintf (b, "%s%d", cfgBg, i);
+      wsprintfW (b, L"%s%d", cfgBg, i);
       write_conf (cfgColors, b, w_textprop_xbackcolor[i].rgb, 1);
     }
   flush_conf ();
@@ -805,11 +805,11 @@ Window::create_default_windows ()
     mlcc[1] = c;
   for (int i = 1; i < GLYPH_TEXTPROP_NCOLORS; i++)
     {
-      char b[32];
-      sprintf (b, "%s%d", cfgFg, i);
+      WCHAR b[32];
+      wsprintfW (b, L"%s%d", cfgFg, i);
       if (read_conf (cfgColors, b, c))
         fg[i] = c;
-      sprintf (b, "%s%d", cfgBg, i);
+      wsprintfW (b, L"%s%d", cfgBg, i);
       if (read_conf (cfgColors, b, c))
         bg[i] = c;
     }

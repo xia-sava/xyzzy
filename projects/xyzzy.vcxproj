@@ -188,6 +188,9 @@
     <ClCompile Include="..\src\gzip.cc" />
     <ClCompile Include="..\src\hash.cc" />
     <ClCompile Include="..\src\hashpjw.cc" />
+    <ClCompile Include="..\src\inifile.cc">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\init.cc" />
     <ClCompile Include="..\src\insdel.cc" />
     <ClCompile Include="..\src\ipc.cc" />
@@ -304,6 +307,7 @@
     <ClInclude Include="..\src\comm-arc.h" />
     <ClInclude Include="..\src\conf.h" />
     <ClInclude Include="..\src\cons.h" />
+    <ClInclude Include="..\src\inifile.h" />
     <ClInclude Include="..\src\ctxmenu.h" />
     <ClInclude Include="..\src\data.h" />
     <ClInclude Include="..\src\dataP.h" />

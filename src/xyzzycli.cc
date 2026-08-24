@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include "xyzzycli.h"
 #include "listen.h"
+#include "inifile.h"
 
 #ifndef SPI_GETFOREGROUNDLOCKTIMEOUT
 #define SPI_GETFOREGROUNDLOCKTIMEOUT 0x2000
@@ -487,6 +488,17 @@ basename (char *path)
   return base ? base : path;
 }
 
+/* 設定は UTF-16 で読める。コマンドラインへ渡す文字列に移す */
+static void
+get_ini_str (const IniFile &ini, const WCHAR *name, char *buf, int size,
+             const char *defalt)
+{
+  WCHAR b[1024];
+  if (!ini.get (L"xyzzy", name, b, 1024)
+      || !WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0))
+    lstrcpyn (buf, defalt, size);
+}
+
 static void
 read_config (config &cf)
 {
@@ -498,15 +510,18 @@ read_config (config &cf)
     lstrcpy (&path[l - 3], "ini");
   else
     lstrcpy (path + l, ".ini");
-  GetPrivateProfileString ("xyzzy", "path", "xyzzy.exe",
-                           cf.xyzzy, sizeof cf.xyzzy, path);
+  WCHAR wpath[MAX_PATH + 16];
+  if (!MultiByteToWideChar (CP_ACP, 0, path, -1, wpath, MAX_PATH + 16))
+    return;
+
+  IniFile ini;
+  ini.open (wpath);
+  get_ini_str (ini, L"path", cf.xyzzy, sizeof cf.xyzzy, "xyzzy.exe");
   if (!cf.notepad)
-    cf.notepad = GetPrivateProfileInt ("xyzzy", "compatNotepad", 0, path);
-  cf.multi_instance = GetPrivateProfileInt ("xyzzy", "multipleInstances", 0, path);
-  GetPrivateProfileString ("xyzzy", "precedingOptions", "",
-                           cf.pre_opt, sizeof cf.pre_opt, path);
-  GetPrivateProfileString ("xyzzy", "followingOptions", "",
-                           cf.post_opt, sizeof cf.post_opt, path);
+    cf.notepad = ini.get_int (L"xyzzy", L"compatNotepad", 0);
+  cf.multi_instance = ini.get_int (L"xyzzy", L"multipleInstances", 0);
+  get_ini_str (ini, L"precedingOptions", cf.pre_opt, sizeof cf.pre_opt, "");
+  get_ini_str (ini, L"followingOptions", cf.post_opt, sizeof cf.post_opt, "");
 }
 
 int WINAPI

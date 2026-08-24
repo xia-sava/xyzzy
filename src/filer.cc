@@ -1659,7 +1659,7 @@ Filer::InitDialog ()
   int posp, sizep;
   save_geometry_p (posp, sizep);
   if (!conf_load_geometry (id_hwnd, cfgFiler,
-                           dual_window_p () ? 0 : "s", posp, sizep)
+                           dual_window_p () ? 0 : L"s", posp, sizep)
       || !posp)
     center_window (id_hwnd);
 
@@ -2184,7 +2184,7 @@ Filer::save_geometry () const
   int posp, sizep;
   save_geometry_p (posp, sizep);
   conf_save_geometry (id_hwnd, cfgFiler,
-                      dual_window_p () ? 0 : "s", posp, sizep);
+                      dual_window_p () ? 0 : L"s", posp, sizep);
   flush_conf ();
 }
 

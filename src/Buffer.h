@@ -34,7 +34,7 @@ enum wcolor_index
 
 struct wcolor_index_name
 {
-  const char *name;
+  const WCHAR *name;
   COLORREF rgb;
   const char *display_name;
 };

@@ -43,12 +43,12 @@ protected:
   void check_proportional_font () const;
   BOOL wndproc (UINT, WPARAM, LPARAM);
   static BOOL CALLBACK wndproc (HWND, UINT, WPARAM, LPARAM);
-  void init_history (UINT, const char *);
+  void init_history (UINT, const WCHAR *);
   int history_command (UINT, UINT, UINT, UINT);
   void move_btn_focus (UINT, UINT);
   int add_history (UINT, UINT, UINT, UINT);
   int delete_history (UINT, UINT, UINT, UINT);
-  void save_history (UINT, const char *);
+  void save_history (UINT, const WCHAR *);
   int find_history (UINT, const char *);
   static int find_menu_text (HMENU, int, char *, int);
   int format_popup (UINT, class subclass_combo &);

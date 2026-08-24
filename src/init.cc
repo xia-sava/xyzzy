@@ -112,14 +112,24 @@ init_home_dir (const char *path)
   return 1;
 }
 
+/* 設定に入っているパスを、パス名として持ち回る文字列にする */
+static int
+read_conf_path (const WCHAR *section, const WCHAR *name, char *buf, int size)
+{
+  WCHAR b[PATH_MAX];
+  if (!read_conf (section, name, b, numberof (b)))
+    return 0;
+  return WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0) > 0;
+}
+
 static void
 init_home_dir ()
 {
   char path[PATH_MAX];
   static const char xyzzyhome[] = "XYZZYHOME";
-  static const char cfgInit[] = "init";
+  static const WCHAR cfgInit[] = L"init";
 
-  if (read_conf (cfgInit, "homeDir", path, sizeof path)
+  if (read_conf_path (cfgInit, L"homeDir", path, numberof (path))
       && init_home_dir (path))
     return;
 
@@ -139,7 +149,7 @@ init_home_dir ()
         return;
     }
 
-  if (read_conf (cfgInit, "logDir", path, sizeof path)
+  if (read_conf_path (cfgInit, L"logDir", path, numberof (path))
       && init_home_dir (path))
     return;
 

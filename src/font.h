@@ -99,7 +99,7 @@ protected:
 
   static const UINT fs_lang_id[];
   static const lisp *const fs_lang_key[];
-  static const char *const fs_regent[];
+  static const WCHAR *const fs_regent[];
   // disp が入っていなければ alt を使う。Windows の版によって、入っている
   // フォントが違うため
   struct fontface {const char *disp, *alt, *print; int charset;};
@@ -161,7 +161,7 @@ public:
   // その枠のフォントが、半角の升目に並べる文字を全角の字形で描くか
   int full_width_slot_p (int slot) const;
 
-  static const char *regent (int n) {return fs_regent[n];}
+  static const WCHAR *regent (int n) {return fs_regent[n];}
   static const char *default_face (int n, int print);
   static int default_charset (int n) {return fs_default_face[n].charset;}
   static UINT lang_id (int n) {return fs_lang_id[n];}
@@ -188,8 +188,8 @@ int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const char *face, BYTE charset);
 
 // フォントの寸法を記録する節の名前。画面の DPI ごとに分かれる
-const char *font_conf_section ();
+const WCHAR *font_conf_section ();
 // 上の節から LOGFONT を読む。無ければ [Font] 節を読んで DPI に合わせて換算する
-int read_font_conf (const char *name, LOGFONT &lf);
+int read_font_conf (const WCHAR *name, LOGFONT &lf);
 
 #endif /* _font_h_ */
