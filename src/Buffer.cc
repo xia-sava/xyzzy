@@ -723,6 +723,17 @@ Buffer::buffer_name (char *b, char *be) const
   return stpncpy (b, t, be - b);
 }
 
+WCHAR *
+Buffer::buffer_name (WCHAR *b, WCHAR *be) const
+{
+  b = w2u (b, be, lbuffer_name);
+  if (b >= be - 1 || b_version == 1)
+    return b;
+  WCHAR t[64];
+  wsprintfW (t, L"<%d>", b_version);
+  return stpncpy (b, t, be - b);
+}
+
 char *
 Buffer::quoted_buffer_name (char *b, char *be, int qc, int qe) const
 {
@@ -1317,12 +1328,12 @@ Fkill_xyzzy (lisp lexit_code)
   return Qnil;
 }
 
-char *
-Buffer::store_title (lisp x, char *b, char *be) const
+WCHAR *
+Buffer::store_title (lisp x, WCHAR *b, WCHAR *be) const
 {
   if (x == lbuffer_name)
     return buffer_name (b, be);
-  return w2s (b, x);
+  return w2u (b, be, x);
 }
 
 void
@@ -1331,10 +1342,10 @@ Buffer::refresh_title_bar () const
   lisp fmt = symbol_value (Vtitle_bar_format, this);
   if (stringp (fmt))
     {
-      char buf[512 + 10];
+      WCHAR buf[512 + 10];
       buffer_info binfo (0, this, 0, 0, 0);
       *binfo.format (fmt, buf, buf + 512) = 0;
-      SetWindowText (app.toplev, buf);
+      SetWindowTextW (app.toplev, buf);
     }
   else
     {
@@ -1346,17 +1357,17 @@ Buffer::refresh_title_bar () const
       else
         x = lbuffer_name;
 
-      int l = (xstring_length (x) * 2 + strlen (TitleBarString) + 32 + 8);
-      char *b0 = (char *)alloca (l);
-      char *b = b0;
+      int l = (w2ul (x) + wcslen (TitleBarString) + 32 + 8);
+      WCHAR *b0 = (WCHAR *)alloca (l * sizeof (WCHAR));
+      WCHAR *b = b0;
       if (Fadmin_user_p () == Qt && sysdep.Win6p ())
-        b = stpcpy (b, "管理者: ");
+        b = stpcpy (b, L"管理者: ");
       if (xsymbol_value (Vtitle_bar_text_order) != Qnil)
-        strcpy (stpcpy (store_title (x, b, b + l), " - "), TitleBarString);
+        wcscpy (stpcpy (store_title (x, b, b0 + l), L" - "), TitleBarString);
       else
-        store_title (x, stpcpy (stpcpy (b, TitleBarString), " - "), b + l);
+        store_title (x, stpcpy (stpcpy (b, TitleBarString), L" - "), b0 + l);
 
-      SetWindowText (app.toplev, b0);
+      SetWindowTextW (app.toplev, b0);
     }
   b_last_title_bar_buffer = 0; // 次回タイトルバーを強制的に再描画させる
 }

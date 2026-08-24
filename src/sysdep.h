@@ -90,7 +90,7 @@ public:
   HFONT ui_font270 ();
 
   char curdir[PATH_MAX];
-  char host_name[MAX_COMPUTERNAME_LENGTH + 1];
+  WCHAR host_name[MAX_COMPUTERNAME_LENGTH + 1];
   DWORD process_id;
 
   int64_t perf_freq;

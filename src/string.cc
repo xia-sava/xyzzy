@@ -270,6 +270,16 @@ w2u (WCHAR *b, const Char *s, size_t size)
   return b;
 }
 
+WCHAR *
+w2u (WCHAR *b, WCHAR *be, const Char *s, size_t size)
+{
+  be--;
+  for (const Char *se = s + size; s < se && b < be; s++)
+    *b++ = WCHAR (*s);
+  *b = 0;
+  return b;
+}
+
 size_t
 u2wl (const WCHAR *s)
 {
@@ -395,6 +405,24 @@ make_string (const char *string)
   size_t size = s2wl (string);
   xstring_contents (p) = s2w (string, size);
   xstring_length (p) = size;
+  return p;
+}
+
+lisp
+make_string (const WCHAR *string)
+{
+  return make_string (string, wcslen (string));
+}
+
+lisp
+make_string (const WCHAR *string, size_t size)
+{
+  lisp p = make_simple_string ();
+  size_t l = u2wl (string, size);
+  Char *b = (Char *)xmalloc (l * sizeof (Char));
+  xstring_contents (p) = b;
+  xstring_length (p) = l;
+  u2w (b, string, size);
   return p;
 }
 

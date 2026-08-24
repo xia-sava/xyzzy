@@ -123,8 +123,8 @@ Sysdep::Sysdep ()
       WINFS::SetCurrentDirectory (curdir);
     }
 
-  DWORD len = sizeof host_name;
-  if (!GetComputerName (host_name, &len))
+  DWORD len = numberof (host_name);
+  if (!GetComputerNameW (host_name, &len))
     *host_name = 0;
 
   process_id = GetCurrentProcessId ();

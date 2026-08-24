@@ -3904,14 +3904,14 @@ Fmessage_box (lisp lmsg, lisp ltitle, lisp styles, lisp args)
   WCHAR *msg = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
   w2u (msg, b, l);
 
-  const char *title;
+  const WCHAR *title;
   if (!ltitle || ltitle == Qnil)
     title = TitleBarString;
   else
     {
       check_string (ltitle);
-      title = (char *)alloca (xstring_length (ltitle) * 2 + 1);
-      w2s ((char *)title, ltitle);
+      title = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (ltitle) + 1));
+      w2u ((WCHAR *)title, ltitle);
     }
 
   msgbox_styles mb;

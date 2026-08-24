@@ -11,6 +11,8 @@ char *xstrdup (const char *);
 void *xmemdup (const void *, size_t);
 char *stpcpy (char *, const char *);
 char *stpncpy (char *, const char *, int);
+WCHAR *stpcpy (WCHAR *, const WCHAR *);
+WCHAR *stpncpy (WCHAR *, const WCHAR *, int);
 long log2_floor (u_long);
 
 # define NF_BAD 0

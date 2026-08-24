@@ -68,6 +68,26 @@ stpncpy (char *d, const char *s, int n)
   return d;
 }
 
+WCHAR *
+stpcpy (WCHAR *d, const WCHAR *s)
+{
+  while ((*d++ = *s++))
+    ;
+  return d - 1;
+}
+
+WCHAR *
+stpncpy (WCHAR *d, const WCHAR *s, int n)
+{
+  for (; n > 0; n--)
+  {
+    if (!(*d++ = *s++))
+      return d - 1;
+  }
+  *d = 0;
+  return d;
+}
+
 char *
 jindex (const char *p, int c)
 {

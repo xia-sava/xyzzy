@@ -149,6 +149,7 @@ void w2s_chunk (char *, char *, const Char *, size_t);
 /* Windows とやりとりする文字列は UTF-16。内部表現との間で幅を移し替える */
 size_t w2ul (const Char *, size_t);
 WCHAR *w2u (WCHAR *, const Char *, size_t);
+WCHAR *w2u (WCHAR *, WCHAR *, const Char *, size_t);
 size_t u2wl (const WCHAR *);
 size_t u2wl (const WCHAR *, size_t);
 Char *u2w (Char *, const WCHAR *);
@@ -161,6 +162,8 @@ lisp coerce_to_string (lisp, int);
 
 lisp make_string (const char *);
 lisp make_string (const u_char *);
+lisp make_string (const WCHAR *);
+lisp make_string (const WCHAR *, size_t);
 lisp make_string (const char *, size_t);
 lisp make_string_simple (const char *, size_t);
 lisp make_string (const Char *, size_t);
@@ -255,6 +258,12 @@ inline WCHAR *
 w2u (WCHAR *b, lisp l)
 {
   return w2u (b, xstring_contents (l), xstring_length (l));
+}
+
+inline WCHAR *
+w2u (WCHAR *b, WCHAR *be, lisp l)
+{
+  return w2u (b, be, xstring_contents (l), xstring_length (l));
 }
 
 #endif

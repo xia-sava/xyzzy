@@ -557,7 +557,7 @@ init_command_line (int ac)
 void
 report_out_of_memory ()
 {
-  MessageBox (0, "メモリが不足しています", TitleBarString, MB_OK | MB_ICONHAND);
+  MessageBoxW (0, L"メモリが不足しています", TitleBarString, MB_OK | MB_ICONHAND);
 }
 
 static inline int
@@ -810,7 +810,7 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
     }
 
   if (*sysdep.host_name)
-    strcpy (stpcpy (TitleBarString + strlen (TitleBarString), "@"),
+    wcscpy (stpcpy (TitleBarString + wcslen (TitleBarString), L"@"),
             sysdep.host_name);
 
   if (!init_lisp_objects ())
@@ -844,9 +844,7 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 
   ole_initialized = SUCCEEDED (OleInitialize (0));
 
-  WCHAR title[TITLE_BAR_STRING_SIZE];
-  s2u (title, TitleBarString);
-  app.toplev = CreateWindowW (Application::ToplevelClassName, title,
+  app.toplev = CreateWindowW (Application::ToplevelClassName, TitleBarString,
                               WS_OVERLAPPEDWINDOW,
                               point.x, point.y, size.cx, size.cy,
                               HWND_DESKTOP, 0, hinst, 0);

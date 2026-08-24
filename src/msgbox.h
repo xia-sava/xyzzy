@@ -16,7 +16,7 @@ public:
 protected:
   HINSTANCE hinst;
   const WCHAR *msg;
-  const char *title;
+  const WCHAR *title;
   HFONT hfont;
   HICON hicon;
   HWND hwnd;
@@ -43,7 +43,7 @@ protected:
   void create_buttons (const RECT br[MAX_BUTTONS]) const;
   static BOOL CALLBACK WndProc (HWND, UINT, WPARAM, LPARAM);
 public:
-  XMessageBox (HINSTANCE hinst_, const WCHAR *msg_, const char *title_,
+  XMessageBox (HINSTANCE hinst_, const WCHAR *msg_, const WCHAR *title_,
                int crlf, int no_wrap)
        : hinst (hinst_), msg (msg_), title (title_), nbuttons (0),
          close_id (-1), default_btn (0), hicon (0),
@@ -56,8 +56,8 @@ public:
   int doit (HWND);
 };
 
-int MsgBox (HWND, const WCHAR *, const char *, UINT, int);
-int MsgBoxEx (HWND, const WCHAR *, const char *, int, int, int, int,
+int MsgBox (HWND, const WCHAR *, const WCHAR *, UINT, int);
+int MsgBoxEx (HWND, const WCHAR *, const WCHAR *, int, int, int, int,
               const WCHAR **, int, int, int);
 
 #endif

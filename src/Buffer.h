@@ -692,6 +692,7 @@ struct Buffer
   point_t coerce_to_restricted_point (lisp) const;
   static Buffer *coerce_to_buffer (lisp);
   char *buffer_name (char *, char *) const;
+  WCHAR *buffer_name (WCHAR *, WCHAR *) const;
   char *quoted_buffer_name (char *, char *, int, int) const;
   void modify_mode_line () const;
   int char_language () const;
@@ -772,7 +773,7 @@ struct Buffer
 
   void refresh_title_bar () const;
   void set_frame_title (int);
-  char *store_title (lisp, char *, char *) const;
+  WCHAR *store_title (lisp, WCHAR *, WCHAR *) const;
 
   void change_colors (const XCOLORREF *);
 

@@ -424,7 +424,7 @@ cleanup_exception ()
     }
   if (fp)
     {
-      fprintf (fp, "%s %s Crash log:\n\n", ProgramName, VersionString);
+      fprintf (fp, "%ls %ls Crash log:\n\n", ProgramName, VersionString);
 
       fprintf (fp, "Windows %s %d.%02d.%d %s\n\n",
                sysdep.windows_name,

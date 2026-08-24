@@ -237,7 +237,7 @@ XMessageBox::init_dialog ()
                 (warea.left + warea.right - sz.cx) / 2,
                 (warea.top + warea.bottom - sz.cy) / 2 - r.top,
                 sz.cx, sz.cy, SWP_NOZORDER | SWP_NOACTIVATE);
-  SetWindowText (hwnd, title);
+  SetWindowTextW (hwnd, title);
 
   if (close_id < 0)
     DeleteMenu (GetSystemMenu (hwnd, 0), SC_CLOSE, MF_BYCOMMAND);
@@ -311,11 +311,11 @@ XMessageBox::doit (HWND hwnd)
 }
 
 int
-MsgBoxEx (HWND hwnd, const WCHAR *msg, const char *title,
+MsgBoxEx (HWND hwnd, const WCHAR *msg, const WCHAR *title,
           int type, int defbtn, int icon, int beep,
           const WCHAR **captions, int ncaptions, int crlf, int no_wrap)
 {
-  XMessageBox mb (app.hinst, msg ? msg : L"", title ? title : "エラー", crlf, no_wrap);
+  XMessageBox mb (app.hinst, msg ? msg : L"", title ? title : L"エラー", crlf, no_wrap);
   if (!captions)
     ncaptions = 0;
 
@@ -397,7 +397,7 @@ MsgBoxEx (HWND hwnd, const WCHAR *msg, const char *title,
 }
 
 int
-MsgBox (HWND hwnd, const WCHAR *msg, const char *title, UINT flags, int beep)
+MsgBox (HWND hwnd, const WCHAR *msg, const WCHAR *title, UINT flags, int beep)
 {
   int defbtn;
   switch (flags & MB_DEFMASK)
