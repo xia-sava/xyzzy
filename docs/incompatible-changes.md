@@ -216,3 +216,16 @@ system:*byte-code」というエラーになります。第三者製の site-lis
 
 **移行方法**: 設定を消してください。全角と半角を移し替えたい場合は
 `map-to-half-width-string` と `map-to-full-width-string` を使ってください。
+
+## 全角・半角の移し替えで `:greek` と `:cyrillic` が効かなくなった
+
+**変更点**: `map-to-half-width-region` / `map-to-half-width-string` /
+`map-to-full-width-region` / `map-to-full-width-string` のキーワード
+`:greek` と `:cyrillic` は、指定を受け取るだけで何も変換しなくなりました。
+文字を符号位置で保持するようになり、ギリシャ文字とキリル文字には全角と半角の
+区別が無くなったためです。
+
+**影響**: これらのキーワードだけを指定した呼び出しは、文字列を変えずに返します。
+`:ascii` や `:hiragana` と併せて指定している場合、そちらの変換は従来どおりです。
+
+**移行方法**: ありません。指定を残していても支障はありません。
