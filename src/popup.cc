@@ -2,7 +2,7 @@
 #include "ed.h"
 #include "monitor.h"
 
-static char *popup_text;
+static WCHAR *popup_text;
 static RECT popup_rect;
 static HWND hwnd_popup;
 static HFONT hfont_popup;
@@ -23,7 +23,7 @@ calc_rect (HDC hdc, const RECT &scr, RECT &r, int num, int den)
 {
   memset (&r, 0, sizeof r);
   r.right = (scr.right - scr.left) * num / den;
-  DrawText (hdc, popup_text, -1, &r,
+  DrawTextW (hdc, popup_text, -1, &r,
             (DT_EXTERNALLEADING | DT_CALCRECT | DT_EXPANDTABS
              | DT_LEFT | DT_NOPREFIX | DT_WORDBREAK));
 }
@@ -50,7 +50,7 @@ check_range (const RECT &scr, const RECT &r, const RECT &pos, POINT &p)
 }
 
 static void
-set_text (const char *text, const RECT &pos)
+set_text (const WCHAR *text, const RECT &pos)
 {
   RECT scr;
   monitor.get_workarea_from_rect (&pos, &scr);
@@ -59,7 +59,7 @@ set_text (const char *text, const RECT &pos)
   scr.right -= 16;
   scr.bottom -= 16;
 
-  popup_text = (char *)text;
+  popup_text = (WCHAR *)text;
 
   RECT r[4];
 
@@ -122,7 +122,7 @@ dopaint (HDC hdc)
   HGDIOBJ of = SelectObject (hdc, hfont_popup);
   SetTextColor (hdc, TEXTCOLOR);
   SetBkColor (hdc, BACKCOLOR);
-  DrawText (hdc, popup_text, -1, &popup_rect,
+  DrawTextW (hdc, popup_text, -1, &popup_rect,
             DT_EXTERNALLEADING | DT_EXPANDTABS | DT_LEFT | DT_NOPREFIX | DT_WORDBREAK);
   SelectObject (hdc, of);
 }
@@ -182,7 +182,7 @@ wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 static int
 create_popup ()
 {
-  static const char wclass[] = "popup!?";
+  static const WCHAR wclass[] = L"popup!?";
 
   f_first_time = 1;
   if (hwnd_popup)
@@ -191,7 +191,7 @@ create_popup ()
       return 1;
     }
 
-  WNDCLASS wc;
+  WNDCLASSW wc;
   wc.style = CS_HREDRAW | CS_VREDRAW;
   wc.lpfnWndProc = wndproc;
   wc.cbClsExtra = 0;
@@ -202,10 +202,10 @@ create_popup ()
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = wclass;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
-  hwnd_popup = CreateWindow (wclass, "",
+  hwnd_popup = CreateWindowW (wclass, L"",
                              WS_POPUP | WS_BORDER,
                              0, 0, 0, 0,
                              app.toplev, 0, app.hinst, 0);
@@ -269,9 +269,8 @@ Fpopup_string (lisp lstring, lisp lpoint, lisp ltimeout)
       popup_text = 0;
     }
 
-  int l = w2sl (lstring) + 1;
-  char *p = (char *)xmalloc (l);
-  w2s (p, lstring);
+  WCHAR *p = (WCHAR *)xmalloc (sizeof (WCHAR) * (w2ul (lstring) + 1));
+  w2u (p, lstring);
   set_text (p, r);
   if (timeout > 0)
     SetTimer (hwnd_popup, TIMER_ID, timeout * 1000, 0);
