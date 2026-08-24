@@ -504,19 +504,3 @@ frameDC::frame_rect (const RECT &r, int w) const
   paint (r);
   SelectClipRgn (f_hdc, 0);
 }
-
-ucs2_t *
-i2w (const Char *p, int l, ucs2_t *b)
-{
-  for (const Char *const pe = p + l; p < pe; p++)
-    *b++ = ucs2_t (*p);
-  *b = 0;
-  return b;
-}
-
-int
-i2wl (const Char *, int l)
-{
-  return l + 1;
-}
-

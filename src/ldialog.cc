@@ -1285,7 +1285,7 @@ ldialog_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
 inline WORD *
 Dialog::store_unicode (WORD *w, lisp string)
 {
-  return i2w (string, w) + 1;
+  return w2u (w, string) + 1;
 }
 
 lisp

@@ -146,8 +146,13 @@ size_t s2wl (const char *string, const char *se, int zero_term);
 Char *s2w (Char *b, const char *string, const char *se, int zero_term);
 void w2s_chunk (char *, char *, const Char *, size_t);
 
-ucs2_t *i2w (const Char *, int, ucs2_t *);
-int i2wl (const Char *, int);
+/* Windows とやりとりする文字列は UTF-16。内部表現との間で幅を移し替える */
+size_t w2ul (const Char *, size_t);
+WCHAR *w2u (WCHAR *, const Char *, size_t);
+size_t u2wl (const WCHAR *);
+size_t u2wl (const WCHAR *, size_t);
+Char *u2w (Char *, const WCHAR *);
+Char *u2w (Char *, const WCHAR *, size_t);
 
 lisp coerce_to_string (lisp, int);
 
@@ -237,16 +242,16 @@ w2s_quote (char *b, char *be, lisp l, int qc, int qe)
   return w2s_quote (b, be, xstring_contents (l), xstring_length (l), qc, qe);
 }
 
-inline ucs2_t *
-i2w (lisp x, ucs2_t *b)
+inline size_t
+w2ul (lisp l)
 {
-  return i2w (xstring_contents (x), xstring_length (x), b);
+  return w2ul (xstring_contents (l), xstring_length (l));
 }
 
-inline int
-i2wl (lisp x)
+inline WCHAR *
+w2u (WCHAR *b, lisp l)
 {
-  return i2wl (xstring_contents (x), xstring_length (x));
+  return w2u (b, xstring_contents (l), xstring_length (l));
 }
 
 #endif

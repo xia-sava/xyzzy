@@ -256,6 +256,47 @@ w2b (char *b, const Char *s, size_t size)
 }
 
 size_t
+w2ul (const Char *, size_t size)
+{
+  return size;
+}
+
+WCHAR *
+w2u (WCHAR *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    *b++ = WCHAR (*s);
+  *b = 0;
+  return b;
+}
+
+size_t
+u2wl (const WCHAR *s)
+{
+  return u2wl (s, wcslen (s));
+}
+
+size_t
+u2wl (const WCHAR *, size_t size)
+{
+  return size;
+}
+
+Char *
+u2w (Char *b, const WCHAR *s)
+{
+  return u2w (b, s, wcslen (s));
+}
+
+Char *
+u2w (Char *b, const WCHAR *s, size_t size)
+{
+  for (const WCHAR *se = s + size; s < se; s++)
+    *b++ = Char (*s);
+  return b;
+}
+
+size_t
 s2wl (const char *string, const char *se, int zero_term)
 {
   size_t l = 0;

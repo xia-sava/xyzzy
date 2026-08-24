@@ -246,7 +246,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
   for (nfiles = 0; consp (f); f = xcdr (f), nfiles++)
     {
       check_string (xcar (f));
-      maxl = max (maxl, xstring_length (xcar (f)));
+      maxl = max (maxl, int (w2ul (xcar (f))));
     }
 
   if (!nfiles)
@@ -280,7 +280,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
   int i;
   for (i = 0; i < nfiles && consp (f); i++, f = xcdr (f))
     {
-      i2w (xcar (f), wbuf);
+      w2u (wbuf, xcar (f));
       ole_error (sf->ParseDisplayName (0, 0, wbuf, &eaten, &idls[i], 0));
     }
 
