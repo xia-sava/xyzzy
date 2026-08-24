@@ -416,7 +416,7 @@ fnkey_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       get_window (hwnd)->OnCancelMode ();
       break;
     }
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 lisp

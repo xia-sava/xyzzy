@@ -81,14 +81,14 @@ GlobalIME::enable (ATOM *atoms, int natoms)
 }
 
 LRESULT
-GlobalIME::DefWindowProc (HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+GlobalIME::DefWindowProcW (HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
 #ifdef HAVE_DIMM_H
   LRESULT lr;
   if (gi_app && gi_app->OnDefWindowProc (hwnd, msg, wp, lp, &lr) == S_OK)
     return lr;
 #endif /* HAVE_DIMM_H */
-  return ::DefWindowProc (hwnd, msg, wp, lp);
+  return ::DefWindowProcW (hwnd, msg, wp, lp);
 }
 
 BOOL

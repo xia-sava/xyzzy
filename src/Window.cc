@@ -438,19 +438,19 @@ Window::init (int minibufp, int temporary)
 
   lwp = make_window ();
 
-  if (!CreateWindowEx (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
-                       Application::ClientClassName, "",
-                       (WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE
-                        | WS_VSCROLL | WS_HSCROLL),
-                       0, 0, 0, 0, app.active_frame.hwnd, 0, app.hinst, this))
+  if (!CreateWindowExW (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
+                        Application::ClientClassName, L"",
+                        (WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE
+                         | WS_VSCROLL | WS_HSCROLL),
+                        0, 0, 0, 0, app.active_frame.hwnd, 0, app.hinst, this))
     FEstorage_error ();
 
   if (minibufp)
     w_hwnd_ml = 0;
-  else if (!CreateWindow (Application::ModelineClassName, "",
-                          WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
-                          0, 0, 0, 0,
-                          app.active_frame.hwnd, 0, app.hinst, this))
+  else if (!CreateWindowW (Application::ModelineClassName, L"",
+                           WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                           0, 0, 0, 0,
+                           app.active_frame.hwnd, 0, app.hinst, this))
     {
       DestroyWindow (w_hwnd);
       FEstorage_error ();

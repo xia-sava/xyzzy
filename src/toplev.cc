@@ -538,19 +538,19 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
           report_out_of_memory ();
           return -1;
         }
-      if (!CreateWindow (FunctionKeyClassName, "",
-                         (((Window::w_default_flags & Window::WF_FUNCTION_BAR)
-                           ? WS_VISIBLE : 0)
-                          | WS_CHILD | WS_CLIPSIBLINGS),
-                         0, 0, 0, 0,
-                         hwnd, 0, app.hinst, app.active_frame.fnkey))
+      if (!CreateWindowW (FunctionKeyClassName, L"",
+                          (((Window::w_default_flags & Window::WF_FUNCTION_BAR)
+                            ? WS_VISIBLE : 0)
+                           | WS_CHILD | WS_CLIPSIBLINGS),
+                          0, 0, 0, 0,
+                          hwnd, 0, app.hinst, app.active_frame.fnkey))
         return -1;
 
-      app.active_frame.hwnd = CreateWindow (Application::FrameClassName, "",
-                                            (WS_VISIBLE | WS_CHILD
-                                             | WS_CLIPCHILDREN | WS_CLIPSIBLINGS),
-                                            0, 0, 0, 0,
-                                            hwnd, 0, app.hinst, 0);
+      app.active_frame.hwnd = CreateWindowW (Application::FrameClassName, L"",
+                                             (WS_VISIBLE | WS_CHILD
+                                              | WS_CLIPCHILDREN | WS_CLIPSIBLINGS),
+                                             0, 0, 0, 0,
+                                             hwnd, 0, app.hinst, 0);
       if (!app.active_frame.hwnd)
         return -1;
 
@@ -667,7 +667,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
             wp.cx = nr.right - nr.left;
             wp.cy = nr.bottom - nr.top;
             wp.flags = SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER;
-            DefWindowProc (hwnd, WM_WINDOWPOSCHANGED, 0, LPARAM (&wp));
+            DefWindowProcW (hwnd, WM_WINDOWPOSCHANGED, 0, LPARAM (&wp));
 #else
             SetWindowPos (hwnd, 0, 0, 0, nr.right - nr.left, nr.bottom - nr.top,
                           SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -967,7 +967,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
 
     case WM_PRIVATE_CALL_MENU:
-      return DefWindowProc (hwnd, WM_SYSCHAR, wparam, lparam);
+      return DefWindowProcW (hwnd, WM_SYSCHAR, wparam, lparam);
 
     case WM_DROPFILES:
       do_dnd (HDROP (wparam));
@@ -1040,7 +1040,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
     }
 
-  return app.kbdq.gime.DefWindowProc (hwnd, msg, wparam, lparam);
+  return app.kbdq.gime.DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 LRESULT CALLBACK
@@ -1094,7 +1094,7 @@ frame_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       return process_mouse_activate (lparam);
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 static inline void
@@ -1279,7 +1279,7 @@ client_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       return 0;
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 LRESULT CALLBACK
@@ -1319,7 +1319,7 @@ modeline_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 class keyvec

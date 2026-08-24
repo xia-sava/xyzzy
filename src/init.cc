@@ -22,11 +22,11 @@
 # define M_PI 3.141592653589793
 #endif
 
-const char Application::ToplevelClassName[] = "　";
-const char Application::FrameClassName[] = "  ";
-const char Application::ClientClassName[] = "   ";
-const char Application::ModelineClassName[] = "    ";
-const char FunctionKeyClassName[] = "     ";
+const WCHAR Application::ToplevelClassName[] = L"　";
+const WCHAR Application::FrameClassName[] = L"  ";
+const WCHAR Application::ClientClassName[] = L"   ";
+const WCHAR Application::ModelineClassName[] = L"    ";
+const WCHAR FunctionKeyClassName[] = L"     ";
 
 Application app;
 
@@ -649,7 +649,7 @@ Fsi_startup ()
 static int
 register_wndclasses (HINSTANCE hinst)
 {
-  WNDCLASS wc;
+  WNDCLASSW wc;
 
   wc.style = 0;
   wc.lpfnWndProc = toplevel_wndproc;
@@ -661,7 +661,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ToplevelClassName;
-  app.atom_toplev = RegisterClass (&wc);
+  app.atom_toplev = RegisterClassW (&wc);
   if (!app.atom_toplev)
     return 0;
 
@@ -675,7 +675,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::FrameClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = 0;
@@ -688,7 +688,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ClientClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = 0;
@@ -701,7 +701,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = HBRUSH (COLOR_BTNFACE + 1);
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ModelineClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -714,7 +714,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = HBRUSH (COLOR_BTNFACE + 1);
   wc.lpszMenuName = 0;
   wc.lpszClassName = FunctionKeyClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   stdctl_hook_init (hinst);
@@ -844,10 +844,12 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 
   ole_initialized = SUCCEEDED (OleInitialize (0));
 
-  app.toplev = CreateWindow (Application::ToplevelClassName, TitleBarString,
-                             WS_OVERLAPPEDWINDOW,
-                             point.x, point.y, size.cx, size.cy,
-                             HWND_DESKTOP, 0, hinst, 0);
+  WCHAR title[TITLE_BAR_STRING_SIZE];
+  s2u (title, TitleBarString);
+  app.toplev = CreateWindowW (Application::ToplevelClassName, title,
+                              WS_OVERLAPPEDWINDOW,
+                              point.x, point.y, size.cx, size.cy,
+                              HWND_DESKTOP, 0, hinst, 0);
   if (!app.toplev)
     return 0;
 
