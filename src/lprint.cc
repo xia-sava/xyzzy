@@ -3898,7 +3898,7 @@ Fmessage_box (lisp lmsg, lisp ltitle, lisp styles, lisp args)
   check_string (lmsg);
   int l = count_crlf (xstring_contents (lmsg),
                       xstring_contents (lmsg) + xstring_length (lmsg));
-  char *msg = (char *)alloca (l * 2 + 3);
+  char *msg = (char *)alloca (sizeof (Char) * l + sizeof (Char) + 1);
   copy_crlf ((Char *)msg + 1,
              xstring_contents (lmsg),
              xstring_contents (lmsg) + xstring_length (lmsg));
