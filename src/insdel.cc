@@ -1385,7 +1385,13 @@ Fget_clipboard_data ()
     {
       lisp encoding = symbol_value (Vclipboard_char_encoding,
                                     selected_buffer ());
-      if (encoding_utf16_p (encoding))
+      /* バイト列の形式は CP932 で作られるので、写せない文字が落ちる。
+         符号位置がそのまま入っている形式があればそちらを読む。ただし
+         CP932 以外の符号を選んでいるときは、その符号で読むために
+         置いた側が並べた順に従う */
+      if ((encoding_sjis_p (encoding) || encoding_auto_detect_p (encoding)
+           || encoding_utf16_p (encoding))
+          && IsClipboardFormatAvailable (CF_UNICODETEXT))
         result = get_clipboatd_data (CF_UNICODETEXT, lstring);
       if (result == -1)
         {
