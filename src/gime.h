@@ -35,10 +35,10 @@ public:
   BOOL ImmSetCompositionFont (HIMC, LOGFONT *);
   BOOL ImmSetCompositionWindow (HIMC, COMPOSITIONFORM *);
   BOOL ImmSetOpenStatus (HIMC, BOOL);
-  BOOL ImmSetCompositionString (HIMC, DWORD, void *, DWORD, void *, DWORD);
-  BOOL ImmConfigureIME (HKL, HWND, DWORD, REGISTERWORD *);
+  BOOL ImmSetCompositionStringW (HIMC, DWORD, void *, DWORD, void *, DWORD);
+  BOOL ImmConfigureIMEW (HKL, HWND, DWORD, REGISTERWORDW *);
   UINT ImmGetVirtualKey (HWND);
-  UINT ImmGetDescription (HKL, LPTSTR, UINT);
+  UINT ImmGetDescriptionW (HKL, LPWSTR, UINT);
   DWORD ImmGetProperty (HKL, DWORD);
 };
 

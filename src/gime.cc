@@ -189,25 +189,25 @@ GlobalIME::ImmSetOpenStatus (HIMC himc, BOOL f)
 }
 
 BOOL
-GlobalIME::ImmSetCompositionString (HIMC himc, DWORD index, void *comp,
-                                    DWORD compl, void *read, DWORD readl)
+GlobalIME::ImmSetCompositionStringW (HIMC himc, DWORD index, void *comp,
+                                     DWORD compl, void *read, DWORD readl)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->SetCompositionStringA (himc, index, comp,
+    return gi_app->SetCompositionStringW (himc, index, comp,
                                           compl, read, readl) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmSetCompositionString (himc, index, comp, compl, read, readl);
+  return ::ImmSetCompositionStringW (himc, index, comp, compl, read, readl);
 }
 
 BOOL
-GlobalIME::ImmConfigureIME (HKL hkl, HWND hwnd, DWORD mode, REGISTERWORD *data)
+GlobalIME::ImmConfigureIMEW (HKL hkl, HWND hwnd, DWORD mode, REGISTERWORDW *data)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->ConfigureIMEA (hkl, hwnd, mode, data) == S_OK;
+    return gi_app->ConfigureIMEW (hkl, hwnd, mode, data) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmConfigureIME (hkl, hwnd, mode, data);
+  return ::ImmConfigureIMEW (hkl, hwnd, mode, data);
 }
 
 UINT
@@ -224,16 +224,16 @@ GlobalIME::ImmGetVirtualKey (HWND hwnd)
 }
 
 UINT
-GlobalIME::ImmGetDescription (HKL hkl, LPTSTR buf, UINT size)
+GlobalIME::ImmGetDescriptionW (HKL hkl, LPWSTR buf, UINT size)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
     {
       UINT n;
-      return gi_app->GetDescriptionA (hkl, size, buf, &n) == S_OK ? n : 0;
+      return gi_app->GetDescriptionW (hkl, size, buf, &n) == S_OK ? n : 0;
     }
 #endif /* HAVE_DIMM_H */
-  return ::ImmGetDescription (hkl, buf, size);
+  return ::ImmGetDescriptionW (hkl, buf, size);
 }
 
 DWORD
