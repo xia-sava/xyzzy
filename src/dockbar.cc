@@ -4,7 +4,7 @@
 #include "mman.h"
 
 const char dock_bar::b_dock_bar_prop[] = "dock_bar::prop";
-char dock_bar::b_ttbuf[TTBUFSIZE];
+WCHAR dock_bar::b_ttbuf[TTBUFSIZE];
 const char tab_bar::b_tab_bar_spin_prop[] = "tab_bar::spin::prop";
 
 dock_bar::dock_bar (dock_frame &frame, lisp name, int dockable)
@@ -333,7 +333,7 @@ tool_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 int
 tool_bar::create (HWND hwnd_parent, DWORD style, UINT id)
 {
-  if (!dock_bar::create (0, TOOLBARCLASSNAME, 0,
+  if (!dock_bar::create (0, TOOLBARCLASSNAMEW, 0,
                          style, 0, 0, 0, 0, hwnd_parent,
                          (HMENU)id, app.hinst, 0))
     return 0;
@@ -496,7 +496,7 @@ tab_bar::create (HWND hwnd_parent)
 DWORD
 tab_bar::nth (int i) const
 {
-  TC_ITEM ti;
+  TC_ITEMW ti;
   ti.mask = TCIF_PARAM;
   return get_item (i, ti) ? ti.lParam : 0;
 }
@@ -592,9 +592,9 @@ tab_bar::calc_tab_height ()
   int nitem = item_count ();
   if (!nitem)
     {
-      TC_ITEM ti;
+      TC_ITEMW ti;
       ti.mask = TCIF_TEXT;
-      ti.pszText = "xyzzy";
+      ti.pszText = L"xyzzy";
       insert_item (0, ti);
     }
 
@@ -649,32 +649,32 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
 }
 
 int
-tab_bar::abbrev_text (HDC hdc, char *s0, int l, int cx) const
+tab_bar::abbrev_text (HDC hdc, WCHAR *s0, int l, int cx) const
 {
   cx -= t_dots;
   if (cx <= 0)
     return 0;
 
   SIZE sz;
-  char *se = s0 + l;
+  WCHAR *se = s0 + l;
   do
     {
-      se = CharPrev (s0, se);
+      se = CharPrevW (s0, se);
       if (se == s0)
         break;
-      GetTextExtentPoint32 (hdc, s0, se - s0, &sz);
+      GetTextExtentPoint32W (hdc, s0, se - s0, &sz);
     }
   while (sz.cx > cx);
-  strcpy (se, "...");
+  wcscpy (se, L"...");
   return se - s0 + 3;
 }
 
 void
-tab_bar::draw_item (const draw_item_struct &dis, char *s, int l,
+tab_bar::draw_item (const draw_item_struct &dis, WCHAR *s, int l,
                     COLORREF fg, COLORREF bg) const
 {
   SIZE sz;
-  GetTextExtentPoint32 (dis.hdc, s, l, &sz);
+  GetTextExtentPoint32W (dis.hdc, s, l, &sz);
 
   int x, y;
   switch (edge ())
@@ -721,7 +721,7 @@ tab_bar::draw_item (const draw_item_struct &dis, char *s, int l,
 
   COLORREF ofg = SetTextColor (dis.hdc, fg);
   COLORREF obg = SetBkColor (dis.hdc, bg);
-  ExtTextOut (dis.hdc, x, y, ETO_CLIPPED | ETO_OPAQUE, &dis.r, s, l, 0);
+  ExtTextOutW (dis.hdc, x, y, ETO_CLIPPED | ETO_OPAQUE, &dis.r, s, l, 0);
   SetTextColor (dis.hdc, ofg);
   SetBkColor (dis.hdc, obg);
   if (dis.state & ODS_SELECTED && GetFocus () == b_hwnd)
@@ -1423,11 +1423,11 @@ tab_bar::move_tab (int x, int y)
                 else if (index == oindex + 1)
                   index++;
 
-                char b[1024];
-                TC_ITEM ti;
+                WCHAR b[1024];
+                TC_ITEMW ti;
                 ti.mask = TCIF_TEXT | TCIF_IMAGE | TCIF_PARAM;
                 ti.pszText = b;
-                ti.cchTextMax = sizeof b;
+                ti.cchTextMax = numberof (b);
                 set_no_redraw ();
                 if (get_item (oindex, ti) && insert_item (index, ti) >= 0)
                   {
@@ -2248,15 +2248,15 @@ dock_frame::draw_item (DRAWITEMSTRUCT *dis)
 int
 dock_frame::notify (NMHDR *nm, LRESULT &result)
 {
-  if (nm->code == TTN_NEEDTEXT)
+  if (nm->code == TTN_NEEDTEXTW)
     {
-      TOOLINFO ti;
+      TOOLINFOW ti;
       ti.cbSize = sizeof ti;
-      if (SendMessage (nm->hwndFrom, TTM_GETCURRENTTOOL, 0, LPARAM (&ti))
-          && ti.lpszText == LPSTR_TEXTCALLBACK)
+      if (SendMessage (nm->hwndFrom, TTM_GETCURRENTTOOLW, 0, LPARAM (&ti))
+          && ti.lpszText == LPSTR_TEXTCALLBACKW)
         {
           dock_bar *bar = dock_bar::from_hwnd (ti.hwnd);
-          return bar ? bar->need_text (*(TOOLTIPTEXT *)nm) : 0;
+          return bar ? bar->need_text (*(TOOLTIPTEXTW *)nm) : 0;
         }
     }
 

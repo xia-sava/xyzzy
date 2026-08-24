@@ -21,8 +21,8 @@ private:
   Buffer *current () const;
   int insert (const Buffer *, int);
   int modify (const Buffer *, int);
-  static char *set_buffer_name (const Buffer *, char *, int);
-  virtual int need_text (TOOLTIPTEXT &);
+  static WCHAR *set_buffer_name (const Buffer *, WCHAR *, int);
+  virtual int need_text (TOOLTIPTEXTW &);
   virtual void draw_item (const draw_item_struct &);
   void insert_buffers ();
   void delete_buffer (Buffer *);
