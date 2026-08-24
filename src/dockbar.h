@@ -116,7 +116,7 @@ public:
   static dock_bar *from_hwnd (HWND hwnd)
     {return (dock_bar *)GetProp (hwnd, b_dock_bar_prop);}
   LRESULT sendmsg (UINT msg, WPARAM wparam, LPARAM lparam) const
-    {return CallWindowProc (b_wndproc, b_hwnd, msg, wparam, lparam);}
+    {return CallWindowProcW (b_wndproc, b_hwnd, msg, wparam, lparam);}
   int create (DWORD exstyle, const WCHAR *class_name, const WCHAR *window_name,
               DWORD style, int x, int y, int cx, int cy, HWND hwnd_parent,
               HMENU hmenu, HINSTANCE hinst, void *param)

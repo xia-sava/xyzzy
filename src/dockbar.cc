@@ -36,7 +36,7 @@ dock_bar::subclass ()
 {
   if (!SetProp (b_hwnd, b_dock_bar_prop, HANDLE (this)))
     return 0;
-  b_wndproc = (WNDPROC)SetWindowLong (b_hwnd, GWL_WNDPROC, LONG (WNDPROC (wndproc)));
+  b_wndproc = (WNDPROC)SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (WNDPROC (wndproc)));
   if (b_wndproc)
     return 1;
   RemoveProp (b_hwnd, b_dock_bar_prop);
@@ -48,7 +48,7 @@ dock_bar::unsubclass ()
 {
   if (b_wndproc)
     {
-      SetWindowLong (b_hwnd, GWL_WNDPROC, LONG (b_wndproc));
+      SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (b_wndproc));
       RemoveProp (b_hwnd, b_dock_bar_prop);
       b_wndproc = 0;
     }
@@ -1125,11 +1125,11 @@ tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
 
     case WM_NCDESTROY:
-      SetWindowLong (hwnd, GWL_WNDPROC, LONG (oproc));
+      SetWindowLongW (hwnd, GWL_WNDPROC, LONG (oproc));
       RemoveProp (hwnd, b_tab_bar_spin_prop);
       break;
     }
-  return oproc ? CallWindowProc (oproc, hwnd, msg, wparam, lparam) : 0;
+  return oproc ? CallWindowProcW (oproc, hwnd, msg, wparam, lparam) : 0;
 }
 
 void
@@ -1138,9 +1138,9 @@ tab_bar::parent_notify (UINT msg, UINT id, HWND hwnd)
   if (msg == WM_CREATE && id == IDC_TAB_SPIN
       && !(GetWindowLong (hwnd, GWL_STYLE) & UDS_HORZ))
     {
-      WNDPROC o = (WNDPROC)GetWindowLong (hwnd, GWL_WNDPROC);
+      WNDPROC o = (WNDPROC)GetWindowLongW (hwnd, GWL_WNDPROC);
       if (o && SetProp (hwnd, b_tab_bar_spin_prop, HANDLE (o)))
-        SetWindowLong (hwnd, GWL_WNDPROC, LONG (spin_wndproc));
+        SetWindowLongW (hwnd, GWL_WNDPROC, LONG (spin_wndproc));
     }
 }
 
