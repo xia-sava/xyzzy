@@ -360,7 +360,7 @@ ChangeColorsPageP::ccp_dialog_proc (HWND hwnd, UINT msg,
   ChangeColorsPageP *p;
   if (msg == WM_INITDIALOG)
     {
-      p = (ChangeColorsPageP *)((PROPSHEETPAGE *)lparam)->lParam;
+      p = (ChangeColorsPageP *)((PROPSHEETPAGEW *)lparam)->lParam;
       SetWindowLong (hwnd, DWL_USER, LPARAM (p));
       p->ccp_hwnd = hwnd;
       if (!p->ccp_parent->ps_moved)
@@ -386,7 +386,7 @@ ChangeColorsPageP::ccp_dialog_proc (HWND hwnd, UINT msg,
 
 void
 ChangeColorsPageP::init_page (UINT idd, PropSheet *sheet, int page_no,
-                              PROPSHEETPAGE *psp)
+                              PROPSHEETPAGEW *psp)
 {
   ccp_page_no = page_no;
   ccp_parent = sheet;
@@ -398,7 +398,7 @@ ChangeColorsPageP::init_page (UINT idd, PropSheet *sheet, int page_no,
   if (ccp_hg)
     psp->pResource = (DLGTEMPLATE *)GlobalLock (ccp_hg);
   else
-    psp->pszTemplate = MAKEINTRESOURCE (idd);
+    psp->pszTemplate = MAKEINTRESOURCEW (idd);
   psp->pszIcon = 0;
   psp->pszTitle = 0;
   psp->lParam = LPARAM (this);
@@ -591,8 +591,8 @@ ChooseFontPage::notify_color (int n)
 int
 ChooseFontPage::get_result ()
 {
-  char b[128];
-  if (!GetDlgItemText (ccp_hwnd, IDC_LSP, b, sizeof b))
+  WCHAR b[128];
+  if (!GetDlgItemTextW (ccp_hwnd, IDC_LSP, b, numberof (b)))
     *b = 0;
   int lsp;
   if (!check_integer_format (b, &lsp) || lsp < 0 || lsp > 30)
@@ -677,7 +677,7 @@ ChooseFontPage::do_destroy ()
 }
 
 void
-ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
+ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
 {
   ChangeColorsPageP::init_page (IDD_FONT, sheet, page_no, psp);
 
@@ -799,7 +799,7 @@ ChangeColorsDialog::get_result ()
 }
 
 void
-ChangeColorsDialog::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
+ChangeColorsDialog::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
 {
   ChangeColorsPageP::init_page (IDD_COLOR, sheet, page_no, psp);
 

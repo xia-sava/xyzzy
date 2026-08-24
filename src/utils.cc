@@ -276,10 +276,11 @@ parse_number_format (const Char *p, const Char *pe, int base)
 }
 
 int
-check_integer_format (const char *s, int *n)
+check_integer_format (const WCHAR *s, int *n)
 {
-  Char *b = (Char *)alloca (strlen (s) * sizeof (Char));
-  Char *be = s2w (b, s);
+  size_t l = wcslen (s);
+  Char *b = (Char *)alloca (l * sizeof (Char));
+  Char *be = u2w (b, s, l);
   for (; b < be && (*b == ' ' || *b == '\t'); b++)
     ;
   for (; be > b && (b[-1] == ' ' || b[-1] == '\t'); b--)
@@ -289,7 +290,7 @@ check_integer_format (const char *s, int *n)
     {
     case NF_INTEGER:
     case NF_INTEGER_DOT:
-      *n = atoi (s);
+      *n = _wtoi (s);
       return 1;
 
     default:

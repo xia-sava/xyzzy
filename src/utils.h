@@ -27,7 +27,7 @@ long log2_floor (u_long);
 # define  NF_FLOAT_L (NF_FLOAT | 'l')
 
 int parse_number_format (const Char *, const Char *, int);
-int check_integer_format (const char *, int *);
+int check_integer_format (const WCHAR *, int *);
 int default_float_format ();
 
 int streq (const Char *, int, const char *);

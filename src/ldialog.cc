@@ -80,19 +80,19 @@ Dialog::send_ltext (int id, int msg, WPARAM wparam, lisp init, dlg_txtwidth *dt)
     init = xchar_encoding_display_name (init);
   if (stringp (init))
     {
-      char *b = (char *)alloca (xstring_length (init) * 2 + 1);
-      char *be = w2s (b, init);
+      WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (init) + 1));
+      WCHAR *be = w2u (b, init);
       if (dt)
         {
           SIZE sz;
-          if (GetTextExtentPoint32 (dt->hdc, b, be - b, &sz)
+          if (GetTextExtentPoint32W (dt->hdc, b, be - b, &sz)
               && sz.cx > dt->l)
             dt->l = sz.cx;
         }
-      return SendDlgItemMessage (d_hwnd, id, msg, wparam, LPARAM (b));
+      return SendDlgItemMessageW (d_hwnd, id, msg, wparam, LPARAM (b));
     }
   else
-    return SendDlgItemMessage (d_hwnd, id, msg, wparam, LPARAM (""));
+    return SendDlgItemMessageW (d_hwnd, id, msg, wparam, LPARAM (L""));
 }
 
 void
@@ -138,10 +138,10 @@ static lisp
 get_window_text (HWND dlg, int id)
 {
   HWND hwnd = GetDlgItem (dlg, id);
-  int l = max (0L, SendMessage (hwnd, WM_GETTEXTLENGTH, 0, 0)) + 2;
-  char *b = (char *)alloca (l);
+  int l = max (0L, SendMessageW (hwnd, WM_GETTEXTLENGTH, 0, 0)) + 2;
+  WCHAR *b = (WCHAR *)alloca (l * sizeof (WCHAR));
   *b = 0;
-  GetWindowText (hwnd, b, l);
+  GetWindowTextW (hwnd, b, l);
   if (*b)
     return make_string (b);
   return Qnil;
@@ -282,9 +282,9 @@ Dialog::edit_command (dlgctrl *c, UINT msg)
     case EN_KILLFOCUS:
     case EN_CHANGE:
       {
-        char buf[10];
+        WCHAR buf[10];
         *buf = 0;
-        GetDlgItemText (d_hwnd, c->id (), buf, sizeof buf);
+        GetDlgItemTextW (d_hwnd, c->id (), buf, numberof (buf));
         if (safe_find_keyword (Knon_null, c->keyword ()) != Qnil)
           enable_windows (c, *buf);
         if (*buf)
@@ -295,7 +295,7 @@ Dialog::edit_command (dlgctrl *c, UINT msg)
 }
 
 lisp
-Dialog::check_result_type (dlgctrl *c, const char *s)
+Dialog::check_result_type (dlgctrl *c, const WCHAR *s)
 {
   lisp kwd = c->keyword ();
   lisp type = safe_find_keyword (Ktype, kwd);
@@ -319,9 +319,9 @@ lisp
 Dialog::edit_result (dlgctrl *c)
 {
   HWND hwnd = GetDlgItem (d_hwnd, c->id ());
-  int l = max (0L, SendMessage (hwnd, WM_GETTEXTLENGTH, 0, 0)) + 2;
-  char *b = (char *)alloca (l);
-  GetWindowText (hwnd, b, l);
+  int l = max (0L, SendMessageW (hwnd, WM_GETTEXTLENGTH, 0, 0)) + 2;
+  WCHAR *b = (WCHAR *)alloca (l * sizeof (WCHAR));
+  GetWindowTextW (hwnd, b, l);
   lisp kwd = c->keyword ();
   lisp non_null = safe_find_keyword (Knon_null, kwd);
   if (!*b && non_null != Qnil)
@@ -332,7 +332,7 @@ Dialog::edit_result (dlgctrl *c)
 inline void
 Dialog::edit_invalidate (class dlgctrl *c)
 {
-  SetDlgItemText (d_hwnd, c->id (), "");
+  SetDlgItemTextW (d_hwnd, c->id (), L"");
 }
 
 inline void
@@ -381,10 +381,10 @@ Dialog::link_command (dlgctrl *c, UINT msg)
   lisp lurl = safe_find_keyword (Kurl, c->keyword ());
   if (!stringp (lurl))
     return;
-  char *url = (char *)alloca (xstring_length (lurl) * 2 + 1);
-  w2s (url, lurl);
+  WCHAR *url = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lurl) + 1));
+  w2u (url, lurl);
   Fbegin_wait_cursor ();
-  ShellExecute (get_active_window (), "open", url, 0, 0, SW_SHOWNORMAL);
+  ShellExecuteW (get_active_window (), L"open", url, 0, 0, SW_SHOWNORMAL);
   Fend_wait_cursor ();
 }
 
@@ -538,9 +538,9 @@ Dialog::listbox_command (dlgctrl *c, UINT msg)
 lisp
 Dialog::make_lb_string (int id, int getlen, int gettext, int idx)
 {
-  int l = max (0L, SendDlgItemMessage (d_hwnd, id, getlen, idx, 0)) + 2;
-  char *b = (char *)alloca (l * 2);
-  if (SendDlgItemMessage (d_hwnd, id, gettext, idx, LPARAM (b)) == LB_ERR)
+  int l = max (0L, SendDlgItemMessageW (d_hwnd, id, getlen, idx, 0)) + 2;
+  WCHAR *b = (WCHAR *)alloca (l * sizeof (WCHAR));
+  if (SendDlgItemMessageW (d_hwnd, id, gettext, idx, LPARAM (b)) == LB_ERR)
     *b = 0;
   return make_string (b);
 }
@@ -669,8 +669,8 @@ Dialog::combobox_command (dlgctrl *c, UINT msg)
     case CBN_KILLFOCUS:
     case CBN_EDITCHANGE:
       {
-        char buf[10];
-        if (SendDlgItemMessage (d_hwnd, c->id (), WM_GETTEXT, sizeof buf, LPARAM (buf)) >= 0)
+        WCHAR buf[10];
+        if (SendDlgItemMessageW (d_hwnd, c->id (), WM_GETTEXT, numberof (buf), LPARAM (buf)) >= 0)
           {
             if (safe_find_keyword (Knon_null, c->keyword ()) != Qnil)
               enable_windows (c, *buf);
@@ -729,16 +729,16 @@ Dialog::combobox_result (dlgctrl *c)
     }
   else
     {
-      int l = max (0L, SendDlgItemMessage (d_hwnd, id, WM_GETTEXTLENGTH, 0, 0)) + 2;
-      char *b = (char *)alloca (l);
+      int l = max (0L, SendDlgItemMessageW (d_hwnd, id, WM_GETTEXTLENGTH, 0, 0)) + 2;
+      WCHAR *b = (WCHAR *)alloca (l * sizeof (WCHAR));
       *b = 0;
 
-      if (SendDlgItemMessage (d_hwnd, id, WM_GETTEXT, l, LPARAM (b)) >= 0)
+      if (SendDlgItemMessageW (d_hwnd, id, WM_GETTEXT, l, LPARAM (b)) >= 0)
         {
           if (!*b && non_null != Qnil)
             return warn (non_null);
-          if (must_match != Qnil && SendDlgItemMessage (d_hwnd, id, CB_FINDSTRINGEXACT,
-                                                        WPARAM (-1), LPARAM (b)) == CB_ERR)
+          if (must_match != Qnil && SendDlgItemMessageW (d_hwnd, id, CB_FINDSTRINGEXACT,
+                                                         WPARAM (-1), LPARAM (b)) == CB_ERR)
             return warn (must_match);
           return check_result_type (c, b);
         }
@@ -757,7 +757,7 @@ Dialog::combobox_invalidate (class dlgctrl *c)
 {
   int id = c->id ();
   if ((c->style () & 3) != CBS_DROPDOWNLIST)
-    SetDlgItemText (d_hwnd, id, "");
+    SetDlgItemTextW (d_hwnd, id, L"");
   SendDlgItemMessage (d_hwnd, id, CB_SETCURSEL, WPARAM (-1), 0);
 }
 
@@ -786,9 +786,9 @@ Dialog::spin_init (dlgctrl *c, lisp init)
           HWND hwnd = HWND (SendDlgItemMessage (d_hwnd, id, UDM_GETBUDDY, 0, 0));
           if (hwnd)
             {
-              char b[32];
-              sprintf (b, "%d", val);
-              SetWindowText (hwnd, b);
+              WCHAR b[32];
+              wsprintfW (b, L"%d", val);
+              SetWindowTextW (hwnd, b);
             }
         }
     }
@@ -931,23 +931,18 @@ column_valid_p (lisp columns)
 }
 
 static void
-item_string (lisp item, char *buf, int size)
+item_string (lisp item, WCHAR *buf, int size)
 {
   if (symbolp (item))
     item = xsymbol_name (item);
   if (stringp (item))
     {
-      char *b0 = buf, *b = buf, *be = buf + size - 2;
+      WCHAR *b0 = buf, *b = buf, *be = buf + size - 2;
       const Char *p = xstring_contents (item), *pe = p + xstring_length (item);
       for (; p < pe && b < be; p++)
         {
-          Char c = w2s_char (*p);
-          if (DBCP (c))
-            {
-              *b++ = char (c >> 8);
-              *b++ = char (c);
-            }
-          else if (c == '\n')
+          Char c = *p;
+          if (c == '\n')
             {
               *b++ = '\\';
               *b++ = 'n';
@@ -969,10 +964,10 @@ item_string (lisp item, char *buf, int size)
           else if (c < ' ')
             {
               *b++ = '^';
-              *b++ = char (c + '@');
+              *b++ = WCHAR (c + '@');
             }
           else
-            *b++ = char (c);
+            *b++ = WCHAR (c);
         }
       *b = 0;
     }
@@ -980,7 +975,7 @@ item_string (lisp item, char *buf, int size)
     {
       Buffer *bp = xbuffer_bp (item);
       if (!bp)
-        strcpy (buf, "#<deleted buffer>");
+        wcscpy (buf, L"#<deleted buffer>");
       else
         bp->buffer_name (buf, buf + size - 2);
     }
@@ -988,7 +983,7 @@ item_string (lisp item, char *buf, int size)
     {
       long v;
       if (safe_fixnum_value (item, &v))
-        sprintf (buf, "%ld", v);
+        wsprintfW (buf, L"%ld", v);
       else
         *buf = 0;
     }
@@ -997,18 +992,18 @@ item_string (lisp item, char *buf, int size)
 static void
 draw_item (HDC hdc, const RECT &r, int x, lisp item, int right)
 {
-  char buf[2048];
-  item_string (item, buf, sizeof buf);
-  int l = strlen (buf);
+  WCHAR buf[2048];
+  item_string (item, buf, numberof (buf));
+  int l = wcslen (buf);
   if (right)
     {
       SIZE size;
-      GetTextExtentPoint32 (hdc, buf, l, &size);
-      ExtTextOut (hdc, r.right - size.cx, r.top,
-                  ETO_OPAQUE | ETO_CLIPPED, &r, buf, l, 0);
+      GetTextExtentPoint32W (hdc, buf, l, &size);
+      ExtTextOutW (hdc, r.right - size.cx, r.top,
+                   ETO_OPAQUE | ETO_CLIPPED, &r, buf, l, 0);
     }
   else
-    ExtTextOut (hdc, x, r.top, ETO_OPAQUE | ETO_CLIPPED, &r, buf, l, 0);
+    ExtTextOutW (hdc, x, r.top, ETO_OPAQUE | ETO_CLIPPED, &r, buf, l, 0);
 }
 
 void
@@ -1073,7 +1068,7 @@ Dialog::draw_item (int id, DRAWITEMSTRUCT *dis)
 }
 
 static int
-lb_match_p (int ch, const u_char *b)
+lb_match_p (int ch, const WCHAR *b)
 {
   for (; *b; b++)
     {
@@ -1088,9 +1083,9 @@ lb_match_p (int ch, const u_char *b)
 static int
 lb_match_p (int ch, lisp item)
 {
-  char buf[2048];
-  item_string (item, buf, sizeof buf);
-  return lb_match_p (ch, (const u_char *)buf);
+  WCHAR buf[2048];
+  item_string (item, buf, numberof (buf));
+  return lb_match_p (ch, buf);
 }
 
 static int
@@ -1123,9 +1118,9 @@ lb_match_p (HWND hwnd, int index, lisp columns, int ch, int lindex)
 static int
 lb_match_p (HWND hwnd, int index, int ch)
 {
-  int l = max (0L, SendMessage (hwnd, LB_GETTEXTLEN, index, 0)) + 2;
-  u_char *b = (u_char *)alloca (l * 2);
-  if (SendMessage (hwnd, LB_GETTEXT, index, LPARAM (b)) == LB_ERR)
+  int l = max (0L, SendMessageW (hwnd, LB_GETTEXTLEN, index, 0)) + 2;
+  WCHAR *b = (WCHAR *)alloca (l * sizeof (WCHAR));
+  if (SendMessageW (hwnd, LB_GETTEXT, index, LPARAM (b)) == LB_ERR)
     return 0;
   return lb_match_p (ch, b);
 }
@@ -1710,10 +1705,10 @@ Fdialog_box (lisp dialog, lisp init, lisp handlers)
                              | WS_CAPTION | WS_SYSMENU),
                             0);
 
-  int result = DialogBoxIndirectParam (app.hinst,
-                                       d.get_template (),
-                                       get_active_window (), ldialog_proc,
-                                       LPARAM (&d));
+  int result = DialogBoxIndirectParamW (app.hinst,
+                                        d.get_template (),
+                                        get_active_window (), ldialog_proc,
+                                        LPARAM (&d));
   Fdo_events ();
   if (result != IDOK)
     {
@@ -1732,7 +1727,7 @@ lprop_page_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
     {
     case WM_INITDIALOG:
       {
-        PropPage *d = (PropPage *)((PROPSHEETPAGE *)lparam)->lParam;
+        PropPage *d = (PropPage *)((PROPSHEETPAGEW *)lparam)->lParam;
         d->d_hwnd = dlg;
         if (!d->p_parent->ps_moved)
           {
@@ -1829,7 +1824,7 @@ PropPage::create_template (lisp page, lisp handlers)
 }
 
 void
-PropPage::init_page (PropSheet *parent, int page_no, PROPSHEETPAGE *psp, lisp init)
+PropPage::init_page (PropSheet *parent, int page_no, PROPSHEETPAGEW *psp, lisp init)
 {
   p_parent = parent;
   d_init = init;
@@ -1939,7 +1934,7 @@ Fproperty_sheet (lisp pages, lisp caption, lisp lstart_page)
 
   lisp *gcprov = (lisp *)alloca (sizeof (lisp) * lpages);
 
-  PROPSHEETPAGE *psp = (PROPSHEETPAGE *)alloca (sizeof *psp * total_pages);
+  PROPSHEETPAGEW *psp = (PROPSHEETPAGEW *)alloca (sizeof *psp * total_pages);
   int i = 0, j = 0;
   for (lisp p = pages; consp (p); p = xcdr (p), i++)
     {
@@ -1961,16 +1956,16 @@ Fproperty_sheet (lisp pages, lisp caption, lisp lstart_page)
 
   protect_gc gcpro2 (gcprov, lpages);
 
-  char *b;
+  WCHAR *b;
   if (!caption || caption == Qnil)
-    b = "";
+    b = L"";
   else
     {
-      b = (char *)alloca (2 * xstring_length (caption) + 1);
-      w2s (b, caption);
+      b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (caption) + 1));
+      w2u (b, caption);
     }
 
-  PROPSHEETHEADER psh;
+  PROPSHEETHEADERW psh;
   psh.dwSize = sizeof psh;
   psh.dwFlags = PSH_PROPSHEETPAGE | PSH_USECALLBACK | PSH_NOAPPLYNOW;
   psh.hwndParent = get_active_window ();
@@ -1984,7 +1979,7 @@ Fproperty_sheet (lisp pages, lisp caption, lisp lstart_page)
 
   sheet.ps_curpage = psh.nStartPage;
 
-  int result = PropertySheet (&psh);
+  int result = PropertySheetW (&psh);
 
   Fdo_events ();
 
