@@ -15,7 +15,7 @@ public:
     };
 protected:
   HINSTANCE hinst;
-  const char *msg;
+  const WCHAR *msg;
   const char *title;
   HFONT hfont;
   HICON hicon;
@@ -25,7 +25,7 @@ protected:
   struct
     {
       UINT id;
-      const char *caption;
+      const WCHAR *caption;
     } btn[MAX_BUTTONS];
   int close_id;
   int default_btn;
@@ -36,28 +36,28 @@ protected:
   BOOL init_dialog ();
   void calc_text_rect (RECT &) const;
   void calc_button_size (RECT br[MAX_BUTTONS]) const;
-  HWND create_ctl (const char *, const char *, DWORD, UINT, const RECT &) const;
-  void create_btn (const char *, UINT, const RECT &) const;
-  void create_label (const char *, const RECT &, int) const;
+  HWND create_ctl (const WCHAR *, const WCHAR *, DWORD, UINT, const RECT &) const;
+  void create_btn (const WCHAR *, UINT, const RECT &) const;
+  void create_label (const WCHAR *, const RECT &, int) const;
   void create_icon (const RECT &) const;
   void create_buttons (const RECT br[MAX_BUTTONS]) const;
   static BOOL CALLBACK WndProc (HWND, UINT, WPARAM, LPARAM);
 public:
-  XMessageBox (HINSTANCE hinst_, const char *msg_, const char *title_,
+  XMessageBox (HINSTANCE hinst_, const WCHAR *msg_, const char *title_,
                int crlf, int no_wrap)
        : hinst (hinst_), msg (msg_), title (title_), nbuttons (0),
          close_id (-1), default_btn (0), hicon (0),
          f_crlf (crlf), f_no_wrap (no_wrap) {}
-  void add_button (UINT, const char *);
-  void set_button (int, UINT, const char *);
+  void add_button (UINT, const WCHAR *);
+  void set_button (int, UINT, const WCHAR *);
   void set_default (int n) {default_btn = n;}
   void set_close (int id) {close_id = id;}
   void set_icon (HICON h) {hicon = h;}
   int doit (HWND);
 };
 
-int MsgBox (HWND, const char *, const char *, UINT, int);
-int MsgBoxEx (HWND, const char *, const char *, int, int, int, int,
-              const char **, int, int, int);
+int MsgBox (HWND, const WCHAR *, const char *, UINT, int);
+int MsgBoxEx (HWND, const WCHAR *, const char *, int, int, int, int,
+              const WCHAR **, int, int, int);
 
 #endif

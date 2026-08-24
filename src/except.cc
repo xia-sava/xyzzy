@@ -480,7 +480,9 @@ cleanup_exception ()
           "運がよければ、書きかけのファイルが救えるかもしれません。\n"
           "試しに自動セーブしてみますか?");
 
-  if (MsgBox (get_active_window (), msg, TitleBarString,
+  WCHAR wmsg[numberof (msg)];
+  s2u (wmsg, msg);
+  if (MsgBox (get_active_window (), wmsg, TitleBarString,
               MB_ICONHAND | MB_YESNO, 1) != IDYES)
     return;
 

@@ -296,6 +296,29 @@ u2w (Char *b, const WCHAR *s, size_t size)
   return b;
 }
 
+WCHAR *
+s2u (WCHAR *b, const char *string)
+{
+  const u_char *s = (const u_char *)string;
+  while (*s)
+    {
+      if (SJISP (*s))
+        {
+          if (!s[1])
+            {
+              *b++ = WCHAR (s2w_char (*s));
+              break;
+            }
+          *b++ = WCHAR (s2w_char ((*s << 8) | s[1]));
+          s += 2;
+        }
+      else
+        *b++ = WCHAR (s2w_char (*s++));
+    }
+  *b = 0;
+  return b;
+}
+
 size_t
 s2wl (const char *string, const char *se, int zero_term)
 {

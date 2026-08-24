@@ -1133,12 +1133,12 @@ ODN::selch (HWND hwnd, int id)
 int
 ODN::error (HWND hwnd, int e)
 {
-  char buf[1024];
-  FormatMessage ((FORMAT_MESSAGE_FROM_SYSTEM
-                  | FORMAT_MESSAGE_IGNORE_INSERTS
-                  | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                 0, e, GetUserDefaultLangID (),
-                 buf, sizeof buf, 0);
+  WCHAR buf[1024];
+  FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
+                   | FORMAT_MESSAGE_IGNORE_INSERTS
+                   | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                  0, e, GetUserDefaultLangID (),
+                  buf, numberof (buf), 0);
   MsgBox (hwnd, buf, TitleBarString, MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
   return 1;

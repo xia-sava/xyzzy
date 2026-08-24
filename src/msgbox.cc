@@ -4,7 +4,7 @@
 #include "monitor.h"
 
 void
-XMessageBox::add_button (UINT id, const char *caption)
+XMessageBox::add_button (UINT id, const WCHAR *caption)
 {
   if (nbuttons < MAX_BUTTONS)
     {
@@ -15,7 +15,7 @@ XMessageBox::add_button (UINT id, const char *caption)
 }
 
 void
-XMessageBox::set_button (int n, UINT id, const char *caption)
+XMessageBox::set_button (int n, UINT id, const WCHAR *caption)
 {
   if (n < nbuttons)
     btn[n].caption = caption;
@@ -30,9 +30,9 @@ XMessageBox::calc_text_rect (RECT &r) const
   HGDIOBJ of = SelectObject (hdc, hfont);
   memset (&r, 0, sizeof r);
   r.right = GetSystemMetrics (SM_CXSCREEN) * 3 / 4;
-  DrawText (hdc, msg, -1, &r,
-            (DT_CALCRECT | DT_EXPANDTABS | DT_LEFT | DT_NOPREFIX
-             | (f_no_wrap ? 0 : DT_WORDBREAK)));
+  DrawTextW (hdc, msg, -1, &r,
+             (DT_CALCRECT | DT_EXPANDTABS | DT_LEFT | DT_NOPREFIX
+              | (f_no_wrap ? 0 : DT_WORDBREAK)));
   SelectObject (hdc, of);
   ReleaseDC (hwnd, hdc);
 }
@@ -53,7 +53,7 @@ XMessageBox::calc_button_size (RECT br[MAX_BUTTONS]) const
     {
       RECT tr;
       memset (&tr, 0, sizeof tr);
-      DrawText (hdc, btn[i].caption, -1, &tr, DT_CALCRECT | DT_SINGLELINE);
+      DrawTextW (hdc, btn[i].caption, -1, &tr, DT_CALCRECT | DT_SINGLELINE);
       r.right = max (r.right, LONG (tr.right + 2 * sep));
     }
   SelectObject (hdc, of);
@@ -69,10 +69,10 @@ XMessageBox::calc_button_size (RECT br[MAX_BUTTONS]) const
 }
 
 HWND
-XMessageBox::create_ctl (const char *cls, const char *caption, DWORD style,
+XMessageBox::create_ctl (const WCHAR *cls, const WCHAR *caption, DWORD style,
                          UINT id, const RECT &r) const
 {
-  HWND c = CreateWindow (cls, caption, style,
+  HWND c = CreateWindowW (cls, caption, style,
                          r.left, r.top, r.right - r.left, r.bottom - r.top,
                          hwnd, HMENU (id), hinst, 0);
   SendMessage (c, WM_SETFONT, WPARAM (hfont), 0);
@@ -80,24 +80,24 @@ XMessageBox::create_ctl (const char *cls, const char *caption, DWORD style,
 }
 
 inline void
-XMessageBox::create_btn (const char *caption, UINT id, const RECT &r) const
+XMessageBox::create_btn (const WCHAR *caption, UINT id, const RECT &r) const
 {
-  create_ctl ("Button", caption,
+  create_ctl (L"Button", caption,
               WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
               id, r);
 }
 
 inline void
-XMessageBox::create_label (const char *caption, const RECT &r, int edit_style) const
+XMessageBox::create_label (const WCHAR *caption, const RECT &r, int edit_style) const
 {
   if (edit_style)
-    create_ctl ("Edit", caption,
+    create_ctl (L"Edit", caption,
                 (WS_CHILD | WS_VISIBLE
                  | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL
                  | ES_READONLY | edit_style),
                 UINT (-1), r);
   else
-    create_ctl ("Static", caption,
+    create_ctl (L"Static", caption,
                 WS_CHILD | WS_VISIBLE | WS_GROUP | SS_LEFT | SS_NOPREFIX,
                 UINT (-1), r);
 }
@@ -105,7 +105,7 @@ XMessageBox::create_label (const char *caption, const RECT &r, int edit_style) c
 inline void
 XMessageBox::create_icon (const RECT &r) const
 {
-  HWND c = create_ctl ("Static", "", WS_CHILD | WS_VISIBLE | WS_GROUP | SS_ICON,
+  HWND c = create_ctl (L"Static", L"", WS_CHILD | WS_VISIBLE | WS_GROUP | SS_ICON,
                        UINT (-1), r);
   SendMessage (c, STM_SETICON, WPARAM (hicon), 0);
 }
@@ -152,7 +152,7 @@ XMessageBox::init_dialog ()
 
   int edit_style = 0;
   if ((tr.right >= maxw || tr.bottom >= maxh)
-      && (f_crlf || !strchr (msg, '\n')))
+      && (f_crlf || !wcschr (msg, L'\n')))
     {
       if (tr.right >= maxw)
         {
@@ -301,21 +301,21 @@ int
 XMessageBox::doit (HWND hwnd)
 {
   if (!nbuttons)
-    add_button (IDBUTTON1, "OK");
+    add_button (IDBUTTON1, L"OK");
   if (default_btn < 0 || default_btn >= nbuttons)
     default_btn = 0;
   if (nbuttons == 1 && close_id == -1)
     close_id = btn[0].id;
-  return DialogBoxParam (hinst, MAKEINTRESOURCE (IDD_MSGBOX),
-                         hwnd, WndProc, LPARAM (this));
+  return DialogBoxParamW (hinst, MAKEINTRESOURCEW (IDD_MSGBOX),
+                          hwnd, WndProc, LPARAM (this));
 }
 
 int
-MsgBoxEx (HWND hwnd, const char *msg, const char *title,
+MsgBoxEx (HWND hwnd, const WCHAR *msg, const char *title,
           int type, int defbtn, int icon, int beep,
-          const char **captions, int ncaptions, int crlf, int no_wrap)
+          const WCHAR **captions, int ncaptions, int crlf, int no_wrap)
 {
-  XMessageBox mb (app.hinst, msg ? msg : "", title ? title : "エラー", crlf, no_wrap);
+  XMessageBox mb (app.hinst, msg ? msg : L"", title ? title : "エラー", crlf, no_wrap);
   if (!captions)
     ncaptions = 0;
 
@@ -325,37 +325,37 @@ MsgBoxEx (HWND hwnd, const char *msg, const char *title,
       break;
 
     case MB_OK:
-      mb.add_button (IDOK, "OK");
+      mb.add_button (IDOK, L"OK");
       mb.set_close (IDOK);
       break;
 
     case MB_OKCANCEL:
-      mb.add_button (IDOK, "OK");
-      mb.add_button (IDCANCEL, "キャンセル");
+      mb.add_button (IDOK, L"OK");
+      mb.add_button (IDCANCEL, L"キャンセル");
       mb.set_close (IDCANCEL);
       break;
 
     case MB_ABORTRETRYIGNORE:
-      mb.add_button (IDABORT, "中止(&A)");
-      mb.add_button (IDRETRY, "再試行(&R)");
-      mb.add_button (IDIGNORE, "無視(&I)");
+      mb.add_button (IDABORT, L"中止(&A)");
+      mb.add_button (IDRETRY, L"再試行(&R)");
+      mb.add_button (IDIGNORE, L"無視(&I)");
       break;
 
     case MB_YESNOCANCEL:
-      mb.add_button (IDYES, "はい(&Y)");
-      mb.add_button (IDNO, "いいえ(&N)");
-      mb.add_button (IDCANCEL, "キャンセル");
+      mb.add_button (IDYES, L"はい(&Y)");
+      mb.add_button (IDNO, L"いいえ(&N)");
+      mb.add_button (IDCANCEL, L"キャンセル");
       mb.set_close (IDCANCEL);
       break;
 
     case MB_YESNO:
-      mb.add_button (IDYES, "はい(&Y)");
-      mb.add_button (IDNO, "いいえ(&N)");
+      mb.add_button (IDYES, L"はい(&Y)");
+      mb.add_button (IDNO, L"いいえ(&N)");
       break;
 
     case MB_RETRYCANCEL:
-      mb.add_button (IDRETRY, "再試行(&R)");
-      mb.add_button (IDCANCEL, "キャンセル");
+      mb.add_button (IDRETRY, L"再試行(&R)");
+      mb.add_button (IDCANCEL, L"キャンセル");
       mb.set_close (IDCANCEL);
       break;
     }
@@ -397,7 +397,7 @@ MsgBoxEx (HWND hwnd, const char *msg, const char *title,
 }
 
 int
-MsgBox (HWND hwnd, const char *msg, const char *title, UINT flags, int beep)
+MsgBox (HWND hwnd, const WCHAR *msg, const char *title, UINT flags, int beep)
 {
   int defbtn;
   switch (flags & MB_DEFMASK)

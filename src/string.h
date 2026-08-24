@@ -154,6 +154,9 @@ size_t u2wl (const WCHAR *, size_t);
 Char *u2w (Char *, const WCHAR *);
 Char *u2w (Char *, const WCHAR *, size_t);
 
+/* 資源や書式から組み立てたバイト列は CP932。UTF-16 に移す */
+WCHAR *s2u (WCHAR *, const char *);
+
 lisp coerce_to_string (lisp, int);
 
 lisp make_string (const char *);

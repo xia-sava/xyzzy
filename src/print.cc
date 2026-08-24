@@ -1812,8 +1812,8 @@ print_engine::bad_range (HWND hwnd)
 int
 print_engine::notice (HWND hwnd, UINT id, UINT ids)
 {
-  char b[256];
-  LoadString (app.hinst, ids, b, sizeof b);
+  WCHAR b[256];
+  LoadStringW (app.hinst, ids, b, numberof (b));
   MsgBox (hwnd, b, TitleBarString, MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
   if (id != UINT (-1))
@@ -1824,9 +1824,9 @@ print_engine::notice (HWND hwnd, UINT id, UINT ids)
 int
 print_engine::notice (HWND hwnd, UINT id, UINT ids, int arg)
 {
-  char fmt[256], b[512];
-  LoadString (app.hinst, ids, fmt, sizeof fmt);
-  wsprintf (b, fmt, arg);
+  WCHAR fmt[256], b[512];
+  LoadStringW (app.hinst, ids, fmt, numberof (fmt));
+  wsprintfW (b, fmt, arg);
   MsgBox (hwnd, b, TitleBarString, MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
   if (id != UINT (-1))
