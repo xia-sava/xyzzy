@@ -35,9 +35,11 @@ ChooseFontP::enum_font_name_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type,
       && (elf->elfLogFont.lfPitchAndFamily & 3) == FIXED_PITCH)
     {
       HWND hwnd = HWND (lparam);
-      if (SendMessage (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1), LPARAM (elf->elfLogFont.lfFaceName)) == LB_ERR)
+      if (SendMessageW (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1),
+                        LPARAM (elf->elfLogFont.lfFaceName)) == LB_ERR)
         {
-          int i = SendMessage (hwnd, LB_ADDSTRING, 0, LPARAM (elf->elfLogFont.lfFaceName));
+          int i = SendMessageW (hwnd, LB_ADDSTRING, 0,
+                                LPARAM (elf->elfLogFont.lfFaceName));
           SendMessage (hwnd, LB_SETITEMDATA, i, (elf->elfLogFont.lfCharSet << 8) | type);
         }
     }
@@ -47,8 +49,8 @@ ChooseFontP::enum_font_name_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type,
 void
 ChooseFontP::add_font_name (HWND hwnd, HDC hdc)
 {
-  EnumFontFamiliesEx (hdc, 0, FONTENUMPROC (enum_font_name_proc),
-                      LPARAM (GetDlgItem (hwnd, IDC_NAMELIST)), 0);
+  EnumFontFamiliesExW (hdc, 0, FONTENUMPROCW (enum_font_name_proc),
+                       LPARAM (GetDlgItem (hwnd, IDC_NAMELIST)), 0);
 }
 
 int CALLBACK
@@ -98,8 +100,8 @@ ChooseFontP::enum_font_size_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type,
 void
 ChooseFontP::add_font_size (HWND hwnd, int i)
 {
-  char face[LF_FACESIZE];
-  if (SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETTEXT, i, LPARAM (face)) == LB_ERR)
+  WCHAR face[LF_FACESIZE];
+  if (SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_GETTEXT, i, LPARAM (face)) == LB_ERR)
     return;
   SendDlgItemMessage (hwnd, IDC_SIZELIST, WM_SETREDRAW, 0, 0);
   SendDlgItemMessage (hwnd, IDC_SIZELIST, LB_RESETCONTENT, 0, 0);
@@ -110,7 +112,7 @@ ChooseFontP::add_font_size (HWND hwnd, int i)
   x.pixel = cf_param.fs_size_pixel;
 
   HDC hdc = GetDC (hwnd);
-  EnumFontFamilies (hdc, face, FONTENUMPROC (enum_font_size_proc), LPARAM (&x));
+  EnumFontFamiliesW (hdc, face, FONTENUMPROCW (enum_font_size_proc), LPARAM (&x));
   ReleaseDC (hwnd, hdc);
 
   SendDlgItemMessage (hwnd, IDC_SIZELIST, WM_SETREDRAW, 1, 0);
@@ -173,8 +175,8 @@ ChooseFontP::notify_lang (HWND hwnd, int code)
   if (i < 0 || i >= FONT_MAX)
     return;
 
-  int j = SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
-                              WPARAM (-1), LPARAM (cf_param.fs_logfont[i].lfFaceName));
+  int j = SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
+                               WPARAM (-1), LPARAM (cf_param.fs_logfont[i].lfFaceName));
   if (j == LB_ERR)
     j = 0;
   SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_SETCURSEL, j, 0);
