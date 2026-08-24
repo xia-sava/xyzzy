@@ -306,6 +306,260 @@ u2w (Char *b, const WCHAR *s, size_t size)
   return b;
 }
 
+/* 一文字ぶんの UTF-8 が何バイトか。サロゲート対はふたつで一文字 */
+static inline int
+u8len (const Char *s, const Char *se)
+{
+  Char c = *s;
+  if (c < 0x80)
+    return 1;
+  if (c < 0x800)
+    return 2;
+  if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+    return 4;
+  return 3;
+}
+
+static inline char *
+put_u8 (char *b, const Char *&s, const Char *se)
+{
+  Char c = *s;
+  switch (u8len (s, se))
+    {
+    case 1:
+      *b++ = char (c);
+      break;
+
+    case 2:
+      *b++ = char (0xc0 | (c >> 6));
+      *b++ = char (0x80 | (c & 0x3f));
+      break;
+
+    case 4:
+      {
+        ucs4_t u = utf16_pair_to_ucs4 (c, s[1]);
+        s++;
+        *b++ = char (0xf0 | (u >> 18));
+        *b++ = char (0x80 | ((u >> 12) & 0x3f));
+        *b++ = char (0x80 | ((u >> 6) & 0x3f));
+        *b++ = char (0x80 | (u & 0x3f));
+        break;
+      }
+
+    default:
+      *b++ = char (0xe0 | (c >> 12));
+      *b++ = char (0x80 | ((c >> 6) & 0x3f));
+      *b++ = char (0x80 | (c & 0x3f));
+      break;
+    }
+  return b;
+}
+
+size_t
+w2u8l (const Char *s, size_t size)
+{
+  size_t l = 0;
+  for (const Char *se = s + size; s < se; s++)
+    {
+      int n = u8len (s, se);
+      l += n;
+      if (n == 4)
+        s++;
+    }
+  return l;
+}
+
+char *
+w2u8 (char *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    b = put_u8 (b, s, se);
+  *b = 0;
+  return b;
+}
+
+char *
+w2u8 (char *b, char *be, const Char *s, size_t size)
+{
+  be--;
+  for (const Char *se = s + size; s < se; s++)
+    {
+      if (b + u8len (s, se) > be)
+        break;
+      b = put_u8 (b, s, se);
+    }
+  *b = 0;
+  return b;
+}
+
+/* 続きのバイトを数える。壊れた並びは一バイトを一文字として拾う */
+static inline int
+u8seqlen (const u_char *s, const u_char *se)
+{
+  int n = (*s < 0xc0 ? 1
+           : *s < 0xe0 ? 2
+           : *s < 0xf0 ? 3
+           : *s < 0xf8 ? 4
+           : 1);
+  for (int i = 1; i < n; i++)
+    if (s + i >= se || (s[i] & 0xc0) != 0x80)
+      return 1;
+  return n;
+}
+
+size_t
+u82wl (const char *string)
+{
+  return u82wl (string, strlen (string));
+}
+
+size_t
+u82wl (const char *string, size_t size)
+{
+  size_t l = 0;
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + size; s < se; l++)
+    {
+      int n = u8seqlen (s, se);
+      if (n == 4)
+        l++;
+      s += n;
+    }
+  return l;
+}
+
+Char *
+u82w (Char *b, const char *string)
+{
+  return u82w (b, string, strlen (string));
+}
+
+Char *
+u82w (Char *b, const char *string, size_t size)
+{
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + size; s < se;)
+    {
+      int n = u8seqlen (s, se);
+      switch (n)
+        {
+        case 1:
+          *b++ = *s;
+          break;
+
+        case 2:
+          *b++ = ((s[0] & 0x1f) << 6) | (s[1] & 0x3f);
+          break;
+
+        case 3:
+          *b++ = ((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f);
+          break;
+
+        default:
+          {
+            ucs4_t u = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+                        | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+            *b++ = utf16_ucs4_to_pair_high (u);
+            *b++ = utf16_ucs4_to_pair_low (u);
+            break;
+          }
+        }
+      s += n;
+    }
+  return b;
+}
+
+WCHAR *
+u82u (WCHAR *b, const char *string)
+{
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + strlen (string); s < se;)
+    {
+      int n = u8seqlen (s, se);
+      switch (n)
+        {
+        case 1:
+          *b++ = *s;
+          break;
+
+        case 2:
+          *b++ = WCHAR (((s[0] & 0x1f) << 6) | (s[1] & 0x3f));
+          break;
+
+        case 3:
+          *b++ = WCHAR (((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f));
+          break;
+
+        default:
+          {
+            ucs4_t u = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+                        | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+            *b++ = utf16_ucs4_to_pair_high (u);
+            *b++ = utf16_ucs4_to_pair_low (u);
+            break;
+          }
+        }
+      s += n;
+    }
+  *b = 0;
+  return b;
+}
+
+size_t
+u2u8l (const WCHAR *s)
+{
+  size_t l = 0;
+  for (const WCHAR *se = s + wcslen (s); s < se; s++)
+    {
+      WCHAR c = *s;
+      if (c < 0x80)
+        l += 1;
+      else if (c < 0x800)
+        l += 2;
+      else if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+        {
+          l += 4;
+          s++;
+        }
+      else
+        l += 3;
+    }
+  return l;
+}
+
+char *
+u2u8 (char *b, const WCHAR *s)
+{
+  for (const WCHAR *se = s + wcslen (s); s < se; s++)
+    {
+      WCHAR c = *s;
+      if (c < 0x80)
+        *b++ = char (c);
+      else if (c < 0x800)
+        {
+          *b++ = char (0xc0 | (c >> 6));
+          *b++ = char (0x80 | (c & 0x3f));
+        }
+      else if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+        {
+          ucs4_t u = utf16_pair_to_ucs4 (c, s[1]);
+          s++;
+          *b++ = char (0xf0 | (u >> 18));
+          *b++ = char (0x80 | ((u >> 12) & 0x3f));
+          *b++ = char (0x80 | ((u >> 6) & 0x3f));
+          *b++ = char (0x80 | (u & 0x3f));
+        }
+      else
+        {
+          *b++ = char (0xe0 | (c >> 12));
+          *b++ = char (0x80 | ((c >> 6) & 0x3f));
+          *b++ = char (0x80 | (c & 0x3f));
+        }
+    }
+  *b = 0;
+  return b;
+}
+
 WCHAR *
 s2u (WCHAR *b, const char *string)
 {

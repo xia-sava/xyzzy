@@ -158,6 +158,18 @@ Char *u2w (Char *, const WCHAR *, size_t);
 /* 資源や書式から組み立てたバイト列は CP932。UTF-16 に移す */
 WCHAR *s2u (WCHAR *, const char *);
 
+/* パス名のように、文字列のまま持ち回るバイト列は UTF-8 */
+size_t w2u8l (const Char *, size_t);
+char *w2u8 (char *, const Char *, size_t);
+char *w2u8 (char *, char *, const Char *, size_t);
+size_t u82wl (const char *);
+size_t u82wl (const char *, size_t);
+Char *u82w (Char *, const char *);
+Char *u82w (Char *, const char *, size_t);
+WCHAR *u82u (WCHAR *, const char *);
+size_t u2u8l (const WCHAR *);
+char *u2u8 (char *, const WCHAR *);
+
 lisp coerce_to_string (lisp, int);
 
 lisp make_string (const char *);
@@ -264,6 +276,24 @@ inline WCHAR *
 w2u (WCHAR *b, WCHAR *be, lisp l)
 {
   return w2u (b, be, xstring_contents (l), xstring_length (l));
+}
+
+inline size_t
+w2u8l (lisp l)
+{
+  return w2u8l (xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2u8 (char *b, lisp l)
+{
+  return w2u8 (b, xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2u8 (char *b, char *be, lisp l)
+{
+  return w2u8 (b, be, xstring_contents (l), xstring_length (l));
 }
 
 #endif
