@@ -26,38 +26,29 @@ ForceSetForegroundWindow (HWND hwnd)
 static int
 error (int id)
 {
-  char buf[256];
-  LoadString (GetModuleHandle (0), id, buf, sizeof buf);
-  MessageBox (0, buf, 0, MB_SYSTEMMODAL	| MB_ICONHAND);
+  WCHAR buf[256];
+  LoadStringW (GetModuleHandleW (0), id, buf, sizeof buf / sizeof *buf);
+  MessageBoxW (0, buf, 0, MB_SYSTEMMODAL	| MB_ICONHAND);
   return 2;
 }
 
-static char *
-stpcpy (char *d, const char *s)
+static WCHAR *
+stpcpy (WCHAR *d, const WCHAR *s)
 {
   while (*d++ = *s++)
     ;
   return d - 1;
 }
 
-static char *
-store (char *d, const char *s)
+static WCHAR *
+store (WCHAR *d, const WCHAR *s)
 {
   *d++ = '"';
   while (*s)
     {
-      if (IsDBCSLeadByte (*s) && s[1])
-        {
-          *d++ = *s++;
-          *d++ = *s++;
-        }
-      else if (*s == '\\' || *s == '"')
-        {
-          *d++ = '\\';
-          *d++ = *s++;
-        }
-      else
-        *d++ = *s++;
+      if (*s == '\\' || *s == '"')
+        *d++ = '\\';
+      *d++ = *s++;
     }
   *d++ = '"';
   return d;
@@ -76,10 +67,10 @@ public:
       if (m_hmap)
         CloseHandle (m_hmap);
     }
-  int alloc (int size)
+  int alloc (int nchars)
     {
-      size += sizeof (xyzzysrv_param);
-      m_hmap = CreateFileMapping (HANDLE (-1), 0, PAGE_READWRITE, 0, size, 0);
+      int size = sizeof (xyzzysrv_param) + nchars * sizeof (WCHAR);
+      m_hmap = CreateFileMappingW (HANDLE (-1), 0, PAGE_READWRITE, 0, size, 0);
       if (!m_hmap)
         return 0;
       m_base = MapViewOfFile (m_hmap, FILE_MAP_WRITE, 0, 0, 0);
@@ -93,23 +84,23 @@ public:
       return 1;
     }
   xyzzysrv_param *param () const {return (xyzzysrv_param *)m_base;}
-  char *data () const {return param ()->data;}
+  WCHAR *data () const {return param ()->data;}
   HANDLE handle () const {return m_hmap;}
 };
 
 static int
-create_sexp (xyzzysrv &sv, int ac, char **av)
+create_sexp (xyzzysrv &sv, int ac, WCHAR **av)
 {
-  char curdir[MAX_PATH + 1];
-  GetCurrentDirectory (sizeof curdir, curdir);
-  int l = 256 + lstrlen (curdir) * 2;
+  WCHAR curdir[MAX_PATH + 1];
+  GetCurrentDirectoryW (sizeof curdir / sizeof *curdir, curdir);
+  int l = 256 + lstrlenW (curdir) * 2;
   for (int i = 0; i < ac; i++)
-    l += lstrlen (av[i]) * 2 + 3;
+    l += lstrlenW (av[i]) * 2 + 3;
 
   if (!sv.alloc (l))
     return 0;
 
-  char *d = stpcpy (sv.data (), "(ed::*xyzzycli-helper ");
+  WCHAR *d = stpcpy (sv.data (), L"(ed::*xyzzycli-helper ");
 
   d = store (d, curdir);
   *d++ = ' ';
@@ -147,7 +138,7 @@ static BOOL CALLBACK
 enum_proc (HWND hwnd, LPARAM param)
 {
   lookup_server *ls = (lookup_server *)param;
-  HANDLE h = GetProp (hwnd, xyzzysrv_name);
+  HANDLE h = GetPropW (hwnd, xyzzysrv_name);
   if (!h)
     return 1;
 
@@ -173,13 +164,13 @@ find_server (lookup_server &ls)
 }
 
 static int
-run_xyzzy (int argc, char **argv, const char *xyzzy)
+run_xyzzy (int argc, WCHAR **argv, const WCHAR *xyzzy)
 {
-  int l = lstrlen (xyzzy) + 1;
-  for (int i = 1; i < argc; l += lstrlen (argv[i]) + 1, i++)
+  int l = lstrlenW (xyzzy) + 1;
+  for (int i = 1; i < argc; l += lstrlenW (argv[i]) + 1, i++)
     ;
-  char *const cl = (char *)_alloca (l);
-  char *p = stpcpy (cl, xyzzy);
+  WCHAR *const cl = (WCHAR *)_alloca (l * sizeof (WCHAR));
+  WCHAR *p = stpcpy (cl, xyzzy);
   for (int i = 1; i < argc; i++)
     {
       *p++ = ' ';
@@ -187,10 +178,10 @@ run_xyzzy (int argc, char **argv, const char *xyzzy)
     }
 
   PROCESS_INFORMATION pi;
-  STARTUPINFO si;
+  STARTUPINFOW si;
   memset (&si, 0, sizeof si);
   si.cb = sizeof si;
-  if (!CreateProcess (0, cl, 0, 0, 0, 0, 0, 0, &si, &pi))
+  if (!CreateProcessW (0, cl, 0, 0, 0, 0, 0, 0, &si, &pi))
     return 0;
   WaitForInputIdle (pi.hProcess, 60000);
   CloseHandle (pi.hProcess);
@@ -213,16 +204,16 @@ wait_term (xyzzysrv &sv)
 }
 
 static int
-skip_args (int argc, char **argv)
+skip_args (int argc, WCHAR **argv)
 {
   int ac;
   for (ac = 1; ac < argc - 1; ac += 2)
-    if (lstrcmp (argv[ac], "-image")
-        && lstrcmp (argv[ac], "-config")
-        && lstrcmp (argv[ac], "-ini"))
+    if (lstrcmpW (argv[ac], L"-image")
+        && lstrcmpW (argv[ac], L"-config")
+        && lstrcmpW (argv[ac], L"-ini"))
       break;
-  if (ac < argc && (!lstrcmp (argv[ac], "-q")
-                    || !lstrcmp (argv[ac], "-no-init-file")))
+  if (ac < argc && (!lstrcmpW (argv[ac], L"-q")
+                    || !lstrcmpW (argv[ac], L"-no-init-file")))
     ac++;
   return ac;
 }
@@ -231,9 +222,9 @@ class synchronize
 {
   HANDLE h;
 public:
-  synchronize (const char *name)
+  synchronize (const WCHAR *name)
     {
-      h = CreateMutex (0, 1, name);
+      h = CreateMutexW (0, 1, name);
       if (h && GetLastError () == ERROR_ALREADY_EXISTS)
         WaitForSingleObject (h, INFINITE);
     }
@@ -248,7 +239,7 @@ public:
 };
 
 static int
-xmain (int argc, char **argv, const char *xyzzy, int multi_instance)
+xmain (int argc, WCHAR **argv, const WCHAR *xyzzy, int multi_instance)
 {
   MSG msg;
   PostQuitMessage (0);
@@ -262,7 +253,7 @@ xmain (int argc, char **argv, const char *xyzzy, int multi_instance)
 
   lookup_server ls;
   {
-    synchronize sync ("{FDFB3F8E-65AC-11D4-ADA0-0040053444B8}");
+    synchronize sync (L"{FDFB3F8E-65AC-11D4-ADA0-0040053444B8}");
     if (multi_instance || !find_server (ls))
       {
         sv.param ()->kill_ok = 1;
@@ -290,8 +281,8 @@ xmain (int argc, char **argv, const char *xyzzy, int multi_instance)
 
   ForceSetForegroundWindow (ls.hwnd);
 
-  int r = SendMessage (ls.hwnd, RegisterWindowMessage (xyzzysrv_name),
-                       GetCurrentProcessId (), LPARAM (sv.handle ()));
+  int r = SendMessageW (ls.hwnd, RegisterWindowMessageW (xyzzysrv_name),
+                        GetCurrentProcessId (), LPARAM (sv.handle ()));
   if (!r)
     return error (IDS_READ_FAILED);
   if (r > 0)
@@ -299,8 +290,8 @@ xmain (int argc, char **argv, const char *xyzzy, int multi_instance)
   return 0;
 }
 
-static const char *
-skip_white (const char *p)
+static const WCHAR *
+skip_white (const WCHAR *p)
 {
   for (; *p == ' ' || *p == '\t'; p++)
     ;
@@ -311,10 +302,10 @@ skip_white (const char *p)
 #define COPYARGV(X) (ac++, (av ? *av++ = (X) : 0))
 
 static int
-parse_cmdline1 (const char *p, char *&b0, int &ac, char **&av0, int nchars)
+parse_cmdline1 (const WCHAR *p, WCHAR *&b0, int &ac, WCHAR **&av0, int nchars)
 {
-  char *b = b0;
-  char **av = av0;
+  WCHAR *b = b0;
+  WCHAR **av = av0;
   while (1)
     {
       p = skip_white (p);
@@ -351,14 +342,7 @@ parse_cmdline1 (const char *p, char *&b0, int &ac, char **&av0, int nchars)
             break;
 
           if (!ignore)
-            {
-              if (IsDBCSLeadByte (*p) && p[1])
-                {
-                  COPYCHAR (*p);
-                  p++;
-                }
-              COPYCHAR (*p);
-            }
+            COPYCHAR (*p);
           p++;
         }
       COPYCHAR (0);
@@ -369,15 +353,15 @@ parse_cmdline1 (const char *p, char *&b0, int &ac, char **&av0, int nchars)
 }
 
 static int
-notepad_parse_cmdline (const char *p, char *&b0, int &ac, char **&av0, int nchars)
+notepad_parse_cmdline (const WCHAR *p, WCHAR *&b0, int &ac, WCHAR **&av0, int nchars)
 {
-  char *b = b0;
-  char **av = av0;
+  WCHAR *b = b0;
+  WCHAR **av = av0;
   p = skip_white (p);
   if (*p == '/' && (p[1] == 'p' || p[1] == 'P')
       && (p[2] == ' ' || p[2] == '\t' || !p[2]))
     {
-      COPYARGV ("-p");
+      COPYARGV (L"-p");
       p = skip_white (p + 2);
     }
   if (*p)
@@ -386,14 +370,7 @@ notepad_parse_cmdline (const char *p, char *&b0, int &ac, char **&av0, int nchar
       do
         {
           if (*p != '"')
-            {
-              if (IsDBCSLeadByte (*p) && p[1])
-                {
-                  COPYCHAR (*p);
-                  p++;
-                }
-              COPYCHAR (*p);
-            }
+            COPYCHAR (*p);
           p++;
         }
       while (*p);
@@ -406,15 +383,15 @@ notepad_parse_cmdline (const char *p, char *&b0, int &ac, char **&av0, int nchar
 
 struct config
 {
-  char xyzzy[MAX_PATH];
-  char pre_opt[1024];
-  char post_opt[1024];
+  WCHAR xyzzy[MAX_PATH];
+  WCHAR pre_opt[1024];
+  WCHAR post_opt[1024];
   int notepad;
   int multi_instance;
 };
 
 static int
-parse_cmdline (const char *p, char *b, int &ac, char **av, const config &cf)
+parse_cmdline (const WCHAR *p, WCHAR *b, int &ac, WCHAR **av, const config &cf)
 {
   int nchars = 0;
   ac = -1;
@@ -424,14 +401,7 @@ parse_cmdline (const char *p, char *b, int &ac, char **av, const config &cf)
   if (*p == '"')
     {
       for (p++; *p && *p != '"'; p++)
-        {
-          if (IsDBCSLeadByte (*p) && p[1])
-            {
-              COPYCHAR (*p);
-              p++;
-            }
-          COPYCHAR (*p);
-        }
+        COPYCHAR (*p);
       COPYCHAR (0);
       if (*p == '"')
         p++;
@@ -439,14 +409,7 @@ parse_cmdline (const char *p, char *b, int &ac, char **av, const config &cf)
   else
     {
       for (; *p && *p != ' ' && *p != '\t'; p++)
-        {
-          if (IsDBCSLeadByte (*p) && p[1])
-            {
-              COPYCHAR (*p);
-              p++;
-            }
-          COPYCHAR (*p);
-        }
+        COPYCHAR (*p);
       COPYCHAR (0);
     }
 
@@ -457,7 +420,7 @@ parse_cmdline (const char *p, char *b, int &ac, char **av, const config &cf)
     }
   else
     {
-      COPYARGV ("-wait");
+      COPYARGV (L"-wait");
       nchars = parse_cmdline1 (cf.pre_opt, b, ac, av, nchars);
       nchars = notepad_parse_cmdline (p, b, ac, av, nchars);
     }
@@ -469,59 +432,47 @@ parse_cmdline (const char *p, char *b, int &ac, char **av, const config &cf)
 #undef COPYARGV
 }
 
-static char *
-basename (char *path)
+static WCHAR *
+basename (WCHAR *path)
 {
-  char *base = 0;
-  char *p = path;
-  while (*p)
-    {
-      if (IsDBCSLeadByte (*p) && p[1])
-        p += 2;
-      else
-        {
-          if (*p == '\\')
-            base = p + 1;
-          p++;
-        }
-    }
+  WCHAR *base = 0;
+  for (WCHAR *p = path; *p; p++)
+    if (*p == '\\')
+      base = p + 1;
   return base ? base : path;
 }
 
-/* 設定は UTF-16 で読める。コマンドラインへ渡す文字列に移す */
 static void
-get_ini_str (const IniFile &ini, const WCHAR *name, char *buf, int size,
-             const char *defalt)
+get_ini_str (const IniFile &ini, const WCHAR *name, WCHAR *buf, int size,
+             const WCHAR *defalt)
 {
-  WCHAR b[1024];
-  if (!ini.get (L"xyzzy", name, b, 1024)
-      || !WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0))
-    lstrcpyn (buf, defalt, size);
+  if (!ini.get (L"xyzzy", name, buf, size))
+    lstrcpynW (buf, defalt, size);
 }
 
 static void
 read_config (config &cf)
 {
-  char path[MAX_PATH + 16];
-  GetModuleFileName (0, path, MAX_PATH);
-  cf.notepad = !lstrcmpi (basename (path), "notepad.exe");
-  int l = lstrlen (path);
-  if (l > 4 && !lstrcmpi (&path[l - 4], ".exe"))
-    lstrcpy (&path[l - 3], "ini");
+  WCHAR path[MAX_PATH + 16];
+  GetModuleFileNameW (0, path, MAX_PATH);
+  cf.notepad = !lstrcmpiW (basename (path), L"notepad.exe");
+  int l = lstrlenW (path);
+  if (l > 4 && !lstrcmpiW (&path[l - 4], L".exe"))
+    lstrcpyW (&path[l - 3], L"ini");
   else
-    lstrcpy (path + l, ".ini");
-  WCHAR wpath[MAX_PATH + 16];
-  if (!MultiByteToWideChar (CP_ACP, 0, path, -1, wpath, MAX_PATH + 16))
-    return;
+    lstrcpyW (path + l, L".ini");
 
   IniFile ini;
-  ini.open (wpath);
-  get_ini_str (ini, L"path", cf.xyzzy, sizeof cf.xyzzy, "xyzzy.exe");
+  ini.open (path);
+  get_ini_str (ini, L"path", cf.xyzzy,
+               sizeof cf.xyzzy / sizeof *cf.xyzzy, L"xyzzy.exe");
   if (!cf.notepad)
     cf.notepad = ini.get_int (L"xyzzy", L"compatNotepad", 0);
   cf.multi_instance = ini.get_int (L"xyzzy", L"multipleInstances", 0);
-  get_ini_str (ini, L"precedingOptions", cf.pre_opt, sizeof cf.pre_opt, "");
-  get_ini_str (ini, L"followingOptions", cf.post_opt, sizeof cf.post_opt, "");
+  get_ini_str (ini, L"precedingOptions", cf.pre_opt,
+               sizeof cf.pre_opt / sizeof *cf.pre_opt, L"");
+  get_ini_str (ini, L"followingOptions", cf.post_opt,
+               sizeof cf.post_opt / sizeof *cf.post_opt, L"");
 }
 
 int WINAPI
@@ -530,10 +481,11 @@ WinMain (HINSTANCE hinst, HINSTANCE, LPSTR, int cmdshow)
   config cf;
   read_config (cf);
 
-  const char *const cl = GetCommandLine ();
+  const WCHAR *const cl = GetCommandLineW ();
   int ac;
   int nchars = parse_cmdline (cl, 0, ac, 0, cf);
-  char **av = (char **)_alloca (sizeof *av * (ac + 1) + nchars);
-  parse_cmdline (cl, (char *)(av + ac + 1), ac, av, cf);
+  WCHAR **av = (WCHAR **)_alloca (sizeof *av * (ac + 1)
+                                  + nchars * sizeof (WCHAR));
+  parse_cmdline (cl, (WCHAR *)(av + ac + 1), ac, av, cf);
   ExitProcess (xmain (ac, av, cf.xyzzy, cf.multi_instance));
 }
