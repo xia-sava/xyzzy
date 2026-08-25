@@ -25,14 +25,14 @@ struct filer_data
       ICON_DOTDOT = 3
     };
   volatile int icon_index;
-  char name[MAX_PATH];
+  char name[NAME_MAX];
 
   void *operator new (size_t, FilerView *);
 #if _MSC_VER >= 1100
   void operator delete (void *, FilerView *) {}
 #endif
 
-  filer_data (const WIN32_FIND_DATA &);
+  filer_data (const find_data &);
   filer_data (const FILETIME &);
   filer_data () {}
 };
@@ -389,7 +389,7 @@ filer_data::operator new (size_t, FilerView *fv)
 }
 
 inline
-filer_data::filer_data (const WIN32_FIND_DATA &fd)
+filer_data::filer_data (const find_data &fd)
 {
   attr = fd.dwFileAttributes;
   time = fd.ftLastWriteTime;

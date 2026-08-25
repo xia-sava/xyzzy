@@ -293,7 +293,7 @@ WINFS::DeleteFile (LPCSTR lpFileName)
 }
 
 static void
-store_find_data (LPWIN32_FIND_DATAA a, const WIN32_FIND_DATAW &w)
+store_find_data (find_data *a, const WIN32_FIND_DATAW &w)
 {
   a->dwFileAttributes = w.dwFileAttributes;
   a->ftCreationTime = w.ftCreationTime;
@@ -309,7 +309,7 @@ store_find_data (LPWIN32_FIND_DATAA a, const WIN32_FIND_DATAW &w)
 }
 
 HANDLE WINAPI
-WINFS::FindFirstFile (LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData)
+WINFS::FindFirstFile (LPCSTR lpFileName, find_data *lpFindFileData)
 {
   wpath w (lpFileName);
   WIN32_FIND_DATAW fd;
@@ -322,7 +322,7 @@ WINFS::FindFirstFile (LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData)
 }
 
 BOOL WINAPI
-WINFS::FindNextFile (HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData)
+WINFS::FindNextFile (HANDLE hFindFile, find_data *lpFindFileData)
 {
   WIN32_FIND_DATAW fd;
   *fd.cFileName = 0;
@@ -442,7 +442,7 @@ WINFS::GetFileAttributes (LPCSTR lpFileName)
   DWORD attr = internal_GetFileAttributes (lpFileName);
   if (attr == DWORD (-1) && GetLastError () != ERROR_INVALID_NAME)
     {
-      WIN32_FIND_DATA fd;
+      find_data fd;
       if (get_file_data (lpFileName, fd))
         attr = fd.dwFileAttributes;
     }
@@ -668,7 +668,7 @@ WINFS::fopen (const char *path, const char *mode)
 }
 
 int WINAPI
-WINFS::get_file_data (const char *path, WIN32_FIND_DATA &fd)
+WINFS::get_file_data (const char *path, find_data &fd)
 {
   HANDLE h = FindFirstFile (path, &fd);
   if (h == INVALID_HANDLE_VALUE)

@@ -595,7 +595,7 @@ completion::complete_filename (const char *path, lisp show_dots, lisp ignores)
 {
   int ignored = 0;
 
-  WIN32_FIND_DATA *fd = (WIN32_FIND_DATA *)alloca (sizeof *fd + 2);
+  find_data *fd = (find_data *)alloca (sizeof *fd + 2);
   HANDLE h = WINFS::FindFirstFile (path, fd);
   if (h == INVALID_HANDLE_VALUE)
     {

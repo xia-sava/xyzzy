@@ -1,6 +1,24 @@
 #ifndef _vfs_h_
 #define _vfs_h_
 
+#include "cdecl.h"
+
+/* 一区画を探して得たもの。API の WIN32_FIND_DATAA は名前を MAX_PATH バイトで
+   持つが、UTF-8 では日本語が 86 文字までしか入らないので、名前の器を広げる */
+struct find_data
+{
+  DWORD dwFileAttributes;
+  FILETIME ftCreationTime;
+  FILETIME ftLastAccessTime;
+  FILETIME ftLastWriteTime;
+  DWORD nFileSizeHigh;
+  DWORD nFileSizeLow;
+  DWORD dwReserved0;
+  DWORD dwReserved1;
+  char cFileName[NAME_MAX];
+  char cAlternateFileName[14];
+};
+
 class WINFS
 {
 protected:
@@ -21,8 +39,8 @@ public:
                                    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
                                    DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
   static BOOL WINAPI DeleteFile (LPCSTR lpFileName);
-  static HANDLE WINAPI FindFirstFile (LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData);
-  static BOOL WINAPI FindNextFile (HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData);
+  static HANDLE WINAPI FindFirstFile (LPCSTR lpFileName, find_data *lpFindFileData);
+  static BOOL WINAPI FindNextFile (HANDLE hFindFile, find_data *lpFindFileData);
   static BOOL WINAPI GetDiskFreeSpace (LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster,
                                        LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters,
                                        LPDWORD lpTotalNumberOfClusters);
@@ -50,7 +68,7 @@ public:
   static const char *WINAPI getenv (const char *name, char *buf, DWORD size);
   static FILE *WINAPI fopen (const char *path, const char *mode);
 
-  static int WINAPI get_file_data (const char *, WIN32_FIND_DATA &);
+  static int WINAPI get_file_data (const char *, find_data &);
 };
 
 #endif /* _vfs_h_ */

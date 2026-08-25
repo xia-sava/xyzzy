@@ -148,7 +148,7 @@ FilerView::load_contents (const char *mask)
   if (!chdir (fv_ldir))
     file_error (GetLastError (), fv_ldir);
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
   HANDLE h = WINFS::FindFirstFile ("*", &fd);
   int error = GetLastError ();
   fv_parent->restore_dir ();

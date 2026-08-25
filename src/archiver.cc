@@ -784,7 +784,7 @@ Archiver::get_creator (const char *path) const
 int
 Archiver::check_file_size (const char *path)
 {
-  WIN32_FIND_DATA fd;
+  find_data fd;
   return (strict_get_file_data (path, fd)
           && (fd.nFileSizeHigh || fd.nFileSizeLow));
 }

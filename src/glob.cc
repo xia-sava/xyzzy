@@ -284,7 +284,7 @@ directory (char *path, const char *pat, char *name, file_masks &masks, int flags
 
   char *ne = name + strlen (name);
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
 
   HANDLE h = WINFS::FindFirstFile (path, &fd);
   if (h != INVALID_HANDLE_VALUE)

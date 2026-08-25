@@ -279,7 +279,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, const char *filename,
 
   xinput_strstream str (bb, be - bb);
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (WINFS::get_file_data (filename, fd))
     rfc.r_modtime = fd.ftLastWriteTime;
   else if (!GetFileTime (mf, 0, 0, &rfc.r_modtime))
@@ -730,7 +730,7 @@ Buffer::make_backup_file_name (char *backup, const char *xoriginal)
       u_char bitmap[MAXVERSIONS];
       bzero (bitmap, sizeof bitmap);
 
-      WIN32_FIND_DATA fd;
+      find_data fd;
       char tem[2];
       tem[0] = name[0];
       tem[1] = name[1];

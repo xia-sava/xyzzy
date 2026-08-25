@@ -735,18 +735,19 @@ Ftruename (lisp pathname)
       sl++;
       memcpy (truename, path, sl - path);
       char *t = truename + (sl - path);
+      char *const te = truename + PATH_MAX;
       while (1)
         {
           char *p = strchr (sl, '\\');
           if (p)
             *p = 0;
-          WIN32_FIND_DATA fd;
-          if (WINFS::get_file_data (path, fd))
-            t = stpcpy (t, fd.cFileName);
-          else if (p)
-            t = stpncpy (t, sl, p - sl);
-          else
-            t = stpcpy (t, sl);
+          /* 短い名前を長い名前へ開くので、元より長くなることがある */
+          find_data fd;
+          const char *name = (WINFS::get_file_data (path, fd)
+                              ? fd.cFileName : sl);
+          if (te - t <= int (strlen (name)))
+            file_error (ERROR_FILENAME_EXCED_RANGE, pathname);
+          t = stpcpy (t, name);
           if (!p)
             break;
           *p = '\\';
@@ -967,7 +968,7 @@ FileTime::file_modtime (lisp filename, int dir_ok)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (filename, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!WINFS::get_file_data (path, fd)
       || (!dir_ok && fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
     clear ();
@@ -1265,7 +1266,7 @@ check_short_names (const char *from_path, const char *to_path)
   if (xsymbol_value (Vrename_alternate_file_name) == Qnil)
     return;
 
-  WIN32_FIND_DATA from_fd, to_fd;
+  find_data from_fd, to_fd;
   if (!WINFS::get_file_data (to_path, to_fd))
     return;
 
@@ -1770,7 +1771,7 @@ Fmodify_file_attributes (lisp lpath, lisp lon, lisp loff)
 }
 
 int
-strict_get_file_data (const char *path, WIN32_FIND_DATA &fd)
+strict_get_file_data (const char *path, find_data &fd)
 {
   for (const char *p = path; *p; p++)
     if (*p == '?' || *p == '*')
@@ -1786,7 +1787,7 @@ Ffile_length (lisp lpath)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!strict_get_file_data (path, fd))
     return Qnil;
   int64_t i = (int64_t (fd.nFileSizeHigh) << 32 |
@@ -1815,7 +1816,7 @@ get_disk_usage (char *path, gdu *du)
   *pe = '*';
   pe[1] = 0;
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
   HANDLE h = WINFS::FindFirstFile (path, &fd);
   if (h != INVALID_HANDLE_VALUE)
     {
@@ -2423,7 +2424,7 @@ Fget_short_path_name (lisp lpath)
 }
 
 lisp
-make_file_info (const WIN32_FIND_DATA &fd)
+make_file_info (const find_data &fd)
 {
   int64_t sz = (int64_t (fd.nFileSizeHigh) << 32 |
                 int64_t (fd.nFileSizeLow));
@@ -2443,7 +2444,7 @@ Fget_file_info (lisp lpath)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!strict_get_file_data (path, fd))
     file_error (GetLastError (), lpath);
   return make_file_info (fd);

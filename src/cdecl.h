@@ -35,6 +35,9 @@
    一文字あたり三バイトを見込む */
 # define WPATH_MAX 512
 # define PATH_MAX (WPATH_MAX * 3 + 1)
+/* パスの一区画の長さ。Windows の上限は 255 文字で、パス全体とは別に決まる */
+# define WNAME_MAX 255
+# define NAME_MAX (WNAME_MAX * 3 + 1)
 # define BUFFER_NAME_MAX 1024
 
 typedef unsigned char u_char;
