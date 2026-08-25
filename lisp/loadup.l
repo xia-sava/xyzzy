@@ -74,5 +74,6 @@
 (si:*load-library "pframe") (gc)
 (si:*load-library "session") (gc)
 (si:*load-library "about") (gc)
+(si:*load-library "update") (gc)
 (si:*load-library "common-lisp") (gc)
 (si:*load-library "siteinit" :if-does-not-exist nil) (gc)

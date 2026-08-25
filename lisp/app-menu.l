@@ -470,6 +470,8 @@
 	   (:item :tag-command "最近入力したキー(&L)"
 	    'view-lossage)
 	   (:sep :above-about)
+	   (:item :tag-command "更新を確認(&U)..."
+	    'check-for-update)
 	   (:item :tag-command "について(&A)..."
 	    'about-dialog))))
 
