@@ -9,6 +9,9 @@
 #define SPI_SETFOREGROUNDLOCKTIMEOUT 0x2001
 #endif
 
+/* パスの長さ。xyzzy 本体が扱えるだけ受け取る */
+#define WPATH_MAX 512
+
 void
 ForceSetForegroundWindow (HWND hwnd)
 {
@@ -91,8 +94,10 @@ public:
 static int
 create_sexp (xyzzysrv &sv, int ac, WCHAR **av)
 {
-  WCHAR curdir[MAX_PATH + 1];
-  GetCurrentDirectoryW (sizeof curdir / sizeof *curdir, curdir);
+  WCHAR curdir[WPATH_MAX + 1];
+  DWORD n = GetCurrentDirectoryW (sizeof curdir / sizeof *curdir, curdir);
+  if (!n || n >= sizeof curdir / sizeof *curdir)
+    *curdir = 0;
   int l = 256 + lstrlenW (curdir) * 2;
   for (int i = 0; i < ac; i++)
     l += lstrlenW (av[i]) * 2 + 3;
@@ -383,7 +388,7 @@ notepad_parse_cmdline (const WCHAR *p, WCHAR *&b0, int &ac, WCHAR **&av0, int nc
 
 struct config
 {
-  WCHAR xyzzy[MAX_PATH];
+  WCHAR xyzzy[WPATH_MAX];
   WCHAR pre_opt[1024];
   WCHAR post_opt[1024];
   int notepad;
@@ -453,8 +458,8 @@ get_ini_str (const IniFile &ini, const WCHAR *name, WCHAR *buf, int size,
 static void
 read_config (config &cf)
 {
-  WCHAR path[MAX_PATH + 16];
-  GetModuleFileNameW (0, path, MAX_PATH);
+  WCHAR path[WPATH_MAX + 16];
+  GetModuleFileNameW (0, path, WPATH_MAX);
   cf.notepad = !lstrcmpiW (basename (path), L"notepad.exe");
   int l = lstrlenW (path);
   if (l > 4 && !lstrcmpiW (&path[l - 4], L".exe"))
