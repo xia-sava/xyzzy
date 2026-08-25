@@ -674,7 +674,7 @@ Window::scroll_window_horizontally (long ncolumns, int abs)
       if (w_point.p_offset != w_point.p_chunk->c_used)
         {
           Char c = w_point.ch ();
-          if (c != CC_LFD && c != CC_TAB && char_width (c) == 2)
+          if (c != CC_LFD && c != CC_TAB && wide_char_p (c))
             cx--;
         }
       if (cx <= 0)

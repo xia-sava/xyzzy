@@ -424,6 +424,14 @@ utf16_surrogate_low_p (Char c)
   return c >= CCS_UTF16_SURROGATE_LOW_MIN && c <= CCS_UTF16_SURROGATE_LOW_MAX;
 }
 
+// その升目から始まる字が升目ふたつを占めるか。サロゲート対はふたつの升目で
+// ひとつの字なので、上位で対ぶんを数える
+static inline int
+wide_char_p (Char c)
+{
+  return char_width (c) == 2 || utf16_surrogate_high_p (c);
+}
+
 static inline ucs4_t
 utf16_pair_to_ucs4 (Char hi, Char lo)
 {
