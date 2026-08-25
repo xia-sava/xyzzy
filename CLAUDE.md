@@ -2,9 +2,24 @@
 
 手順や環境の話は書かない。**変わらないことだけ**をここに置く。
 
-- ビルドと検証の手順、踏みやすい罠 … `docs/development.md`
-- 画面を使わない検証台 … `misc/verify/README.md`
-- Lisp から見える非互換の記録 … `docs/incompatible-changes.md`
+- ビルドや検証をする前に … `docs/development.md`（手順と、踏みやすい罠）
+- xyzzy を起動して外から確かめるとき … `misc/verify/README.md`
+- Lisp から見える動作を変えたとき … `docs/incompatible-changes.md`
+
+## どこに何があるか
+
+| | |
+|---|---|
+| `src/` | 本体の C++ |
+| `src/gen-syms.cc` | **Lisp から見える名前の一覧表** |
+| `src/gen/` | 一覧表などから作られる生成物。git には入れない |
+| `lisp/` | 標準添付の Lisp。`.l` と対の `.lc` が並ぶ |
+| `reference/reference.xml` | リファレンスマニュアルの原稿 |
+| `unittest/` | Lisp の中から回す単体テスト |
+| `misc/verify/` | プロセスの外から確かめる検証台 |
+| `etc/` | 実行時に読むデータ。言語ごとのキーワード表と `DOC` |
+| `projects/` | vcxproj。`xyzzy.sln` が使うのは 5 本 |
+| `src/version.h` | 版番号 |
 
 ## 後方互換は原則、破るなら記録する
 
@@ -29,7 +44,15 @@ Lisp の動作は 0.2.2.235 と互換であることを原則とする。現代�
 xyzzy は `.lc` があればそちらを読む。`.l` だけ直して動かすと、**古い定義のまま
 動いて混乱する**。組み込み関数を消す・改名するときは、先に `.lc` を消す。
 
-組み込み関数を足したら、`lisp/builtin.l` にも宣言を足す。
+## 組み込みを足すときは四箇所そろえる
+
+1. `src/gen-syms.cc` の表に `DEFUN3`、対話コマンドなら `DEFCMD3` を書く
+2. `F<名前>` を実装する
+3. `lisp/builtin.l` に `si::defun-builtin` を足す
+4. `reference/reference.xml` に項目を足す
+
+`F<名前>` のプロトタイプとシンボルは表から生成されるので、自分では書かない。
+3 を忘れると `test-defun-builtin-1`（`builtin.l` に無い組み込みが存在しないこと）が落ちる。
 
 ## 検証で利用者の画面を奪わない
 
