@@ -256,8 +256,6 @@ make_wc2cp932_table ()
   for (int i = 0xe000; i <= 0xfcff; i++)
     wc2cp932_table[i2w (i)] = i;
   wc2cp932_table[0xffff] = CHAR_INVALID;
-  for (int i = CCS_UTF16_SURROGATE_HIGH_MIN; i <= CCS_UTF16_SURROGATE_LOW_MAX; i++)
-    wc2cp932_table[i] = i;
 
   COPY_DIFF_TABLE (wc2cp932_table,
                    "wc2cp932", wc2cp932_diff, numberof (wc2cp932_diff),
