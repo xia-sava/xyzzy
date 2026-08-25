@@ -2,7 +2,9 @@
 #define _charset_h_
 
 /*
-  INTERNAL CODE
+  文字集合ごとに区画を分けた符号。バッファと文字列が持つのは Unicode の
+  符号位置（UTF-16）で、この符号はもう中身ではない。文字集合を単位とする
+  符号との間で写すときの足場として、i2w / w2i と各 wc2*_table が使う。
 
   0000-007F  US-ASCII
   0080-00FF  JIS X 0201-KANA
