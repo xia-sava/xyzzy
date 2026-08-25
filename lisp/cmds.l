@@ -367,7 +367,10 @@
 			      (insert #\SPC nchars)
 			      (forward-char (- nchars)))
 			    (setq column (- nchars))))
-			 ((= (char-columns c) 2)
+			 ((or (= (char-columns c) 2)
+			      ;; サロゲート対は升目ふたつでひとつの字なので、
+			      ;; 符号ひとつぶんの幅では足りない
+			      (<= #xd800 (char-code c) #xdbff))
 			  (delete-char 1)
 			  (when (= column 1)
 			    (insert #\SPC 1)
