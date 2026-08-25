@@ -15,18 +15,18 @@ class status_area
   int s_order[ST_MAX];
   int s_nitems;
   int s_dow;
-  char *s_lbuf[ST_MAX];
-  char s_timeb[16];             // " XX/XX XX:XX "
-  char s_posb[32];              // " XXXXXXXXXX:XXXXXXXXXX "
-  char s_codeb[8];              // " XXXX "
-  char s_unicodeb[12];          // " U+XXXX "
+  WCHAR *s_lbuf[ST_MAX];
+  WCHAR s_timeb[16];            // " XX/XX XX:XX "
+  WCHAR s_posb[32];             // " XXXXXXXXXX:XXXXXXXXXX "
+  WCHAR s_codeb[8];             // " XXXX "
+  WCHAR s_unicodeb[12];         // " U+XXXX "
 
-  static const char s_nil[];
-  static const char s_eof[];
+  static const WCHAR s_nil[];
+  static const WCHAR s_eof[];
 
   void clear_cache ();
-  int get_extent (const char *) const;
-  int calc_extent (int, const char *);
+  int get_extent (const WCHAR *) const;
+  int calc_extent (int, const WCHAR *);
   void set_parts () const;
   void update (int) const;
   void update_all ();

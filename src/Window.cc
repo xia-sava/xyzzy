@@ -184,14 +184,14 @@ StatusWindow::StatusWindow ()
 void
 StatusWindow::restore ()
 {
-  SendMessage (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
+  SendMessageW (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
   UpdateWindow (sw_hwnd);
 }
 
 int
-StatusWindow::text (const char *s)
+StatusWindow::text (const WCHAR *s)
 {
-  SendMessage (sw_hwnd, SB_SETTEXT, 0, LPARAM (s));
+  SendMessageW (sw_hwnd, SB_SETTEXT, 0, LPARAM (s));
   UpdateWindow (sw_hwnd);
   sw_last.textf = 1;
   return sw_last.l;
@@ -247,7 +247,7 @@ StatusWindow::flush ()
       memcpy (sw_last.buf, sw_buf, sizeof *sw_buf * l);
       sw_last.l = l;
       sw_last.textf = 0;
-      SendMessage (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
+      SendMessageW (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
       UpdateWindow (sw_hwnd);
     }
 }
@@ -283,7 +283,7 @@ StatusWindow::clear (int no_update)
       sw_last.textf = 0;
       if (!no_update)
         {
-          SendMessage (sw_hwnd, SB_SETTEXT, 0, LPARAM (""));
+          SendMessageW (sw_hwnd, SB_SETTEXT, 0, LPARAM (L""));
           UpdateWindow (sw_hwnd);
         }
     }

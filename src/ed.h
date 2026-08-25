@@ -303,7 +303,7 @@ protected:
   ucs2_t *sw_tail;
 public:
   void restore ();
-  int text (const char *);
+  int text (const WCHAR *);
   void puts (const Char *, int);
   int putc (Char);
   void newline ();

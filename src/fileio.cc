@@ -164,7 +164,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, xread_stream &sin)
   int nchunks = 1;
   long total_bytes = sin.input_stream ().rest_chars ();
   DWORD last_tick = GetTickCount () + 1000;
-  char msg[64];
+  WCHAR msg[64];
 
   *msg = 0;
   Fbegin_wait_cursor ();
@@ -183,9 +183,9 @@ Buffer::read_file_contents (ReadFileContext &rfc, xread_stream &sin)
       if (int (t - last_tick) >= 300)
         {
           last_tick = t;
-          sprintf (msg, "Reading %d/%d bytes...",
-                   total_bytes - sin.input_stream ().rest_chars (),
-                   total_bytes);
+          wsprintfW (msg, L"Reading %d/%d bytes...",
+                     total_bytes - sin.input_stream ().rest_chars (),
+                     total_bytes);
           app.status_window.text (msg);
         }
     }

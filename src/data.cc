@@ -895,8 +895,12 @@ gc (int nomsg)
     nomsg = xsymbol_value (Vgarbage_collection_messages) == Qnil;
 
   int msglen = 0;
+  WCHAR msg[256];
   if (!nomsg)
-    msglen = app.status_window.text (get_message_string (Mgarbage_collecting));
+    {
+      s2u (msg, get_message_string (Mgarbage_collecting));
+      msglen = app.status_window.text (msg);
+    }
 
   ldataP::ld_nwasted = 0;
   gc_mark_object ();
@@ -919,7 +923,10 @@ gc (int nomsg)
       if (msglen)
         app.status_window.restore ();
       else
-        app.status_window.text (get_message_string (Mgarbage_collecting_done));
+        {
+          s2u (msg, get_message_string (Mgarbage_collecting_done));
+          app.status_window.text (msg);
+        }
     }
 
   _heapmin ();

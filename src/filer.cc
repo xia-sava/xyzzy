@@ -915,9 +915,11 @@ FilerView::display_disk_info (HWND hwnd, int n) const
   char total[128], free[128];
   disk_space (double (total_c) * s_per_c * b_per_s, total, -1);
   disk_space (double (free_c) * s_per_c * b_per_s, free, -1);
-  char buf[256];
-  sprintf (buf, "Free: %s, Total: %s", free, total);
-  SendMessage (hwnd, SB_SETTEXT, n, LPARAM (buf));
+  WCHAR wtotal[128], wfree[128], buf[256];
+  u82u (wtotal, total);
+  u82u (wfree, free);
+  wsprintfW (buf, L"Free: %s, Total: %s", wfree, wtotal);
+  SendMessageW (hwnd, SB_SETTEXT, n, LPARAM (buf));
 }
 
 int
@@ -1272,7 +1274,9 @@ FilerView::echo_filename ()
       if (find_focused (&lvi) >= 0)
         {
           const filer_data *f = (filer_data *)lvi.lParam;
-          app.status_window.text (*f->name ? f->name : "..");
+          WCHAR w[NAME_MAX];
+          u82u (w, *f->name ? f->name : "..");
+          app.status_window.text (w);
         }
       app.status_window.clear (1);
     }
@@ -1546,9 +1550,11 @@ Filer::IdleProc ()
 static void
 add_combo (HWND combo, lisp string)
 {
-  char *b = (char *)alloca (xstring_length (string) * 2 + 1);
-  w2s (b, string);
-  SendMessage (combo, CB_ADDSTRING, 0, LPARAM (b));
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR)
+                              * (w2ul (xstring_contents (string),
+                                       xstring_length (string)) + 1));
+  *w2u (b, xstring_contents (string), xstring_length (string)) = 0;
+  SendMessageW (combo, CB_ADDSTRING, 0, LPARAM (b));
 }
 
 static void
