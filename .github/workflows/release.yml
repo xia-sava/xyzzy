@@ -1,0 +1,186 @@
+name: release
+
+# タグを打つと配布物を組んで公開する。
+#
+# 配布物に派生物（lisp/*.lc・etc/DOC・xyzzy.wxp）は入れない。どれも git 管理外なので
+# 素のチェックアウトには存在せず、archive.bat をそのまま走らせれば入らない。xyzzy は
+# ダンプが無ければ起動時に DOC とダンプを自分で作り（lisp/startup.l）、.lc が無ければ
+# .l を読む（src/pathname.cc の探索順）。exe と対で腐るものを配らないので、版のずれた
+# 派生物を掴む事故が起きない。
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+# 既定では何の権限も与えない。必要なジョブが必要な分だけ宣言する。
+permissions: {}
+
+# 連続して打ったタグを取りこぼさないよう、キャンセルせず順に流す。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      asset: ${{ steps.version.outputs.asset }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          # misc/update_version_describe.bat が git describe --tags を見る。浅い取得では
+          # タグに届かず、題に版番号ではなくハッシュが出る。
+          fetch-depth: 0
+
+      # 版番号の本体は src/version.h で、タグはその写し。食い違ったまま公開すると exe が
+      # 名乗る版と更新機構が見る版がずれるため、組む前に突き合わせて落とす。
+      #
+      # シェルに pwsh を明示する。Windows PowerShell 5.1 は BOM の無いスクリプトを CP932 と
+      # して読むため、日本語を含む行が壊れる。
+      - name: Check version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $header = Get-Content src/version.h -Raw
+          function Get-Macro([string] $name) {
+            if ($header -notmatch "define\s+$name\s+(\d+)") {
+              throw "src/version.h: $name not found"
+            }
+            [int] $Matches[1]
+          }
+          $parts = @(
+            (Get-Macro "PROGRAM_MAJOR_VERSION"),
+            (Get-Macro "PROGRAM_MINOR_VERSION"),
+            (Get-Macro "PROGRAM_MAJOR_REVISION"),
+            (Get-Macro "PROGRAM_MINOR_REVISION"),
+            (Get-Macro "PROGRAM_PATCH_LEVEL")
+          )
+          # src/version.cc は末尾の 0 を落として組み立てる。同じ規則で写す。
+          $count = $parts.Length
+          while ($count -gt 2 -and $parts[$count - 1] -eq 0) { $count-- }
+          $version = ($parts[0..($count - 1)]) -join "."
+
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "tag $($env:GITHUB_REF_NAME) does not match src/version.h (v$version)"
+          }
+          Write-Host "version: $version"
+          "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
+          "asset=xyzzy-$version.zip" | Out-File $env:GITHUB_OUTPUT -Append
+
+      - name: Build
+        shell: cmd
+        run: .\build.bat Release Build normal "/p:GenerateDebugInformation=false"
+
+      # archive.bat が呼ぶ 7za はランナーに無い。入っている 7z を同じ名前で見えるように
+      # 複製して PATH へ足す（書庫を作る引数の書式は同じ）。
+      - name: Provide 7za
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = Join-Path $env:RUNNER_TEMP "bin"
+          New-Item -ItemType Directory -Force -Path $bin | Out-Null
+          Copy-Item "$env:ProgramFiles\7-Zip\7z.exe" (Join-Path $bin "7za.exe")
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+
+      - name: Package
+        shell: cmd
+        run: .\archive.bat ${{ steps.version.outputs.version }}
+
+      # archive.bat の xcopy は対象が無くても止まらないため、書庫の中身を直に確かめる。
+      # 入っているべきものと、入っていてはいけない派生物の両方を見る。
+      - name: Verify archive
+        shell: pwsh
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $path = (Resolve-Path (Join-Path "_dist" $env:ASSET)).Path
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($path)
+          try { $names = @($zip.Entries.FullName) } finally { $zip.Dispose() }
+
+          $required = @(
+            "xyzzy/xyzzy.exe",
+            "xyzzy/xyzzycli.exe",
+            "xyzzy/xyzzyenv.exe",
+            "xyzzy/lisp/startup.l",
+            "xyzzy/etc/Basic"
+          )
+          foreach ($name in $required) {
+            if ($names -notcontains $name) { throw "missing from archive: $name" }
+          }
+          $derived = @($names | Where-Object { $_ -match "\.lc$|\.wxp$|/etc/DOC$" })
+          if ($derived.Count -gt 0) {
+            throw "derived files must not be distributed: $($derived -join ', ')"
+          }
+          Write-Host "$($names.Count) entries"
+
+      # 更新機構が最初に引くもの。zip の実体は asset の名前で同じリリースに置く。
+      - name: Write manifest
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $zip = Join-Path "_dist" $env:ASSET
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          [ordered] @{
+            version = $env:VERSION
+            tag     = "v$($env:VERSION)"
+            commit  = $env:GITHUB_SHA
+            asset   = $env:ASSET
+            sha256  = $hash
+          } | ConvertTo-Json | Set-Content -Path "_dist/manifest.json" -Encoding utf8
+          Get-Content "_dist/manifest.json"
+
+      # release へ渡すまでの置き場で、リリースへ載れば用済み。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            _dist/${{ steps.version.outputs.asset }}
+            _dist/manifest.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # 成果物を公開するだけのジョブ。contents: write を持つのはここだけ。手動実行では走らない
+  # ので、組めるかどうかだけを試せる。
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      # 版ごとのリリース。配布物の実物が残るので、後からどの版で何を配ったかを辿れる。
+      # 配布物を書き込む唯一の外部コードなので、可変タグではなくコミットで固定する。
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: xyzzy ${{ needs.build.outputs.version }}
+          files: dist/${{ needs.build.outputs.asset }}
+
+      # 更新機構が見るのはこちら。置き場を動かさずに中身だけ差し替える。
+      - name: Update latest release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: latest
+          name: "Latest build"
+          body: |
+            配布中の版（${{ needs.build.outputs.version }}）。
+          prerelease: true
+          files: |
+            dist/${{ needs.build.outputs.asset }}
+            dist/manifest.json
