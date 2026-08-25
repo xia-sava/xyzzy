@@ -59,18 +59,18 @@ init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
       width = v;
     }
 
-  LV_COLUMN lvc;
+  LV_COLUMNW lvc;
   lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 
   for (int i = 0; i < ncolumns; i++)
     {
-      char buf[64];
+      WCHAR buf[64];
       lvc.cx = width[i];
-      LoadString (app.hinst, id_start + i, buf, sizeof buf);
+      LoadStringW (app.hinst, id_start + i, buf, numberof (buf));
       lvc.pszText = buf;
       lvc.iSubItem = i;
       lvc.fmt = fmts[i];
-      ListView_InsertColumn (list, i, &lvc);
+      SendMessageW (list, LVM_INSERTCOLUMNW, i, LPARAM (&lvc));
     }
 }
 
@@ -131,36 +131,36 @@ buffer_list_save_column (HWND list)
 }
 
 static int
-store_buffer_name (HWND list, const Buffer *bp, LV_ITEM *lvi)
+store_buffer_name (HWND list, const Buffer *bp, LV_ITEMW *lvi)
 {
-  int l = xstring_length (bp->lbuffer_name) * 2 + 32;
-  char *b = (char *)alloca (l + 1);
+  int l = xstring_length (bp->lbuffer_name) + 32;
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
   bp->buffer_name (b, b + l);
   lvi->pszText = b;
-  return ListView_InsertItem (list, lvi);
+  return SendMessageW (list, LVM_INSERTITEMW, 0, LPARAM (lvi));
 }
 
 static void
-store_buffer_size (HWND list, const Buffer *bp, LV_ITEM *lvi)
+store_buffer_size (HWND list, const Buffer *bp, LV_ITEMW *lvi)
 {
-  char b[32];
-  sprintf (b, "%d", bp->b_nchars);
+  WCHAR b[32];
+  wsprintfW (b, L"%d", bp->b_nchars);
   lvi->pszText = b;
-  ListView_SetItem (list, lvi);
+  SendMessageW (list, LVM_SETITEMW, 0, LPARAM (lvi));
 }
 
 static void
-store_string (HWND list, lisp string, LV_ITEM *lvi)
+store_string (HWND list, lisp string, LV_ITEMW *lvi)
 {
   if (stringp (string))
     {
-      char *b = (char *)alloca (xstring_length (string) * 2 + 1);
-      w2s (b, string);
+      WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (string) + 1));
+      w2u (b, string);
       lvi->pszText = b;
     }
   else
-    lvi->pszText = "";
-  ListView_SetItem (list, lvi);
+    lvi->pszText = (WCHAR *)L"";
+  SendMessageW (list, LVM_SETITEMW, 0, LPARAM (lvi));
 }
 
 static void
@@ -179,7 +179,7 @@ buffer_list_init_item (HWND list)
       {
         if (bp == selected_buffer ())
           cur = i;
-        LV_ITEM lvi;
+        LV_ITEMW lvi;
         lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
         lvi.iItem = i++;
         lvi.iSubItem = 0;
