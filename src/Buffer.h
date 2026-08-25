@@ -660,6 +660,7 @@ struct Buffer
   void goto_eol (Point &) const;
   int forward_line (Point &, long) const;
   int forward_char (Point &, long) const;
+  void skip_surrogate_low (Point &, int) const;
   long count_lines ();
   int bolp (const Point &) const;
   int eolp (const Point &) const;

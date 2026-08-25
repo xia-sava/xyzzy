@@ -89,6 +89,15 @@ Buffer::forward_char (Point &point, long nchars) const
   return f;
 }
 
+/* サロゲート対はふたつの升目でひとつの文字なので、その内側には止まらない。
+   下位にいるなら、動いてきた向きへもう一歩出る */
+void
+Buffer::skip_surrogate_low (Point &point, int dir) const
+{
+  if (point.p_point < b_nchars && utf16_surrogate_low_p (point.ch ()))
+    forward_char (point, dir);
+}
+
 void
 Buffer::goto_char (Point &point, point_t goal) const
 {
@@ -522,6 +531,8 @@ Buffer::forward_column (Point &point, long ncolumns, long curcol,
 {
   Chunk *cp = point.p_chunk;
   point_t limit = restrict ? b_contents.p2 : b_nchars;
+  Char last = 0;
+  long lastcol = curcol;
 
   do
     {
@@ -533,6 +544,8 @@ Buffer::forward_column (Point &point, long ncolumns, long curcol,
       int ncol = char_columns (c, curcol);
       if (!can_exceed && curcol + ncol > ncolumns)
         break;
+      last = c;
+      lastcol = curcol;
       curcol += ncol;
       point.p_point++;
       point.p_offset++;
@@ -546,6 +559,12 @@ Buffer::forward_column (Point &point, long ncolumns, long curcol,
     }
   while (curcol < ncolumns);
   point.p_chunk = cp;
+  /* 対の上位まで取ると内側で終わってしまうので、対の手前へ戻す */
+  if (utf16_surrogate_high_p (last))
+    {
+      forward_char (point, -1);
+      curcol = lastcol;
+    }
   return curcol;
 }
 
@@ -1492,11 +1511,16 @@ Buffer::folded_forward_column (Point &point, long ncolumns, long curcol,
     limit = eol.p_point;
 
   Chunk *cp = point.p_chunk;
+  Char last = 0;
+  long lastcol = curcol;
   while (point.p_point < limit)
     {
-      long nextcol = curcol + char_columns (cp->c_text[point.p_offset], curcol);
+      Char c = cp->c_text[point.p_offset];
+      long nextcol = curcol + char_columns (c, curcol);
       if (!can_exceed && nextcol > ncolumns)
         break;
+      last = c;
+      lastcol = curcol;
       curcol = nextcol;
       point.p_point++;
       point.p_offset++;
@@ -1511,6 +1535,12 @@ Buffer::folded_forward_column (Point &point, long ncolumns, long curcol,
         break;
     }
   point.p_chunk = cp;
+  /* 対の上位まで取ると内側で終わってしまうので、対の手前へ戻す */
+  if (utf16_surrogate_high_p (last))
+    {
+      forward_char (point, -1);
+      curcol = lastcol;
+    }
 
   return curcol;
 }
@@ -1686,8 +1716,11 @@ Fforward_char (lisp n)
 {
   Window *wp = selected_window ();
   wp->w_disp_flags |= Window::WDF_GOAL_COLUMN;
-  return boole (wp->w_bufp->forward_char (wp->w_point,
-                                          (!n || n == Qnil) ? 1 : fixnum_value (n)));
+  long nchars = (!n || n == Qnil) ? 1 : fixnum_value (n);
+  int f = wp->w_bufp->forward_char (wp->w_point, nchars);
+  if (nchars)
+    wp->w_bufp->skip_surrogate_low (wp->w_point, nchars < 0 ? -1 : 1);
+  return boole (f);
 }
 
 lisp
