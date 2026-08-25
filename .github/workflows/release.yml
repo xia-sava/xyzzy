@@ -109,7 +109,9 @@ jobs:
           }
           Write-Host "$($names.Count) entries"
 
-      # 更新機構が最初に引くもの。zip の実体は asset の名前で同じリリースに置く。
+      # 更新機構は latest の manifest.json を読み、同じリリースにある asset を取りに行く。
+      # latest へ置く zip は版番号を含まない固定の名前にする。版ごとの名前のまま置くと、
+      # 名前が毎回変わるので古い zip が latest に積み上がる。
       - name: Write manifest
         shell: pwsh
         env:
@@ -117,13 +119,13 @@ jobs:
           ASSET: ${{ steps.version.outputs.asset }}
         run: |
           $ErrorActionPreference = "Stop"
-          $zip = Join-Path "_dist" $env:ASSET
-          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          Copy-Item (Join-Path "_dist" $env:ASSET) "_dist/xyzzy.zip"
+          $hash = (Get-FileHash "_dist/xyzzy.zip" -Algorithm SHA256).Hash.ToLower()
           [ordered] @{
             version = $env:VERSION
             tag     = "v$($env:VERSION)"
             commit  = $env:GITHUB_SHA
-            asset   = $env:ASSET
+            asset   = "xyzzy.zip"
             sha256  = $hash
           } | ConvertTo-Json | Set-Content -Path "_dist/manifest.json" -Encoding utf8
           Get-Content "_dist/manifest.json"
@@ -134,6 +136,7 @@ jobs:
           name: dist
           path: |
             _dist/${{ steps.version.outputs.asset }}
+            _dist/xyzzy.zip
             _dist/manifest.json
           if-no-files-found: error
           retention-days: 1
@@ -171,5 +174,5 @@ jobs:
             配布中の版（${{ needs.build.outputs.version }}）。
           prerelease: true
           files: |
-            dist/${{ needs.build.outputs.asset }}
+            dist/xyzzy.zip
             dist/manifest.json
