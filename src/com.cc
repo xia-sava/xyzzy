@@ -219,7 +219,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
 {
   USES_CONVERSION;
 
-  char path[MAX_PATH + 1];
+  char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
   map_sl_to_backsl (path);
   wchar_t *wpath = A2W (path);
