@@ -100,7 +100,7 @@ jobs:
             "xyzzy/lisp/startup.l",
             "xyzzy/lisp/update.l",
             "xyzzy/etc/Basic",
-            "xyzzy/update-app.sh"
+            "xyzzy/update-app.bat"
           )
           foreach ($name in $required) {
             if ($names -notcontains $name) { throw "missing from archive: $name" }

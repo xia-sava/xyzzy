@@ -130,6 +130,9 @@ UTF-8（BOM なし）へ変換済み: `src/*.cc` `*.h`、`src/*.rc`、`*.bat`、
   `.lc` は素朴な連結器のままにする**非対称な設計が要る
 - 変換に使う符号名は **`SHIFT_JIS` ではなく `CP932`**。波ダッシュ `0x8160` などで
   名前を誤ると写像がずれる
+- **`misc/update-app.bat` は CP932。** 他の `.bat` と違って日本語を `echo` するため。
+  cmd は `.bat` を CP932 として読むので、UTF-8 で書くと出力が化けるうえ、行が壊れる
+  危険もある（`rem "..."` で括れるのはコメントだけで、`echo` の行は括れない）
 
 **触らないもの**: `etc/DOC`（生成物）、`etc/dxflush.dxa`、`unittest/data/hello.txt.gz`
 （バイナリ）、`src/dsfmt/README.jp.txt`（第三者コードの同梱物）

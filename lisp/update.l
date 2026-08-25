@@ -5,21 +5,22 @@
 ;;; 配布されている最新版を確かめ、望まれれば入れ替えを始める。
 ;;;
 ;;; 実行中の xyzzy は自分自身を置き換えられないので、入れ替えは導入先に同梱した
-;;; update-app.sh に任せ、こちらは起動してから終了する。update-app.sh は xyzzy が
-;;; 消えるのを待ってから始める。
+;;; update-app.bat に任せ、こちらは起動してから終了する。update-app.bat は xyzzy が
+;;; 消えるのを待ってから始め、済んだら開き直す。
 
 (provide "update")
 
 (in-package "editor")
 
 (export '(check-for-update
+	  update-rebuild-site-lisp
 	  *update-manifest-url*
 	  *update-applier-name*))
 
 (defvar *update-manifest-url*
   "https://github.com/xia-sava/xyzzy/releases/download/latest/manifest.json")
 
-(defvar *update-applier-name* "update-app.sh")
+(defvar *update-applier-name* "update-app.bat")
 
 (defun update-slashify (path)
   (substitute #\/ #\\ path))
@@ -65,18 +66,38 @@
 (defun update-applier-path ()
   (format nil "~A/~A" (update-install-directory) *update-applier-name*))
 
-;; 入れ替えは bash で走る。無い環境では確認まではできても適用できないので、
-;; 訊く前に確かめて、できないことをそのまま伝える。
-(defun update-bash-available-p ()
-  (zerop (update-run "bash --version")))
-
 (defun update-start-applier ()
-  (call-process (format nil "bash \"~A\" --from-app \"~A\""
+  (call-process (format nil "cmd /c \"\"~A\" /from-app \"~A\"\""
 			(update-applier-path) (update-install-directory))
 		:no-std-handles t :show :show))
 
 (defun update-tell (fmt &rest args)
   (message-box (apply #'format nil fmt args) "更新の確認" '(:ok :exclamation)))
+
+;; 入れ替えのとき退けた .lc を、対の .l から作り直す。作り直さなくても .l が読まれる
+;; ので動きはするが、そのぶん起動が遅い。更新直後の開き直しで一度だけ呼ばれる。
+(defun update-rebuild-site-lisp ()
+  "退けられた site-lisp の .lc を作り直す。"
+  (interactive)
+  (let* ((hold (concat (string-right-trim "/" (update-install-directory)) ".lc-hold/"))
+	 (site (format nil "~A/site-lisp/" (update-install-directory)))
+	 (held (and (file-exist-p hold)
+		    (ignore-errors
+		     (directory hold :absolute t :recursive t :wild "*.lc"))))
+	 (done 0) (ng 0))
+    (cond
+     ((null held)
+      (message "作り直す .lc はありません"))
+     (t
+      (dolist (lc held)
+	(let ((src (concat site (subseq lc (length hold) (- (length lc) 2)) "l")))
+	  (if (not (file-exist-p src))
+	      (incf ng)
+	    (multiple-value-bind (v e) (ignore-errors (byte-compile-file src))
+	      (declare (ignore v))
+	      (if e (incf ng) (incf done))))))
+      (message "site-lisp の .lc を ~D 個作り直しました~@[（~D 個は作り直せません）~]"
+	       done (and (plusp ng) ng))))))
 
 (defun check-for-update ()
   "配布されている最新版を確かめ、新しければ入れ替えるかどうかを訊く。"
@@ -94,9 +115,6 @@
      ((not (file-exist-p (update-applier-path)))
       (update-tell "新しい ~A が出ていますが、入れ替えを行なう ~A が見つかりません。"
 		   (car latest) *update-applier-name*))
-     ((not (update-bash-available-p))
-      (update-tell "新しい ~A が出ていますが、入れ替えに必要な bash が見つかりません。"
-		   (car latest)))
      ((eq :yes (message-box
 		(format nil "新しい ~A が出ています（いまは ~A）。~%~%~
 			     いま入れ替えますか？~%~
