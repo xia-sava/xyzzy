@@ -136,7 +136,8 @@ protected:
   int fv_marks_changed;
 
   int fv_retrieve_icon;
-  char fv_buf[64];
+  WCHAR fv_buf[64];
+  WCHAR fv_namebuf[MAX_PATH];
 
 #ifdef DnD_TEST
   filer_drop_target dropt;
@@ -170,7 +171,7 @@ public:
 
   void display_disk_info (HWND, int) const;
 
-  void dispinfo (LV_ITEM *);
+  void dispinfo (LV_ITEMW *);
 
 protected:
   int find_focused (LV_ITEM *);

@@ -1458,20 +1458,38 @@ Fparse_integer (lisp string, lisp keys)
   return result;
 }
 
+/* サロゲート対を割らないよう、一文字ぶん戻る／進む */
+static inline WCHAR *
+char_prev (const WCHAR *b, const WCHAR *p)
+{
+  p--;
+  if (p > b && utf16_surrogate_low_p (*p) && utf16_surrogate_high_p (p[-1]))
+    p--;
+  return (WCHAR *)p;
+}
+
+static inline WCHAR *
+char_next (const WCHAR *p)
+{
+  if (utf16_surrogate_high_p (*p) && utf16_surrogate_low_p (p[1]))
+    p++;
+  return (WCHAR *)(p + 1);
+}
+
 int WINAPI
-abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
+abbreviate_string (HDC hdc, WCHAR *buf, int maxpxl, int is_pathname)
 {
   SIZE sz;
-  int l = strlen (buf);
-  GetTextExtentPoint32 (hdc, buf, l, &sz);
+  int l = wcslen (buf);
+  GetTextExtentPoint32W (hdc, buf, l, &sz);
   if (sz.cx <= maxpxl)
     return 0;
 
-  GetTextExtentPoint32 (hdc, "...", 3, &sz);
+  GetTextExtentPoint32W (hdc, L"...", 3, &sz);
   maxpxl = (maxpxl - sz.cx);
 
-  char *lb, *le;
-  char *rb, *re;
+  WCHAR *lb, *le;
+  WCHAR *rb, *re;
 
   if (is_pathname)
     {
@@ -1480,7 +1498,7 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
       rb = find_last_slash (buf);
       if (rb)
         {
-          GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+          GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
           if (sz.cx > maxpxl)
             {
               rb++;
@@ -1489,11 +1507,11 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
 
           int pxl = sz.cx;
           int dev = 0;
-          if (alpha_char_p (*lb & 255) && lb[1] == ':')
+          if (alpha_char_p (*lb) && lb[1] == ':')
             dev = dir_separator_p (lb[2]) ? 3 : 2;
           else if (dir_separator_p (*lb) && dir_separator_p (lb[1]))
             {
-              char *sl = find_slash (lb + 2);
+              WCHAR *sl = find_slash (lb + 2);
               if (sl)
                 sl = find_slash (sl + 1);
               if (sl && sl < rb)
@@ -1501,7 +1519,7 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
             }
           if (dev)
             {
-              GetTextExtentPoint32 (hdc, lb, dev, &sz);
+              GetTextExtentPoint32W (hdc, lb, dev, &sz);
               if (pxl + sz.cx > maxpxl)
                 goto done;
               pxl += sz.cx;
@@ -1510,13 +1528,13 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
 
           while (rb > le)
             {
-              char c = *rb;
+              WCHAR c = *rb;
               *rb = 0;
-              char *slash = find_last_slash (buf);
+              WCHAR *slash = find_last_slash (buf);
               *rb = c;
               if (!slash)
                 break;
-              GetTextExtentPoint32 (hdc, slash, rb - slash, &sz);
+              GetTextExtentPoint32W (hdc, slash, rb - slash, &sz);
               if (sz.cx + pxl > maxpxl)
                 break;
               rb = slash;
@@ -1527,15 +1545,16 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
         {
           rb = buf;
         trim_tail:
-          for (; re > rb; re = CharPrev (rb, re))
+          for (; re > rb; re = char_prev (rb, re))
             {
-              GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+              GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
               if (sz.cx <= maxpxl)
                 {
                   if (re - rb + 3 > l)
                     return 0;
                   *re = 0;
-                  strcpy (stpcpy (buf, rb), "...");
+                  wcscpy (buf, rb);
+                  wcscat (buf, L"...");
                   return 1;
                 }
             }
@@ -1544,15 +1563,15 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
   else
     {
       maxpxl /= 2;
-      for (lb = buf, le = buf + l / 2; le > lb; le = CharPrev (lb, le))
+      for (lb = buf, le = buf + l / 2; le > lb; le = char_prev (lb, le))
         {
-          GetTextExtentPoint32 (hdc, lb, le - lb, &sz);
+          GetTextExtentPoint32W (hdc, lb, le - lb, &sz);
           if (sz.cx <= maxpxl)
             break;
         }
-      for (rb = buf + l / 2, re = buf + l; rb < re; rb = CharNext (rb))
+      for (rb = buf + l / 2, re = buf + l; rb < re; rb = char_next (rb))
         {
-          GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+          GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
           if (sz.cx <= maxpxl)
             break;
         }
@@ -1563,12 +1582,12 @@ done:
 
   for (int i = 0; i < 3; i++)
     le[i] = '.';
-  strcpy (le + 3, rb);
+  wcscpy (le + 3, rb);
   return 1;
 }
 
 static int
-abbrev_string (char *buf, int maxl, int pathname_p)
+abbrev_string (WCHAR *buf, int maxl, int pathname_p)
 {
   HDC hdc (GetDC (0));
   HGDIOBJ of (SelectObject (hdc, sysdep.ui_font ()));
@@ -1588,8 +1607,8 @@ Fabbreviate_display_string (lisp string, lisp maxlen, lisp pathname_p)
   int l = fixnum_value (maxlen);
   if (l <= 0)
     return make_string ("");
-  char *buf = (char *)alloca (xstring_length (string) * 2 + 1);
-  w2s (buf, string);
+  WCHAR *buf = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (string) + 4));
+  w2u (buf, string);
   if (!abbrev_string (buf, l, pathname_p && pathname_p != Qnil))
     return string;
   return make_string (buf);

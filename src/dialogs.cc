@@ -1352,8 +1352,8 @@ IdleDialog::DoModal (HWND owner, UINT id)
       enable_owner = 1;
     }
 
-  id_hwnd = CreateDialogParam (app.hinst, MAKEINTRESOURCE (id), owner,
-                               WndProc, LPARAM (this));
+  id_hwnd = CreateDialogParamW (app.hinst, MAKEINTRESOURCEW (id), owner,
+                                WndProc, LPARAM (this));
   if (id_hwnd)
     {
       ShowWindow (id_hwnd, SW_SHOW);
@@ -1377,8 +1377,8 @@ int
 IdleDialog::Create (HWND owner, UINT id)
 {
   id_modeless = 1;
-  id_hwnd = CreateDialogParam (app.hinst, MAKEINTRESOURCE (id), owner,
-                               WndProc, LPARAM (this));
+  id_hwnd = CreateDialogParamW (app.hinst, MAKEINTRESOURCEW (id), owner,
+                                WndProc, LPARAM (this));
   if (!id_hwnd)
     return 0;
   ShowWindow (id_hwnd, SW_SHOW);

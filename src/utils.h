@@ -44,6 +44,8 @@ char *jindex (const char *, int);
 char *jrindex (const char *, int);
 char *find_last_slash (const char *);
 char *find_slash (const char *);
+WCHAR *find_last_slash (const WCHAR *);
+WCHAR *find_slash (const WCHAR *);
 void convert_backsl_with_sl (char *, int, int);
 
 inline void

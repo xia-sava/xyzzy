@@ -490,13 +490,14 @@ check_share_folder (const char *path)
 }
 
 void
-FilerView::dispinfo (LV_ITEM *lv)
+FilerView::dispinfo (LV_ITEMW *lv)
 {
   filer_data *d = (filer_data *)lv->lParam;
   switch (lv->iSubItem)
     {
     case 0:
-      lv->pszText = *d->name ? d->name : "..";
+      u82u (fv_namebuf, *d->name ? d->name : "..");
+      lv->pszText = fv_namebuf;
       if (lv->mask & LVIF_IMAGE)
         {
           int image;
@@ -535,11 +536,13 @@ FilerView::dispinfo (LV_ITEM *lv)
     case 1:
       if (!(d->attr & FILE_ATTRIBUTE_DIRECTORY))
         {
-          print_size (d->bytes, fv_buf);
+          char b[64];
+          print_size (d->bytes, b);
+          s2u (fv_buf, b);
           lv->pszText = fv_buf;
         }
       else
-        lv->pszText = "";
+        lv->pszText = (WCHAR *)L"";
       break;
 
     case 2:
@@ -548,9 +551,9 @@ FilerView::dispinfo (LV_ITEM *lv)
         FileTimeToLocalFileTime (&d->time, &ft);
         SYSTEMTIME st;
         FileTimeToSystemTime (&ft, &st);
-        sprintf (fv_buf, "%04d/%02d/%02d %02d:%02d:%02d",
-                 st.wYear, st.wMonth, st.wDay,
-                 st.wHour, st.wMinute, st.wSecond);
+        wsprintfW (fv_buf, L"%04d/%02d/%02d %02d:%02d:%02d",
+                   st.wYear, st.wMonth, st.wDay,
+                   st.wHour, st.wMinute, st.wSecond);
         lv->pszText = fv_buf;
         break;
       }
@@ -1925,11 +1928,11 @@ Filer::Notify (NMHDR *nm)
           context_menu (nm);
           return 1;
 
-        case LVN_GETDISPINFO:
+        case LVN_GETDISPINFOW:
           if (nm->idFrom == IDC_LIST1)
-            f_fv1.dispinfo (&((LV_DISPINFO *)nm)->item);
+            f_fv1.dispinfo (&((LV_DISPINFOW *)nm)->item);
           else
-            f_fv2.dispinfo (&((LV_DISPINFO *)nm)->item);
+            f_fv2.dispinfo (&((LV_DISPINFOW *)nm)->item);
           return 1;
 
         case LVN_ITEMCHANGED:

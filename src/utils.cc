@@ -126,36 +126,39 @@ jrindex (const char *p, int c)
 char *
 find_slash (const char *p)
 {
-  for (u_char *s = (u_char *)p; *s;)
-    {
-      if (SJISP (*s) && s[1])
-        s += 2;
-      else
-        {
-          if (*s == '/' || *s == '\\')
-            return (char *)s;
-          s++;
-        }
-    }
+  for (const char *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      return (char *)s;
   return 0;
 }
 
 char *
 find_last_slash (const char *p)
 {
-  u_char *save, *s;
-  for (save = 0, s = (u_char *)p; *s;)
-    {
-      if (SJISP (*s) && s[1])
-        s += 2;
-      else
-        {
-          if (*s == '/' || *s == '\\')
-            save = s;
-          s++;
-        }
-    }
+  const char *save = 0;
+  for (const char *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      save = s;
   return (char *)save;
+}
+
+WCHAR *
+find_slash (const WCHAR *p)
+{
+  for (const WCHAR *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      return (WCHAR *)s;
+  return 0;
+}
+
+WCHAR *
+find_last_slash (const WCHAR *p)
+{
+  const WCHAR *save = 0;
+  for (const WCHAR *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      save = s;
+  return (WCHAR *)save;
 }
 
 long
