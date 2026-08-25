@@ -558,12 +558,34 @@ init_symbol_value ()
   xsymbol_value (Vlast_match_string) = Qnil;
 }
 
+static int wargc;
+static WCHAR **wargv;
+
+/* コマンドラインは UTF-16 で受け取る。CRT の __argv は CP932 へ写した後のもので、
+   写せない文字が失われている */
+static void
+init_command_line_args ()
+{
+  wargv = CommandLineToArgvW (GetCommandLineW (), &wargc);
+  if (!wargv)
+    wargc = 0;
+}
+
+/* 引数を、パスとして持ち回る形の UTF-8 にする */
+static char *
+u8arg (const WCHAR *w)
+{
+  char *b = (char *)xmalloc (u2u8l (w) + 1);
+  u2u8 (b, w);
+  return b;
+}
+
 static void
 init_command_line (int ac)
 {
   lisp p = Qnil;
-  for (int i = __argc - 1; i >= ac; i--)
-    p = xcons (make_string (__argv[i]), p);
+  for (int i = wargc - 1; i >= ac; i--)
+    p = xcons (make_string (wargv[i]), p);
   xsymbol_value (Vsi_command_line_args) = p;
 }
 
@@ -586,27 +608,30 @@ init_lisp_objects ()
   const char *config_path = 0, *ini_file = 0;
   *app.dump_image = 0;
 
+  init_command_line_args ();
+
   int ac;
-  for (ac = 1; ac < __argc - 1; ac += 2)
-    if (!strcmp (__argv[ac], "-image"))
+  for (ac = 1; ac < wargc - 1; ac += 2)
+    if (!wcscmp (wargv[ac], L"-image"))
       {
         char *tem;
-        int l = WINFS::GetFullPathName (__argv[ac + 1], sizeof app.dump_image,
+        int l = WINFS::GetFullPathName (u8arg (wargv[ac + 1]),
+                                        sizeof app.dump_image,
                                         app.dump_image, &tem);
         if (!l || l >= sizeof app.dump_image)
           *app.dump_image = 0;
       }
-    else if (!strcmp (__argv[ac], "-config"))
-      config_path = __argv[ac + 1];
-    else if (!strcmp (__argv[ac], "-ini"))
-      ini_file = __argv[ac + 1];
+    else if (!wcscmp (wargv[ac], L"-config"))
+      config_path = u8arg (wargv[ac + 1]);
+    else if (!wcscmp (wargv[ac], L"-ini"))
+      ini_file = u8arg (wargv[ac + 1]);
     else
       break;
 
   try
     {
       init_dump_path ();
-      if ((ac < __argc || !check_dump_key ())
+      if ((ac < wargc || !check_dump_key ())
           && rdump_xyzzy ())
         {
           combine_syms ();
