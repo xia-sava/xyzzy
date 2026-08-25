@@ -733,6 +733,11 @@ parse_encoding_to_charset (lisp lcharset)
 static int
 parse_encoding_init (lisp laccept)
 {
+  /* 言語ごとの表は必要になってから作られる。引く前に揃えておく */
+  init_wc2big5_table ();
+  init_wc2ksc5601_table ();
+  init_wc2gb2312_table ();
+
   if (laccept == Qt)
     return -1;
   int accept = 0;
@@ -765,18 +770,55 @@ parse_encoding_finish (int accept, int found)
   return r;
 }
 
-static int
-parse_encoding_exec (Char cc, int accept, int &found)
+/* 同じ字が複数の文字集合にあるので、落ち着き先だけでは足りない */
+static const Char *const parse_encoding_tables[] =
 {
-  if (cc != DEFCHAR)
+  wc2cp932_table, wc2gb2312_table, wc2ksc5601_table, wc2big5_table,
+};
+
+/* その字を書ける文字集合を、受け入れるものの中から選ぶ。符号位置には
+   文字集合という区別が無いので、区画ではなく変換表に訊く。文字集合ごとに
+   区画を分けた符号を返し、書けるものが無ければ CHAR_INVALID */
+static Char
+parse_encoding_code (Char wc, int accept, int &ccs)
+{
+  if (wc >= CHAR_LIMIT)
+    return CHAR_INVALID;
+
+  Char cc = w2i (ucs2_t (wc));
+  if (cc != CHAR_INVALID)
     {
-      cc = convert_ibmext (cc);
-      if (cc == DEFCHAR)
-        return 0;
+      /* IBM 拡張は写し先が無ければ '?' になる。それは書けたことにしない */
+      Char m = cc == DEFCHAR ? cc : convert_ibmext (cc);
+      if (m != DEFCHAR || cc == DEFCHAR)
+        {
+          ccs = code_charset (m);
+          if (accept & (1 << ccs))
+            return m;
+        }
     }
 
-  int ccs = code_charset (cc);
-  if (!(accept & (1 << ccs)))
+  for (int i = 0; i < numberof (parse_encoding_tables); i++)
+    {
+      Char alt = parse_encoding_tables[i][wc];
+      if (alt == CHAR_INVALID)
+        continue;
+      int accs = code_charset (alt);
+      if (accept & (1 << accs))
+        {
+          ccs = accs;
+          return alt;
+        }
+    }
+  return CHAR_INVALID;
+}
+
+static int
+parse_encoding_exec (Char wc, int accept, int &found)
+{
+  int ccs = ccs_invalid;
+  Char cc = parse_encoding_code (wc, accept, ccs);
+  if (cc == CHAR_INVALID)
     return 0;
 
   found |= 1 << ccs;
