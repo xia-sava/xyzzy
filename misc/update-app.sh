@@ -5,7 +5,6 @@
 #
 #     --dry-run          何をするかだけ表示し、一切変更しない
 #     --force            同じ版でも適用する
-#     --replace-backup   退避先が既にあるとき、それを捨てて上書きする
 #
 #   <導入先> は環境変数 XYZZY_INSTALL_DIR でも渡せる。
 #
@@ -32,7 +31,6 @@ STAMP_NAME=".xyzzy-update"
 
 DRY_RUN=0
 FORCE=0
-REPLACE_BACKUP=0
 INSTALL_DIR=""
 
 # 退避を終えてから転ぶと、導入先が中途半端なまま残る。戻し方を必ず添える。
@@ -49,16 +47,15 @@ say () { printf '%s\n' "$*"; }
 act () { if [ "$DRY_RUN" -eq 1 ]; then printf '        (試行) %s\n' "$*"; else printf '        %s\n' "$*"; fi; }
 
 usage () {
-  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
-  exit 1
+  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --force) FORCE=1 ;;
-    --replace-backup) REPLACE_BACKUP=1 ;;
-    -h|--help) usage ;;
+    -h|--help) usage 0 ;;
     -*) die "知らない選択肢: $1" ;;
     *) [ -n "$INSTALL_DIR" ] && die "導入先を 2 つ受け取った: $INSTALL_DIR と $1"
        INSTALL_DIR="$1" ;;
@@ -105,6 +102,7 @@ fi
 [[ "$INSTALL_WIN" =~ ^[A-Za-z]:/ ]] \
   || die "導入先を Windows のパスへ直せない: $INSTALL_DIR -> $INSTALL_WIN"
 BACKUP_DIR="$INSTALL_DIR.bak"
+BACKUP_PREV="$INSTALL_DIR.bak.1"
 LC_HOLD_DIR="$INSTALL_DIR.lc-hold"
 
 WORK="$(mktemp -d)"
@@ -190,16 +188,12 @@ fi
 
 # --- 4. 退避する ----------------------------------------------------------
 say "[4/7] 退避する"
+# 退避は 2 世代残す。直前の状態が一番戻したいものなので、古い方を送って場所を空ける。
 if [ -e "$BACKUP_DIR" ]; then
-  if [ "$REPLACE_BACKUP" -eq 1 ]; then
-    act "退避先を捨てる: $BACKUP_DIR"
-    [ "$DRY_RUN" -eq 1 ] || rm -rf "$BACKUP_DIR"
-  elif [ "$DRY_RUN" -eq 1 ]; then
-    say "        退避先が既にある: $BACKUP_DIR"
-    say "        このまま試すと、ここで中止になる（--replace-backup で捨てられる）"
-  else
-    die "退避先が既にある: $BACKUP_DIR
-中身を確かめて消すか、--replace-backup を付けること。前回の退避を黙って捨てない。"
+  act "前の退避を送る: $BACKUP_DIR -> $BACKUP_PREV"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    rm -rf "$BACKUP_PREV"
+    mv "$BACKUP_DIR" "$BACKUP_PREV" || die "前の退避を送れない"
   fi
 fi
 act "$INSTALL_DIR -> $BACKUP_DIR"
@@ -282,4 +276,4 @@ say "$NEW_VERSION にした。"
 say ""
 say "  * 次の起動で etc/DOC とダンプが作り直される（少し待たされ、窓が前に出る）"
 say "  * site-lisp は .l から読まれる。.lc を作り直すと次から速くなる"
-say "  * 退避は $BACKUP_DIR に残してある。落ち着いてから消すこと"
+say "  * 直前の姿は $BACKUP_DIR、その前は $BACKUP_PREV に残っている"
