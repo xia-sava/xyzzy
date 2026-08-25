@@ -8,13 +8,15 @@ Frun_winhelp (lisp file, lisp topic)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (file, path);
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
   if (!topic || topic == Qnil)
-    return boole (WinHelp (app.toplev, path, HELP_CONTENTS, 0));
+    return boole (WinHelpW (app.toplev, wpath, HELP_CONTENTS, 0));
 
   check_string (topic);
-  char *b = (char *)alloca (xstring_length (topic) * 2 + 1);
-  w2s (b, topic);
-  return boole (WinHelp (app.toplev, path, HELP_PARTIALKEY, DWORD (b)));
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (topic) + 1));
+  w2u (b, topic);
+  return boole (WinHelpW (app.toplev, wpath, HELP_PARTIALKEY, DWORD (b)));
 }
 
 lisp
@@ -22,7 +24,9 @@ Fkill_winhelp (lisp file)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (file, path);
-  return boole (WinHelp (app.toplev, path, HELP_QUIT, 0));
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
+  return boole (WinHelpW (app.toplev, wpath, HELP_QUIT, 0));
 }
 
 struct iheader
@@ -275,8 +279,10 @@ iset::load (lisp filename)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (filename, path);
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
   ifile *f = new ifile;
-  FILE *fp = _fsopen (path, "rb", _SH_DENYNO);
+  FILE *fp = _wfsopen (wpath, L"rb", _SH_DENYNO);
   if (!fp)
     {
       delete f;
@@ -397,7 +403,7 @@ Ffind_winhelp_path (lisp index_file, lisp ltopic)
   return make_string (is.is_match->ih_file);
 }
 
-typedef HWND (WINAPI *HTMLHELPPROC)(HWND, LPCSTR, UINT, DWORD);
+typedef HWND (WINAPI *HTMLHELPPROC)(HWND, LPCWSTR, UINT, DWORD);
 
 #define HH_KEYWORD_LOOKUP 0xd
 #define HH_GET_LAST_ERROR 0x14
@@ -406,11 +412,11 @@ typedef struct tagHH_AKLINK
 {
   int cbStruct;
   BOOL fReserved;
-  LPCTSTR pszKeywords;
-  LPCTSTR pszUrl;
-  LPCTSTR pszMsgText;
-  LPCTSTR pszMsgTitle;
-  LPCTSTR pszWindow;
+  LPCWSTR pszKeywords;
+  LPCWSTR pszUrl;
+  LPCWSTR pszMsgText;
+  LPCWSTR pszMsgTitle;
+  LPCWSTR pszWindow;
   BOOL fIndexOnFail;
 } HH_AKLINK;
 
@@ -427,15 +433,15 @@ Fhtml_help (lisp lfile, lisp lkeyword)
   check_string (lfile);
   check_string (lkeyword);
 
-  static HTMLHELPPROC HtmlHelp = (HTMLHELPPROC)GetProcAddress (LoadLibrary ("hhctrl.ocx"),
-                                                               "HtmlHelpA");
+  static HTMLHELPPROC HtmlHelp = (HTMLHELPPROC)GetProcAddress (LoadLibraryW (L"hhctrl.ocx"),
+                                                               "HtmlHelpW");
   if (!HtmlHelp)
     FEsimple_error (Ehtml_help_does_not_supported);
 
-  char *file = (char *)alloca (xstring_length (lfile) * 2 + 1);
-  w2s (file, lfile);
-  char *keyword = (char *)alloca (xstring_length (lkeyword) * 2 + 1);
-  w2s (keyword, lkeyword);
+  WCHAR *file = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lfile) + 1));
+  w2u (file, lfile);
+  WCHAR *keyword = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lkeyword) + 1));
+  w2u (keyword, lkeyword);
 
   HH_AKLINK link = {sizeof link};
   link.pszKeywords = keyword;

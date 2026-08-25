@@ -169,6 +169,19 @@ Char *u82w (Char *, const char *, size_t);
 WCHAR *u82u (WCHAR *, const char *);
 size_t u2u8l (const WCHAR *);
 char *u2u8 (char *, const WCHAR *);
+Char u8getc (const u_char *&);
+
+/* 外部の ANSI の窓口へ渡すバイト列は CP932。写せない文字は失われる */
+char *u82s (char *, char *, const char *);
+
+/* 文字の途中で切らないよう、並びの先頭まで戻した位置を返す */
+inline int
+u8back (const char *s, int i)
+{
+  while (i > 0 && (u_char (s[i]) & 0xc0) == 0x80)
+    i--;
+  return i;
+}
 
 lisp coerce_to_string (lisp, int);
 

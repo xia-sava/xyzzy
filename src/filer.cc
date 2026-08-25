@@ -115,16 +115,16 @@ FilerView::set_colors () const
 int
 FilerView::chdir (lisp dir)
 {
-  char *b = (char *)alloca (xstring_length (dir) * 2 + 1);
-  w2s (b, dir);
+  char *b = (char *)alloca (xstring_length (dir) * 3 + 1);
+  w2u8 (b, dir);
   return WINFS::SetCurrentDirectory (b);
 }
 
 int
 FilerView::chdevdir (lisp dir)
 {
-  char *b = (char *)alloca (xstring_length (dir) * 2 + 1);
-  w2s (b, dir);
+  char *b = (char *)alloca (xstring_length (dir) * 3 + 1);
+  w2u8 (b, dir);
   return set_device_dir (b, 0);
 }
 
@@ -134,9 +134,9 @@ FilerView::filename (const filer_data *d) const
   const char *name = *d->name ? d->name : "..";
   int l = xstring_length (fv_ldir);
   int sl = (d->attr & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
-  lisp string = make_string (sl + l + s2wl (name));
+  lisp string = make_string (sl + l + u82wl (name));
   bcopy (xstring_contents (fv_ldir), xstring_contents (string), l);
-  Char *b = s2w (&xstring_contents (string) [l], name);
+  Char *b = u82w (&xstring_contents (string) [l], name);
   if (sl)
     *b = '/';
   return string;
@@ -308,7 +308,8 @@ FilerView::add_list_view (const char *last)
               int e = xstring_length (fv_llastdir);
               if (e && xstring_contents (fv_llastdir) [e - 1] == '/')
                 e--;
-              w2s (lastb, xstring_contents (fv_llastdir) + l, e - l);
+              w2u8 (lastb, lastb + sizeof lastb - 1,
+                    xstring_contents (fv_llastdir) + l, e - l);
               if (*lastb)
                 last = lastb;
             }
@@ -596,17 +597,14 @@ compare_filename (const char *s1, const char *s2, int param)
         }
       else
         {
-          c1 = translate[c1];
-          c2 = translate[c2];
+          /* 一バイトで一文字を表す範囲だけ字体を畳む。それより上は
+             そのまま比べれば符号位置の順になる */
+          if (c1 < 0x80)
+            c1 = translate[c1];
+          if (c2 < 0x80)
+            c2 = translate[c2];
           if (c1 != c2)
             return c1 - c2;
-          if (SJISP (c1) && *p1)
-            {
-              if (*p1 != *p2)
-                return *p1 - *p2;
-              p1++;
-              p2++;
-            }
         }
     }
   return *p1 - *p2;
@@ -650,8 +648,8 @@ compare_file (LPARAM p1, LPARAM p2, LPARAM param)
           ;
         for (p2 = f2->name; *p2 == '.'; p2++)
           ;
-        p1 = jrindex (p1, '.');
-        p2 = jrindex (p2, '.');
+        p1 = strrchr (p1, '.');
+        p2 = strrchr (p2, '.');
         if (p1 && p2)
           d = compare_filename (p1, p2, param);
         else if (p1)
@@ -863,12 +861,9 @@ FilerView::set_directory (lisp dir)
     file_error (GetLastError (), dir);
 
   char cur[PATH_MAX];
-  GetCurrentDirectory (sizeof cur, cur);
+  WINFS::GetCurrentDirectory (sizeof cur, cur);
   fv_parent->restore_dir ();
-  lisp lcur = make_string (cur);
-  map_backsl_to_sl (xstring_contents (lcur),
-                    xstring_length (lcur));
-  lcur = Fappend_trail_slash (lcur);
+  lisp lcur = Fappend_trail_slash (make_path (cur, 0));
   if (string_equal (fv_ldir, lcur))
     return 0;
   fv_llastdir = fv_ldir;
@@ -1080,8 +1075,8 @@ int
 FilerView::search (lisp string, lisp lstart, lisp lreverse, lisp lwild)
 {
   check_string (string);
-  char *pat = (char *)alloca (xstring_length (string) * 2 + 2);
-  char *pe = w2s (pat, string);
+  char *pat = (char *)alloca (xstring_length (string) * 3 + 2);
+  char *pe = w2u8 (pat, string);
 
   int inc = !lreverse || lreverse == Qnil ? 1 : -1;
   int wild = lwild && lwild != Qnil;
@@ -1431,10 +1426,10 @@ FilerView::restart_thread ()
 {
   if (!fv_hthread)
     return;
-  char *path = (char *)malloc (xstring_length (fv_ldir) * 2 + 1);
+  char *path = (char *)malloc (xstring_length (fv_ldir) * 3 + 1);
   if (!path)
     return;
-  w2s (path, fv_ldir);
+  w2u8 (path, fv_ldir);
   map_sl_to_backsl (path);
 
   ex_lock lock (fv_lockobj);
@@ -3175,8 +3170,8 @@ Filer::do_keyup ()
       else
         {
           lisp dir = v->get_directory ();
-          char *path = (char *)alloca (xstring_length (dir) * 2 + MAX_PATH + 1);
-          strcpy (w2s (path, dir), d->name);
+          char *path = (char *)alloca (xstring_length (dir) * 3 + MAX_PATH + 1);
+          strcpy (w2u8 (path, dir), d->name);
           try
             {
               f_vbuffer.readin (&f_vwindow, path);

@@ -218,13 +218,13 @@ make_idl (HWND hwnd, lisp ldir, void *param,
   safe_com <IShellFolder> desktop;
   ole_error (SHGetDesktopFolder (&desktop));
 
-  char *dir = (char *)alloca (xstring_length (ldir) * 2 + 1);
-  w2s (dir, ldir);
+  char *dir = (char *)alloca (xstring_length (ldir) * 3 + 1);
+  w2u8 (dir, ldir);
   map_sl_to_backsl (dir);
 
   int sz = max (int (strlen (dir) + 1), MAX_PATH) + MAX_PATH;
   wchar_t *w = (wchar_t *)alloca (sz * sizeof (wchar_t));
-  MultiByteToWideChar (CP_ACP, 0, dir, -1, w, sz);
+  u82u (w, dir);
 
   ULONG eaten;
   safe_idl dir_idl (ialloc);
@@ -252,7 +252,7 @@ make_idl (HWND hwnd, lisp ldir, void *param,
                                -1, w, sz);
 #else
           const filer_data *f = (const filer_data *)lvi.lParam;
-          MultiByteToWideChar (CP_ACP, 0, *f->name ? f->name : "..", -1, w, sz);
+          u82u (w, *f->name ? f->name : "..");
 #endif
           ole_error (sf->ParseDisplayName (hwnd, 0, w, &eaten,
                                            &idls[nstored], 0));
@@ -474,14 +474,14 @@ filer_drop_target::scroll_view (const POINTL &pt) const
 inline int
 filer_drop_target::target_path_length () const
 {
-  return (xstring_length (fdt_view->get_directory ()) * 2
-          + MAX_PATH + 10);
+  return (xstring_length (fdt_view->get_directory ()) * 3
+          + MAX_PATH * 3 + 10);
 }
 
 void
 filer_drop_target::target_path (char *buf, const POINTL &pt)
 {
-  w2s (buf, fdt_view->get_directory ());
+  w2u8 (buf, fdt_view->get_directory ());
 
   LV_HITTESTINFO ht;
   ht.pt.x = pt.x;
@@ -566,9 +566,8 @@ filer_drop_target::check_self (const char *path, char *base, char *target)
 int
 filer_drop_target::check_self (const wchar_t *w, char *base, char *target)
 {
-  int l = wcslen (w) * 2 + 1;
-  char *p = (char *)alloca (l);
-  WideCharToMultiByte (CP_OEMCP, 0, w, -1, p, l, 0, 0);
+  char *p = (char *)alloca (u2u8l (w) + 1);
+  u2u8 (p, w);
   return check_self (p, base, target);
 }
 
@@ -636,16 +635,15 @@ filer_drop_target::make_drop_file (const char *path, const char *base_path,
 
   if (!link && _memicmp (base_path, name, strlen (base_path)))
     return 0;
-  return make_string (name);
+  return make_path (name, 0);
 }
 
 lisp
 filer_drop_target::make_drop_file (const wchar_t *w, const char *base_path,
                                    char *target, int link)
 {
-  int l = wcslen (w) * 2 + 1;
-  char *p = (char *)alloca (l);
-  WideCharToMultiByte (CP_OEMCP, 0, w, -1, p, l, 0, 0);
+  char *p = (char *)alloca (u2u8l (w) + 1);
+  u2u8 (p, w);
   return make_drop_file (p, base_path, target, link);
 }
 
@@ -656,7 +654,7 @@ filer_drop_target::process_drop (IDataObject *data_obj, const POINTL &pt,
   char *target = (char *)alloca (target_path_length ());
   target_path (target, pt);
   char *tbuf = (char *)alloca (strlen (target) + 1);
-  lisp ltarget = make_string (target);
+  lisp ltarget = make_path (target, 0);
 
   FORMATETC etc;
   etc.cfFormat = CF_HDROP;
@@ -678,15 +676,16 @@ filer_drop_target::process_drop (IDataObject *data_obj, const POINTL &pt,
   if (!df->fWide)
     {
       const char *p = (char *)df + df->pFiles;
-      base_path = (char *)alloca (strlen (p) + 1);
-      strcpy (base_path, p);
+      WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (strlen (p) + 1));
+      s2u (w, p);
+      base_path = (char *)alloca (u2u8l (w) + 1);
+      u2u8 (base_path, w);
     }
   else
     {
       const wchar_t *w = (wchar_t *)((char *)df + df->pFiles);
-      int l = wcslen (w) * 2 + 1;
-      base_path = (char *)alloca (l);
-      WideCharToMultiByte (CP_OEMCP, 0, w, -1, base_path, l, 0, 0);
+      base_path = (char *)alloca (u2u8l (w) + 1);
+      u2u8 (base_path, w);
     }
 
   if (!base_path)
@@ -700,7 +699,7 @@ filer_drop_target::process_drop (IDataObject *data_obj, const POINTL &pt,
   if (effect != DROPEFFECT_LINK && same_file_p (target, base_path))
     return 0;
 
-  lisp lsrc = make_string (base_path);
+  lisp lsrc = make_path (base_path, 0);
 
   lisp lfiles = Qnil;
 
@@ -708,7 +707,9 @@ filer_drop_target::process_drop (IDataObject *data_obj, const POINTL &pt,
     {
       for (const char *p = (char *)df + df->pFiles; *p; p += strlen (p) + 1)
         {
-          lisp x = make_drop_file (p, base_path, strcpy (tbuf, target),
+          WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (strlen (p) + 1));
+          s2u (w, p);
+          lisp x = make_drop_file (w, base_path, strcpy (tbuf, target),
                                    effect == DROPEFFECT_LINK);
           if (!x)
             return 0;

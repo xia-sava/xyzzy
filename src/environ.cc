@@ -942,33 +942,34 @@ lisp
 Fsi_getenv (lisp var)
 {
   check_string (var);
-  char *v = (char *)alloca (xstring_length (var) * 2 + 1);
-  w2s (v, var);
-  char *e = getenv (v);
-  return e ? make_string (e) : Qnil;
+  WCHAR *v = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (var) + 1));
+  w2u (v, var);
+  WCHAR buf[4096];
+  DWORD l = GetEnvironmentVariableW (v, buf, numberof (buf));
+  return l && l < numberof (buf) ? make_string (buf) : Qnil;
 }
 
 lisp
 Fsi_putenv (lisp var, lisp val)
 {
   check_string (var);
-  int l = xstring_length (var) * 2 + 1 + 1;
+  int l = w2ul (var) + 2;
   if (val && val != Qnil)
     {
       check_string (val);
-      l += xstring_length (val) * 2;
+      l += w2ul (val);
     }
 
-  char *v = (char *)alloca (l);
-  char *b = v;
-  v = w2s (v, var);
+  WCHAR *v = (WCHAR *)alloca (sizeof (WCHAR) * l);
+  WCHAR *b = v;
+  v = w2u (v, var);
   *v++ = '=';
   if (val && val != Qnil)
-    w2s (v, val);
+    w2u (v, val);
   else
     *v++ = 0;
 
-  int r = _putenv (b);
+  int r = _wputenv (b);
   return (r < 0 || !val) ? Qnil : val;
 }
 
@@ -993,7 +994,7 @@ Fuser_config_path ()
 lisp
 Fxyzzy_ini_path ()
 {
-  return make_string (app.ini_file_path);
+  return make_path (app.ini_file_path, 0);
 }
 
 lisp

@@ -40,7 +40,7 @@ Fsi_snarf_documentation (lisp lpath, lisp symlist)
 {
   char path[MAX_PATH + 1];
   pathname2cstr (lpath, path);
-  FILE *fp = fopen (path, "wb");
+  FILE *fp = WINFS::fopen (path, "wb");
   if (!fp)
     FEsimple_crtl_error (errno, lpath);
 

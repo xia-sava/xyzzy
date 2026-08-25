@@ -17,7 +17,7 @@ close_file_stream (lisp stream, int abort)
   else
     {
       char path[PATH_MAX + 1];
-      w2s (path, xfile_stream_pathname (stream));
+      w2u8 (path, xfile_stream_pathname (stream));
       WINFS::DeleteFile (path);
       if (!WINFS::MoveFile (xfile_stream_alt_pathname (stream), path))
         file_error (GetLastError (), xfile_stream_pathname (stream));
@@ -379,7 +379,7 @@ create_file_stream (lisp filename, lisp direction, lisp if_exists,
                                   : (access == GENERIC_WRITE
                                      ? st_file_output
                                      : st_file_io));
-  xfile_stream_pathname (stream) = make_string (path);
+  xfile_stream_pathname (stream) = make_path (path, 0);
   xfile_stream_encoding (stream) = encoding;
 
   if (need_alt)

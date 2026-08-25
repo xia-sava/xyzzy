@@ -138,7 +138,7 @@ set_device_dir (const char *path, int f)
   if (f || xsymbol_value (Vauto_update_per_device_directory) != Qnil)
     {
       char curdir[PATH_MAX];
-      if (GetCurrentDirectory (sizeof curdir, curdir)
+      if (WINFS::GetCurrentDirectory (sizeof curdir, curdir)
           && alpha_char_p (*curdir & 255) && curdir[1] == ':')
         strcpy (devdirs[_char_downcase (*curdir) - 'a'], curdir + 2);
     }
@@ -156,13 +156,13 @@ get_device_dir (Char *b, const Char *p, int l)
 {
   if (l == 2 && alpha_char_p (*p) && p[1] == ':'
       && *devdirs[_char_downcase (*p) - 'a'])
-    return s2w (b, devdirs[_char_downcase (*p) - 'a']);
+    return u82w (b, devdirs[_char_downcase (*p) - 'a']);
 
   char buf[PATH_MAX + 1], path[PATH_MAX + 1], *tem;
-  w2s (buf, p, l);
+  w2u8 (buf, buf + PATH_MAX, p, l);
   if (WINFS::GetFullPathName (buf, sizeof path, path, &tem))
     {
-      Char *be = s2w (b, path);
+      Char *be = u82w (b, path);
       return copy_Chars (b, skip_device_or_host (b, be), be);
     }
   return b;
@@ -343,7 +343,7 @@ lisp
 make_path (const char *s, int append_slash)
 {
   Char *b = (Char *)alloca ((strlen (s) + 1) * sizeof (Char));
-  Char *be = s2w (b, s);
+  Char *be = u82w (b, s);
   map_backsl_to_sl (b, be - b);
   if (append_slash && be != b && be[-1] != '/')
     *be++ = '/';
@@ -620,7 +620,7 @@ pathname2cstr (lisp pathname, char *buf)
   pathbuf_t tem;
   const Char *p, *pe;
   pathname = coerce_to_pathname (pathname, tem, p, pe);
-  return w2s (buf, p, pe - p);
+  return w2u8 (buf, p, pe - p);
 }
 
 static int
@@ -722,12 +722,12 @@ Ftruename (lisp pathname)
     sl = path + 2;
   else if (*path == '\\' && path[1] == '\\')
     {
-      sl = jindex (path + 2, '\\');
+      sl = strchr (path + 2, '\\');
       if (sl)
-        sl = jindex (sl + 1, '\\');
+        sl = strchr (sl + 1, '\\');
     }
   if (!sl)
-    sl = jindex (path, '\\');
+    sl = strchr (path, '\\');
   if (!sl)
     strcpy (truename, path);
   else
@@ -737,7 +737,7 @@ Ftruename (lisp pathname)
       char *t = truename + (sl - path);
       while (1)
         {
-          char *p = jindex (sl, '\\');
+          char *p = strchr (sl, '\\');
           if (p)
             *p = 0;
           WIN32_FIND_DATA fd;
@@ -758,7 +758,7 @@ Ftruename (lisp pathname)
   map_backsl_to_sl (truename);
 
   Char w[PATH_MAX + 1];
-  int l = s2w (w, truename) - w;
+  int l = u82w (w, truename) - w;
   if (stringp (pathname) && l == xstring_length (pathname)
       && !bcmp (w, xstring_contents (pathname), l))
     return pathname;
@@ -801,7 +801,7 @@ Ffile_system_supports_long_file_name_p (lisp path)
   t = buf + (t - p);
   *t++ = SEPCHAR;
   char cbuf[PATH_MAX + 1];
-  w2s (cbuf, buf, t - buf);
+  w2u8 (cbuf, cbuf + PATH_MAX, buf, t - buf);
 
   DWORD maxl, flags;
   return boole (WINFS::GetVolumeInformation (cbuf, 0, 0, 0, &maxl, &flags, 0, 0) && maxl > 12);
@@ -940,7 +940,7 @@ Ffind_load_path (lisp filename)
     FEsimple_error (Epath_name_too_long, filename);
 
   char file[PATH_MAX + 1];
-  w2s (file, filename);
+  w2u8 (file, filename);
 
   for (const char *const *e = ext; *e; e++)
     for (lisp p = xsymbol_value (Vload_path); consp (p); p = xcdr (p))
@@ -997,7 +997,7 @@ Fchdir (lisp dirname)
   pathname2cstr (dir, path);
   if (!WINFS::SetCurrentDirectory (path))
     file_error (GetLastError (), dir);
-  if (!GetCurrentDirectory (sizeof path, path))
+  if (!WINFS::GetCurrentDirectory (sizeof path, path))
     file_error (GetLastError (), dir);
 
   if (strcmp (sysdep.curdir, path) == 0)
@@ -1020,7 +1020,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
       check_string (lprefix);
       if (xstring_length (lprefix) > 10)
         FEsimple_error (Eprefix_too_long, lprefix);
-      w2s (prefix, lprefix);
+      w2u8 (prefix, lprefix);
     }
 
   if (lsuffix == Qnil)
@@ -1030,7 +1030,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
       check_string (lsuffix);
       if (xstring_length (lsuffix) > 10)
         FEsimple_error (Esuffix_too_long, lsuffix);
-      w2s (suffix, lsuffix);
+      w2u8 (suffix, lsuffix);
     }
 
   if (dir && dir != Qnil)
@@ -1039,7 +1039,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
         file_error (Enot_a_directory, dir);
       pathname2cstr (dir, temp);
     }
-  else if (!GetTempPath (sizeof temp, temp))
+  else if (!WINFS::GetTempPath (sizeof temp, temp))
     file_error (Ecannot_make_temp_file_name);
   char *sl = find_last_slash (temp);
   if (!sl)
@@ -1049,8 +1049,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
   if (!make_temp_file_name (temp, lprefix ? prefix : 0, lsuffix ? suffix : 0,
                             0, dirp && dirp != Qnil))
     file_error (Ecannot_make_temp_file_name);
-  map_backsl_to_sl (temp);
-  return make_string (temp);
+  return make_path (temp, 0);
 }
 
 lisp
@@ -1208,7 +1207,7 @@ static int
 copyn (char *d, const char *s, int n, int l)
 {
   if (n < l)
-    l = check_kanji2 (s, n) ? n - 1 : n;
+    l = u8back (s, n);
   memcpy (d, s, l);
   d[l] = 0;
   return l;
@@ -1610,7 +1609,7 @@ mkdirhier (char *path, int exists_ok)
         return 0;
     }
   map_sl_to_backsl (path);
-  for (char *p = path; (p = jindex (p, '\\')); *p++ = '\\')
+  for (char *p = path; (p = strchr (p, '\\')); *p++ = '\\')
     {
       *p = 0;
       WINFS::CreateDirectory (path, 0);
@@ -1773,20 +1772,12 @@ Fmodify_file_attributes (lisp lpath, lisp lon, lisp loff)
 int
 strict_get_file_data (const char *path, WIN32_FIND_DATA &fd)
 {
-  for (const u_char *p = (const u_char *)path; *p;)
-    {
-      if (SJISP (*p) && p[1])
-        p += 2;
-      else
-        {
-          if (*p == '?' || *p == '*')
-            {
-              SetLastError (ERROR_INVALID_NAME);
-              return 0;
-            }
-          p++;
-        }
-    }
+  for (const char *p = path; *p; p++)
+    if (*p == '?' || *p == '*')
+      {
+        SetLastError (ERROR_INVALID_NAME);
+        return 0;
+      }
   return WINFS::get_file_data (path, fd);
 }
 
@@ -1862,7 +1853,7 @@ Fget_disk_usage (lisp dirname, lisp recursive)
 {
   char path[PATH_MAX * 2];
   pathname2cstr (dirname, path);
-  char *p = jrindex (path, '/');
+  char *p = strrchr (path, '/');
   if (p && p[1])
     strcat (p, "/");
   gdu du;
@@ -2340,10 +2331,10 @@ list_server_resources::list_server_resources (lisp lserver, int pair)
      : list_net_resources (pair)
 {
   check_string (lserver);
-  m_server = new char [xstring_length (lserver) * 2 + 3];
+  m_server = new char [xstring_length (lserver) * 3 + 3];
   m_server[0] = '\\';
   m_server[1] = '\\';
-  w2s (m_server + 2, lserver);
+  w2u8 (m_server + 2, lserver);
 }
 
 void
@@ -2476,10 +2467,10 @@ root_path_name (char *buf, const char *path)
         {
           if (buf[1] == '\\')
             {
-              char *p = jindex (buf + 2, '\\');
+              char *p = strchr (buf + 2, '\\');
               if (p)
                 {
-                  char *p2 = jindex (p + 1, '\\');
+                  char *p2 = strchr (p + 1, '\\');
                   if (p2)
                     p2[1] = 0;
                   else

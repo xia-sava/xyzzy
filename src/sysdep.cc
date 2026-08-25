@@ -116,10 +116,10 @@ Sysdep::Sysdep ()
   init_machine_type ();
   init_process_type ();
 
-  GetCurrentDirectory (sizeof curdir, curdir);
+  WINFS::GetCurrentDirectory (sizeof curdir, curdir);
   if (*curdir == '\\')
     {
-      GetWindowsDirectory (curdir, sizeof curdir);
+      WINFS::GetWindowsDirectory (curdir, sizeof curdir);
       WINFS::SetCurrentDirectory (curdir);
     }
 

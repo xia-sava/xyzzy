@@ -219,7 +219,7 @@ askpass (const char *path1, const char *path2)
   return askpass1 (path1, 0) || askpass1 (path2, 0);
 }
 
-/* パスは文字列のまま持ち回る。API へ渡す手前で UTF-16 にする */
+/* パスは UTF-8 のバイト列のまま持ち回る。API へ渡す手前で UTF-16 にする */
 class wpath
 {
   WCHAR w_buf[PATH_MAX + 1];
@@ -229,7 +229,7 @@ public:
     {
       *w_buf = 0;
       if (path && strlen (path) <= PATH_MAX)
-        s2u (w_buf, path);
+        u82u (w_buf, path);
     }
   operator LPCWSTR () const {return w_null ? 0 : w_buf;}
 };
@@ -238,8 +238,11 @@ public:
 static DWORD
 store_path (LPSTR buf, DWORD size, LPCWSTR w)
 {
-  int l = WideCharToMultiByte (CP_ACP, 0, w, -1, buf, size, 0, 0);
-  return l > 0 ? l - 1 : 0;
+  size_t l = u2u8l (w);
+  if (l >= size)
+    return 0;
+  u2u8 (buf, w);
+  return DWORD (l);
 }
 
 char WINFS::wfs_share_cache[MAX_PATH * 2];
@@ -593,6 +596,75 @@ WINFS::WNetOpenEnum (DWORD dwScope, DWORD dwType, DWORD dwUsage,
   if (r != NO_ERROR && askpass_noshare (lpNetResource->lpRemoteName))
     r = ::WNetOpenEnumA (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
   return r;
+}
+
+DWORD WINAPI
+WINFS::GetModuleFileName (HMODULE hModule, LPSTR lpFilename, DWORD nSize)
+{
+  WCHAR buf[PATH_MAX + 1];
+  if (!::GetModuleFileNameW (hModule, buf, numberof (buf)))
+    return 0;
+  return store_path (lpFilename, nSize, buf);
+}
+
+DWORD WINAPI
+WINFS::GetTempPath (DWORD nBufferLength, LPSTR lpBuffer)
+{
+  WCHAR buf[PATH_MAX + 1];
+  if (!::GetTempPathW (numberof (buf), buf))
+    return 0;
+  return store_path (lpBuffer, nBufferLength, buf);
+}
+
+DWORD WINAPI
+WINFS::GetCurrentDirectory (DWORD nBufferLength, LPSTR lpBuffer)
+{
+  WCHAR buf[PATH_MAX + 1];
+  if (!::GetCurrentDirectoryW (numberof (buf), buf))
+    return 0;
+  return store_path (lpBuffer, nBufferLength, buf);
+}
+
+UINT WINAPI
+WINFS::GetWindowsDirectory (LPSTR lpBuffer, UINT uSize)
+{
+  WCHAR buf[PATH_MAX + 1];
+  if (!::GetWindowsDirectoryW (buf, numberof (buf)))
+    return 0;
+  return store_path (lpBuffer, uSize, buf);
+}
+
+UINT WINAPI
+WINFS::GetSystemDirectory (LPSTR lpBuffer, UINT uSize)
+{
+  WCHAR buf[PATH_MAX + 1];
+  if (!::GetSystemDirectoryW (buf, numberof (buf)))
+    return 0;
+  return store_path (lpBuffer, uSize, buf);
+}
+
+const char *WINAPI
+WINFS::getenv (const char *name, char *buf, DWORD size)
+{
+  WCHAR wname[256], wbuf[PATH_MAX + 1];
+  if (strlen (name) >= numberof (wname))
+    return 0;
+  s2u (wname, name);
+  DWORD l = ::GetEnvironmentVariableW (wname, wbuf, numberof (wbuf));
+  if (!l || l >= numberof (wbuf))
+    return 0;
+  return store_path (buf, size, wbuf) ? buf : 0;
+}
+
+FILE *WINAPI
+WINFS::fopen (const char *path, const char *mode)
+{
+  wpath w (path);
+  WCHAR wmode[16];
+  if (strlen (mode) >= numberof (wmode))
+    return 0;
+  s2u (wmode, mode);
+  return _wfopen (w, wmode);
 }
 
 int WINAPI

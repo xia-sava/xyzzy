@@ -41,6 +41,15 @@ public:
   static DWORD WINAPI WNetOpenEnum (DWORD dwScope, DWORD dwType, DWORD dwUsage,
                                     LPNETRESOURCE lpNetResource, LPHANDLE lphEnum);
 
+  /* パスを組み立てて返すものも、同じ形の文字列で受け取る */
+  static DWORD WINAPI GetModuleFileName (HMODULE hModule, LPSTR lpFilename, DWORD nSize);
+  static DWORD WINAPI GetTempPath (DWORD nBufferLength, LPSTR lpBuffer);
+  static DWORD WINAPI GetCurrentDirectory (DWORD nBufferLength, LPSTR lpBuffer);
+  static UINT WINAPI GetWindowsDirectory (LPSTR lpBuffer, UINT uSize);
+  static UINT WINAPI GetSystemDirectory (LPSTR lpBuffer, UINT uSize);
+  static const char *WINAPI getenv (const char *name, char *buf, DWORD size);
+  static FILE *WINAPI fopen (const char *path, const char *mode);
+
   static int WINAPI get_file_data (const char *, WIN32_FIND_DATA &);
 };
 

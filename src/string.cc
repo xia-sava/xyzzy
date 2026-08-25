@@ -407,6 +407,65 @@ u8seqlen (const u_char *s, const u_char *se)
   return n;
 }
 
+/* 終端まで数えずに、その場の並びの長さを見る */
+static inline int
+u8seqlen_z (const u_char *s)
+{
+  int n = (*s < 0xc0 ? 1
+           : *s < 0xe0 ? 2
+           : *s < 0xf0 ? 3
+           : *s < 0xf8 ? 4
+           : 1);
+  for (int i = 1; i < n; i++)
+    if ((s[i] & 0xc0) != 0x80)
+      return 1;
+  return n;
+}
+
+/* 一文字を取り出し、その分だけ進める。BMP の外は符号位置のまま返す */
+Char
+u8getc (const u_char *&s)
+{
+  int n = u8seqlen_z (s);
+  Char c;
+  switch (n)
+    {
+    case 2:
+      c = ((s[0] & 0x1f) << 6) | (s[1] & 0x3f);
+      break;
+
+    case 3:
+      c = ((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f);
+      break;
+
+    case 4:
+      c = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+           | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+      break;
+
+    default:
+      c = *s;
+      break;
+    }
+  s += n;
+  return c;
+}
+
+char *
+u82s (char *b, char *be, const char *s)
+{
+  size_t n = u82wl (s);
+  WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (n + 1));
+  u82u (w, s);
+  int l = WideCharToMultiByte (CP_ACP, 0, w, -1, b, be - b, 0, 0);
+  if (l <= 0)
+    {
+      *b = 0;
+      return b;
+    }
+  return b + l - 1;
+}
+
 size_t
 u82wl (const char *string)
 {

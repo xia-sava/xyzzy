@@ -151,9 +151,9 @@ get_section_name (void *base, void *p, char *buf, int size)
 int
 get_module_base_name (HMODULE h, LPSTR buf, DWORD size)
 {
-  if (!GetModuleFileName (h, buf, size))
+  if (!WINFS::GetModuleFileName (h, buf, size))
     return 0;
-  char *p = jrindex (buf, '\\');
+  char *p = strrchr (buf, '\\');
   if (p)
     strcpy (buf, p + 1);
   int l = strlen (buf);
@@ -402,7 +402,7 @@ cleanup_exception ()
 {
   const char* desc = get_exception_description (Win32Exception::code);
   char path[PATH_MAX];
-  GetModuleFileName (0, path, PATH_MAX);
+  WINFS::GetModuleFileName (0, path, PATH_MAX);
   int l = strlen (path);
   if (l >= 4 && !_stricmp (path + l - 4, ".exe"))
     strcpy (path + l - 4, ".BUG");
@@ -413,14 +413,14 @@ cleanup_exception ()
   if (!find_module_name (Win32Exception::r.ExceptionAddress, module))
     *module = 0;
 
-  FILE *fp = fopen (path, "w");
-  if (!fp && GetTempPath (sizeof path, path))
+  FILE *fp = WINFS::fopen (path, "w");
+  if (!fp && WINFS::GetTempPath (sizeof path, path))
     {
       char *p = find_last_slash (path);
       if (!p || p[1])
         strcat (path, "\\");
       strcat (path, "xyzzy.BUG");
-      fp = fopen (path, "w");
+      fp = WINFS::fopen (path, "w");
     }
   if (fp)
     {

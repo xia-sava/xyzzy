@@ -2513,10 +2513,12 @@ dump_object (FILE *fp, const ldll_module *d, int n,
 static void
 load_dyn_library (ldll_module *p)
 {
-  char *s = (char *)alloca (xstring_length (p->name) * 2 + 1);
-  w2s (s, p->name);
+  char *s = (char *)alloca (xstring_length (p->name) * 3 + 1);
+  w2u8 (s, p->name);
+  WCHAR *ws = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (p->name) + 1));
+  w2u (ws, p->name);
   p->loaded = 0;
-  HMODULE h = GetModuleHandle (s);
+  HMODULE h = GetModuleHandleW (ws);
   if (!h)
     {
       h = WINFS::LoadLibrary (s);
@@ -2753,7 +2755,7 @@ Fdump_xyzzy (lisp filename)
     }
   qsort (addr_orderp, nreps, sizeof *addr_orderp, compare_addr);
 
-  FILE *fp = fopen (path, "wb");
+  FILE *fp = WINFS::fopen (path, "wb");
   if (!fp)
     FEsimple_crtl_error (errno, filename);
 

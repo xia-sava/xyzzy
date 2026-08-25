@@ -74,8 +74,8 @@ static void
 init_module_dir ()
 {
   char path[PATH_MAX];
-  GetModuleFileName (0, path, sizeof path);
-  char *p = jrindex (path, '\\');
+  WINFS::GetModuleFileName (0, path, sizeof path);
+  char *p = strrchr (path, '\\');
   if (p)
     p[1] = 0;
   xsymbol_value (Qmodule_dir) = make_path (path);
@@ -91,10 +91,10 @@ static void
 init_windows_dir ()
 {
   char path[PATH_MAX];
-  GetWindowsDirectory (path, sizeof path);
+  WINFS::GetWindowsDirectory (path, sizeof path);
   xsymbol_value (Qwindows_dir) = make_path (path);
 
-  GetSystemDirectory (path, sizeof path);
+  WINFS::GetSystemDirectory (path, sizeof path);
   xsymbol_value (Qsystem_dir) = make_path (path);
 }
 
@@ -135,14 +135,15 @@ init_home_dir ()
 
   for (int i = 0; i <= 5; i += 5)
     {
-      char *e = getenv (xyzzyhome + i);
-      if (e && init_home_dir (e))
+      char e[PATH_MAX];
+      if (WINFS::getenv (xyzzyhome + i, e, sizeof e) && init_home_dir (e))
         return;
     }
 
-  char *drive = getenv ("HOMEDRIVE");
-  char *dir = getenv ("HOMEPATH");
-  if (drive && dir && strlen (drive) + strlen (dir) < sizeof path - 1)
+  char drive[PATH_MAX], dir[PATH_MAX];
+  if (WINFS::getenv ("HOMEDRIVE", drive, sizeof drive)
+      && WINFS::getenv ("HOMEPATH", dir, sizeof dir)
+      && strlen (drive) + strlen (dir) < sizeof path - 1)
     {
       strcpy (stpcpy (path, drive), dir);
       if (init_home_dir (path))
@@ -180,8 +181,9 @@ init_load_path ()
 static void
 init_user_config_path (const char *config_path)
 {
-  if (!config_path)
-    config_path = getenv ("XYZZYCONFIGPATH");
+  char env[PATH_MAX];
+  if (!config_path && WINFS::getenv ("XYZZYCONFIGPATH", env, sizeof env))
+    config_path = env;
   if (config_path)
     {
       char path[PATH_MAX], *tem;
@@ -197,13 +199,13 @@ init_user_config_path (const char *config_path)
         }
     }
 
-  char *path = (char *)alloca (w2sl (xsymbol_value (Qmodule_dir))
-                               + w2sl (xsymbol_value (Vuser_name))
+  char *path = (char *)alloca (w2u8l (xsymbol_value (Qmodule_dir))
+                               + w2u8l (xsymbol_value (Vuser_name))
                                + 32);
-  char *p = stpcpy (w2s (path, xsymbol_value (Qmodule_dir)), "usr");
+  char *p = stpcpy (w2u8 (path, xsymbol_value (Qmodule_dir)), "usr");
   WINFS::CreateDirectory (path, 0);
   *p++ = '/';
-  p = w2s (p, xsymbol_value (Vuser_name));
+  p = w2u8 (p, xsymbol_value (Vuser_name));
   WINFS::CreateDirectory (path, 0);
   *p++ = '/';
   strcpy (p, sysdep.windows_short_name);
@@ -218,15 +220,16 @@ init_user_config_path (const char *config_path)
 static void
 init_user_inifile_path (const char *ini_file)
 {
-  if (!ini_file)
-    ini_file = getenv ("XYZZYINIFILE");
+  char env[PATH_MAX];
+  if (!ini_file && WINFS::getenv ("XYZZYINIFILE", env, sizeof env))
+    ini_file = env;
   if (ini_file && find_slash (ini_file))
     {
       char path[PATH_MAX], *tem;
       int l = WINFS::GetFullPathName (ini_file, sizeof path, path, &tem);
       if (l && l < sizeof path)
         {
-          HANDLE h = CreateFile (path, GENERIC_READ, 0, 0, OPEN_ALWAYS,
+          HANDLE h = WINFS::CreateFile (path, GENERIC_READ, 0, 0, OPEN_ALWAYS,
                                  FILE_ATTRIBUTE_ARCHIVE, 0);
           if (h != INVALID_HANDLE_VALUE)
             {
@@ -240,9 +243,9 @@ init_user_inifile_path (const char *ini_file)
   if (!ini_file)
     ini_file = "xyzzy.ini";
 
-  char *path = (char *)alloca (w2sl (xsymbol_value (Quser_config_path))
+  char *path = (char *)alloca (w2u8l (xsymbol_value (Quser_config_path))
                                + strlen (ini_file) + 32);
-  strcpy (w2s (path, xsymbol_value (Quser_config_path)), ini_file);
+  strcpy (w2u8 (path, xsymbol_value (Quser_config_path)), ini_file);
   app.ini_file_path = xstrdup (path);
 }
 
@@ -251,7 +254,7 @@ init_dump_path ()
 {
   if (!*app.dump_image)
     {
-      int l = GetModuleFileName (0, app.dump_image, PATH_MAX);
+      int l = WINFS::GetModuleFileName (0, app.dump_image, PATH_MAX);
       char *e = app.dump_image + l;
       if (l > 4 && !_stricmp (e - 4, ".exe"))
         e -= 3;

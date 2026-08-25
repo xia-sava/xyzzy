@@ -61,12 +61,14 @@ Fsi_load_dll_module (lisp lname)
   if (dll != Qnil)
     return dll;
 
-  char *name = (char *)alloca (xstring_length (lname) * 2 + 1);
-  w2s (name, lname);
+  char *name = (char *)alloca (xstring_length (lname) * 3 + 1);
+  w2u8 (name, lname);
+  WCHAR *wname = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lname) + 1));
+  w2u (wname, lname);
 
   dll = make_dll_module ();
   lisp list = xcons (dll, xsymbol_value (Vdll_module_list));
-  HMODULE h = GetModuleHandle (name);
+  HMODULE h = GetModuleHandleW (wname);
   if (!h)
     {
       h = WINFS::LoadLibrary (name);

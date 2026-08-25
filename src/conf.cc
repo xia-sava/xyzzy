@@ -16,7 +16,7 @@ ini ()
   if (!ini_file.loaded () && app.ini_file_path)
     {
       WCHAR path[PATH_MAX];
-      s2u (path, app.ini_file_path);
+      u82u (path, app.ini_file_path);
       ini_file.open (path);
     }
   return ini_file;

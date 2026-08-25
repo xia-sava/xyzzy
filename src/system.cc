@@ -48,35 +48,36 @@ Fsi_get_key_state (lisp lvkey)
 lisp
 Fsi_search_path (lisp lfile, lisp lpath, lisp lext)
 {
-  char *path = 0;
-  char *file = 0;
-  char *ext = 0;
+  WCHAR *path = 0;
+  WCHAR *file = 0;
+  WCHAR *ext = 0;
 
   check_string (lfile);
-  file = (char *)alloca (xstring_length (lfile) * 2 + 1);
-  w2s (file, lfile);
+  file = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lfile) + 1));
+  w2u (file, lfile);
 
   if (lpath && lpath != Qnil)
     {
-      path = (char *)alloca (xstring_length (lpath) * 2 + 1);
-      w2s (path, lpath);
+      path = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lpath) + 1));
+      w2u (path, lpath);
     }
   if (lext && lext != Qnil)
     {
-      ext = (char *)alloca (xstring_length (lext) * 2 + 1);
-      w2s (ext, lext);
+      ext = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lext) + 1));
+      w2u (ext, lext);
     }
 
-  DWORD len = SearchPath (path, file, ext, 0, 0, 0);
+  DWORD len = SearchPathW (path, file, ext, 0, 0, 0);
   if (!len)
     return Qnil;
 
-  char *file_part = 0;
-  char *buffer = (char *)alloca (len);
-  if (!SearchPath (path, file, ext, len, buffer, &file_part))
+  WCHAR *file_part = 0;
+  WCHAR *buffer = (WCHAR *)alloca (sizeof (WCHAR) * len);
+  if (!SearchPathW (path, file, ext, len, buffer, &file_part))
     return Qnil;
 
-  return buffer ? make_path (buffer, 0) : Qnil;
+  map_backsl_to_sl (buffer);
+  return make_string (buffer);
 }
 
 lisp

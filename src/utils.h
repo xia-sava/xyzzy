@@ -58,6 +58,22 @@ map_sl_to_backsl (char *s)
   convert_backsl_with_sl (s, '/', '\\');
 }
 
+inline void
+map_sl_to_backsl (WCHAR *s)
+{
+  for (; *s; s++)
+    if (*s == '/')
+      *s = '\\';
+}
+
+inline void
+map_backsl_to_sl (WCHAR *s)
+{
+  for (; *s; s++)
+    if (*s == '\\')
+      *s = '/';
+}
+
 inline char *
 strappend (char *d, const char *s)
 {
