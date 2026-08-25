@@ -225,7 +225,7 @@ StatusWindow::putc (Char c)
           *sw_b++ = char (c == CC_DEL ? '?' : c + '@');
         }
       else
-        *sw_b++ = i2w (c);
+        *sw_b++ = ucs2_t (c);
     }
   return 1;
 }
@@ -258,11 +258,11 @@ StatusWindow::puts (const char *s, int fl)
   for (const u_char *p = (const u_char *)s; *p;)
     if (SJISP (*p) && p[1])
       {
-        putc ((*p << 8) | p[1]);
+        putc (s2w_char ((*p << 8) | p[1]));
         p += 2;
       }
     else
-      putc (*p++);
+      putc (s2w_char (*p++));
 
   if (fl)
     newline ();

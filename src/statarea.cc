@@ -149,11 +149,8 @@ status_area::char_unicode ()
     return calc_extent (ST_UNICODE, s_nil);
   if (wp->w_bufp->eobp (wp->w_point))
     return calc_extent (ST_UNICODE, s_eof);
-  ucs2_t wc = i2w (wp->w_point.ch ());
-  if (wc == ucs2_t (-1))
-    return calc_extent (ST_UNICODE, s_nil);
   char b[16];
-  sprintf (b, " U+%04X ", wc);
+  sprintf (b, " U+%04X ", wp->w_point.ch ());
   return calc_extent (ST_UNICODE, b);
 }
 

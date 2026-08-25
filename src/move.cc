@@ -776,15 +776,14 @@ hang_char (fold_info &f, int mode)
 static int
 iso8859_word_char_p (Char cc)
 {
-  ucs2_t wc = i2w (cc);
-  return (wc >= 0xc0
-          && (wc <= 0x1ff
-              || (wc >= 0x250
-                  && (wc <= 0x2af
-                      || (wc >= 0x386
-                          && (wc <= 0x3ce
-                              || (wc >= 0x401
-                                  && wc <= 0x4ff)))))));
+  return (cc >= 0xc0
+          && (cc <= 0x1ff
+              || (cc >= 0x250
+                  && (cc <= 0x2af
+                      || (cc >= 0x386
+                          && (cc <= 0x3ce
+                              || (cc >= 0x401
+                                  && cc <= 0x4ff)))))));
 }
 
 #if 0
