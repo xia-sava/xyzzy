@@ -5,6 +5,7 @@
 #
 #     --dry-run          何をするかだけ表示し、一切変更しない
 #     --force            同じ版でも適用する
+#     --from-app         xyzzy から呼ばれた。終了を待ってから始め、終わったら開き直す
 #
 #   <導入先> は環境変数 XYZZY_INSTALL_DIR でも渡せる。
 #
@@ -31,7 +32,12 @@ STAMP_NAME=".xyzzy-update"
 
 DRY_RUN=0
 FORCE=0
+FROM_APP=0
 INSTALL_DIR=""
+ORIG_ARGS=("$@")
+
+# xyzzy が消えるのを待つ上限。これを過ぎたら何も触らずに諦める。
+WAIT_LIMIT=60
 
 # 退避を終えてから転ぶと、導入先が中途半端なまま残る。戻し方を必ず添える。
 BACKUP_DONE=0
@@ -55,6 +61,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --force) FORCE=1 ;;
+    --from-app) FROM_APP=1 ;;
     -h|--help) usage 0 ;;
     -*) die "知らない選択肢: $1" ;;
     *) [ -n "$INSTALL_DIR" ] && die "導入先を 2 つ受け取った: $INSTALL_DIR と $1"
@@ -91,6 +98,20 @@ done
 
 INSTALL_DIR="$(cd "$INSTALL_DIR" && pwd)"
 
+# 導入先に置かれた自分自身も入れ替えるので、そこから起動されたときは一時領域へ写して
+# 走り直す。bash は走らせながら読むので、実行中のファイルを書き換えると壊れる。
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+case "$SELF" in
+  "$INSTALL_DIR"/*)
+    if [ -z "${XYZZY_UPDATE_RELOCATED:-}" ]; then
+      relocated="$(mktemp -d)/update-app.sh"
+      cp "$SELF" "$relocated" || die "自分自身を写せない"
+      export XYZZY_UPDATE_RELOCATED=1
+      exec bash "$relocated" ${ORIG_ARGS[@]+"${ORIG_ARGS[@]}"}
+    fi
+    ;;
+esac
+
 # 動作中かどうかは PowerShell に訊くので、Windows のパスが要る。bash から見える
 # 名前は /tmp のような別名になっていることがあり、そのまま渡すと何にも一致せず、
 # 「動いていない」と黙って通ってしまう。直せなければ止める。
@@ -108,13 +129,23 @@ LC_HOLD_DIR="$INSTALL_DIR.lc-hold"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# curl・7z は Windows のプログラムなので /tmp のような名前を書けない。呼び出し側の
+# 環境しだいで暗黙のパス変換が効かないことがある（MSYS_NO_PATHCONV など）ため、
+# native な道具へ渡す分は自分で直しておく。
+if command -v cygpath >/dev/null 2>&1; then
+  WORK_WIN="$(cygpath -m "$WORK")"
+else
+  WORK_WIN="$(to_win "$WORK")"
+fi
+[[ "$WORK_WIN" =~ ^[A-Za-z]:/ ]] || die "作業場所を Windows のパスへ直せない: $WORK"
+
 say "導入先        $INSTALL_DIR"
 say "配布物の置き場 $BASE_URL"
 say ""
 
 # --- 1. 配布中の版を調べる ------------------------------------------------
 say "[1/7] 配布中の版を調べる"
-curl -fsSL "$BASE_URL/manifest.json" -o "$WORK/manifest.json"
+curl -fsSL "$BASE_URL/manifest.json" -o "$WORK_WIN/manifest.json"
 [ $? -eq 0 ] || die "manifest.json を取得できない"
 
 NEW_VERSION="$(json_value "$WORK/manifest.json" version)"
@@ -148,7 +179,7 @@ fi
 
 # --- 2. 落として照合する --------------------------------------------------
 say "[2/7] 配布物を落として照合する"
-curl -fsSL "$BASE_URL/$NEW_ASSET" -o "$WORK/$NEW_ASSET"
+curl -fsSL "$BASE_URL/$NEW_ASSET" -o "$WORK_WIN/$NEW_ASSET"
 [ $? -eq 0 ] || die "$NEW_ASSET を取得できない"
 
 GOT_SHA="$(sha256sum "$WORK/$NEW_ASSET" | cut -d' ' -f1)"
@@ -159,7 +190,7 @@ if [ "$GOT_SHA" != "$NEW_SHA" ]; then
 fi
 say "        sha256 一致"
 
-7z x -o"$WORK/x" "$WORK/$NEW_ASSET" > /dev/null 2>&1
+7z x -o"$WORK_WIN/x" "$WORK_WIN/$NEW_ASSET" > /dev/null 2>&1
 [ $? -eq 0 ] || die "配布物を展開できない"
 
 SRC="$WORK/x/xyzzy"
@@ -170,11 +201,32 @@ say "        展開した"
 
 # --- 3. 動いていないことを確かめる ----------------------------------------
 say "[3/7] 動いていないことを確かめる"
-RUNNING="$(powershell.exe -NoProfile -NonInteractive -Command \
-  "Get-CimInstance Win32_Process -Filter \"Name='xyzzy.exe' OR Name='xyzzycli.exe' OR Name='xyzzyenv.exe'\" |
-   Where-Object { \$_.ExecutablePath -and \$_.ExecutablePath.StartsWith('$INSTALL_WIN'.Replace('/','\\'), 'OrdinalIgnoreCase') } |
-   ForEach-Object { \$_.ProcessId }" 2>/dev/null | tr -d '\r' | tr '\n' ' ')"
-RUNNING="$(printf '%s' "$RUNNING" | sed 's/^ *//;s/ *$//')"
+
+running_pids () {
+  local pids
+  pids="$(powershell.exe -NoProfile -NonInteractive -Command \
+    "Get-CimInstance Win32_Process -Filter \"Name='xyzzy.exe' OR Name='xyzzycli.exe' OR Name='xyzzyenv.exe'\" |
+     Where-Object { \$_.ExecutablePath -and \$_.ExecutablePath.StartsWith('$INSTALL_WIN'.Replace('/','\\'), 'OrdinalIgnoreCase') } |
+     ForEach-Object { \$_.ProcessId }" 2>/dev/null | tr -d '\r' | tr '\n' ' ')"
+  printf '%s' "$pids" | sed 's/^ *//;s/ *$//'
+}
+
+RUNNING="$(running_pids)"
+
+# xyzzy から呼ばれたときは、呼んだ当人がまだ生きている。消えるのを待ってから始める。
+# 待っても消えなければ、保存の確認で止まっているなどなので、何も触らずに諦める。
+if [ -n "$RUNNING" ] && [ "$FROM_APP" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
+  say "        終了を待っている（PID: $RUNNING）"
+  waited=0
+  while [ -n "$RUNNING" ] && [ "$waited" -lt "$WAIT_LIMIT" ]; do
+    sleep 1
+    waited=$((waited + 1))
+    RUNNING="$(running_pids)"
+  done
+  [ -n "$RUNNING" ] && die "$WAIT_LIMIT 秒待っても終了しなかった（PID: $RUNNING）。何も変更していない。"
+  say "        ${waited} 秒で終了した"
+fi
+
 if [ -n "$RUNNING" ]; then
   # 勝手に落とすと作業中のものが失われるので、こちらからは止めない。
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -218,6 +270,13 @@ for dir in lisp etc; do
   act "$dir/ （上書きのみ。導入先の追加分は残す）"
   [ "$DRY_RUN" -eq 1 ] || cp -r "$SRC/$dir/." "$INSTALL_DIR/$dir/" || die "$dir を置けない"
 done
+# 自分自身も配布物のものへ入れ替える。手順に不備があっても次の更新で直せる。
+# いま走っているのは一時領域へ写した方なので、実体を書き換えても差し支えない。
+if [ -f "$SRC/update-app.sh" ]; then
+  act "update-app.sh （更新の手順そのもの）"
+  [ "$DRY_RUN" -eq 1 ] || cp "$SRC/update-app.sh" "$INSTALL_DIR/update-app.sh" \
+    || die "update-app.sh を置けない"
+fi
 
 # --- 6. 古い派生物を退ける ------------------------------------------------
 say "[6/7] 古い派生物を退ける"
@@ -277,3 +336,10 @@ say ""
 say "  * 次の起動で etc/DOC とダンプが作り直される（少し待たされ、窓が前に出る）"
 say "  * site-lisp は .l から読まれる。.lc を作り直すと次から速くなる"
 say "  * 直前の姿は $BACKUP_DIR、その前は $BACKUP_PREV に残っている"
+
+# xyzzy から呼ばれたのなら、終わらせた当人を開き直す。
+if [ "$FROM_APP" -eq 1 ]; then
+  say ""
+  say "xyzzy を開き直す。"
+  "$INSTALL_DIR/xyzzy.exe" &
+fi
