@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # xyzzy のビルド・バイトコンパイル・テストを Bash から安定して実行する。
 #
-#   .claude/dev.local.sh build [Release|Debug] [Build|Rebuild]
-#   .claude/dev.local.sh bytecompile
-#   .claude/dev.local.sh test [visible [all]]
-#   .claude/dev.local.sh all
+#   misc/dev.sh build [Release|Debug] [Build|Rebuild]
+#   misc/dev.sh bytecompile
+#   misc/dev.sh test [visible [all]]
+#   misc/dev.sh all
 #
 # この環境固有の事情を吸収するのがこのスクリプトの目的:
 #
@@ -54,7 +54,7 @@ decode () { iconv -f CP932 -t UTF-8 -c < "$1" | dos2unix; }
 # 子プロセスは親のデスクトップを引き継ぐので、cmd をそこで起動すれば xyzzy も従う。
 # デスクトップを作れなかった場合は、見える方へ落とさずに失敗する。
 offscreen () {
-  MSYS_NO_PATHCONV=1 python "$REPO_WIN/.claude/rundesk.local.py" \
+  MSYS_NO_PATHCONV=1 python "$REPO_WIN/misc/verify/rundesk.py" \
     cmd.exe /c "$1"
 }
 

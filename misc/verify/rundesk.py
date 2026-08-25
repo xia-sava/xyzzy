@@ -1,6 +1,6 @@
 """Run a command on a separate desktop so its windows never touch the screen.
 
-    python rundesk.local.py <program> [args...]
+    python rundesk.py <program> [args...]
 
 Windows は「デスクトップ」ごとにウィンドウの世界が分かれていて、切り替えていない
 デスクトップの窓は利用者の画面に一切現れない。子プロセスは親のデスクトップを
@@ -82,7 +82,7 @@ def quote(a):
 
 def main(argv):
     if not argv:
-        sys.stderr.write("usage: rundesk.local.py <program> [args...]\n")
+        sys.stderr.write("usage: rundesk.py <program> [args...]\n")
         return 2
 
     hdesk = u32.CreateDesktopW(DESKTOP_NAME, None, None, 0, GENERIC_ALL, None)
