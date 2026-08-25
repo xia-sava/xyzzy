@@ -194,6 +194,9 @@ if [ -e "$BACKUP_DIR" ]; then
   if [ "$REPLACE_BACKUP" -eq 1 ]; then
     act "退避先を捨てる: $BACKUP_DIR"
     [ "$DRY_RUN" -eq 1 ] || rm -rf "$BACKUP_DIR"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    say "        退避先が既にある: $BACKUP_DIR"
+    say "        このまま試すと、ここで中止になる（--replace-backup で捨てられる）"
   else
     die "退避先が既にある: $BACKUP_DIR
 中身を確かめて消すか、--replace-backup を付けること。前回の退避を黙って捨てない。"
