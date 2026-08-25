@@ -12,9 +12,9 @@ Fsi_app_user_model_id ()
 void
 appid::set ()
 {
-  HMODULE shell32 = GetModuleHandle ("shell32");
+  HMODULE shell32 = GetModuleHandleW (L"shell32");
   if (!shell32)
-    shell32 = LoadLibrary ("shell32");
+    shell32 = LoadLibraryW (L"shell32");
   if (!shell32)
     return;
 

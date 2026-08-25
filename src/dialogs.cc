@@ -1423,13 +1423,14 @@ list_volume_name::thread_main ()
       for (int c = 'a'; c <= 'z' && m_hwnd; c++)
         if (m_drives & (1 << (c - 'a')))
           {
-            char name[5];
-            sprintf (name, "%c:\\", c);
-            int type = GetDriveType (name);
-            char volname[1024];
+            WCHAR name[5];
+            wsprintfW (name, L"%c:\\", c);
+            int type = GetDriveTypeW (name);
+            WCHAR volname[1024];
             if (type != DRIVE_REMOVABLE
-                && GetVolumeInformation (name, volname + 1, sizeof volname - 1,
-                                         0, 0, 0, 0, 0)
+                && GetVolumeInformationW (name, volname + 1,
+                                          numberof (volname) - 1,
+                                          0, 0, 0, 0, 0)
                 && volname[1])
               {
                 *volname = c;
@@ -1508,9 +1509,9 @@ DriveDialog::insert_drives (HWND hwnd)
           if (c == dd_defalt)
             cur = item;
 
-          char name[5];
-          sprintf (name, "%c:\\", c);
-          int type = GetDriveType (name);
+          WCHAR name[5];
+          wsprintfW (name, L"%c:\\", c);
+          int type = GetDriveTypeW (name);
 
           LV_ITEM lvi;
           lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
@@ -1527,7 +1528,7 @@ DriveDialog::insert_drives (HWND hwnd)
           ListView_InsertItem (hwnd, &lvi);
 
           SIZE sz;
-          GetTextExtentPoint32 (hdc, name, 2, &sz);
+          GetTextExtentPoint32W (hdc, name, 2, &sz);
           dd_maxw = max (dd_maxw, sz.cx);
         }
       else
@@ -1553,16 +1554,16 @@ DriveDialog::insert_volnames ()
   LONG maxw = 0;
   for (const xstring_node *p = dd_thread->list ().head (); p; p = p->next ())
     {
-      const char *volname = *p;
+      const WCHAR *volname = *p;
       if (lower_char_p (*volname & 255))
         {
           int i = dd_indexes[*volname - 'a'];
           if (i >= 0)
             {
               volname++;
-              ListView_SetItemText (hwnd, i, 1, (char *)volname);
+              ListView_SetItemText (hwnd, i, 1, (WCHAR *)volname);
               SIZE sz;
-              GetTextExtentPoint32 (hdc, volname, strlen (volname), &sz);
+              GetTextExtentPoint32W (hdc, volname, wcslen (volname), &sz);
               maxw = max (maxw, sz.cx);
             }
         }

@@ -429,8 +429,11 @@ paint_ascii_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                    const char *string, int len, const INT *padding)
 {
   const FontObject &f = app.text_font.font (FONT_ASCII);
-  ExtTextOut (hdc, x + f.offset ().x, y + f.offset ().y, flags,
-              &r, string, len, padding);
+  WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (len + 1));
+  for (int i = 0; i < len; i++)
+    w[i] = u_char (string[i]);
+  ExtTextOutW (hdc, x + f.offset ().x, y + f.offset ().y, flags,
+               &r, w, len, padding);
 }
 
 // 主フォントは升目に収まる寸法で作られているので、走査ごとにまとめて描く。
@@ -734,13 +737,13 @@ Window::paint_glyphs (HDC hdc, HDC hdcmem, const glyph_t *gstart, const glyph_t 
             {
               r.bottom = y + app.text_font.size ().cy;
               r.top = r.bottom - app.text_font.line_width ();
-              ExtTextOut (hdc, r.left, r.top, ETO_OPAQUE, &r, "", 0, 0);
+              ExtTextOutW (hdc, r.left, r.top, ETO_OPAQUE, &r, L"", 0, 0);
             }
           if (!yoffset && c & GLYPH_STRIKEOUT)
             {
               r.top = y + app.text_font.size ().cy / 2;
               r.bottom = r.top + app.text_font.line_width ();
-              ExtTextOut (hdc, r.left, r.top, ETO_OPAQUE, &r, "", 0, 0);
+              ExtTextOutW (hdc, r.left, r.top, ETO_OPAQUE, &r, L"", 0, 0);
             }
 
           SetBkColor (hdc, obg);
@@ -3190,16 +3193,19 @@ mode_line_percent_painter::paint_percent (HDC hdc)
   format_percent(nb, 32, m_percent);
   m_last_width = strlen(nb);
 
+  WCHAR wb[32];
+  u82u (wb, nb);
+
   SIZE size;
-  GetTextExtentPoint32 (hdc, nb, m_last_width, &size);
+  GetTextExtentPoint32W (hdc, wb, m_last_width, &size);
 
   long right = size.cx + r.left;
   r.right = min(right, m_ml_size.cx - 1);
 
-  ExtTextOut (hdc,
-              m_point_pixel ,
-              1 + m_modeline_paramp->m_exlead,
-              ETO_OPAQUE | ETO_CLIPPED, &r, nb, m_last_width, 0);
+  ExtTextOutW (hdc,
+               m_point_pixel ,
+               1 + m_modeline_paramp->m_exlead,
+               ETO_OPAQUE | ETO_CLIPPED, &r, wb, m_last_width, 0);
   m_last_percent = m_percent;
   
 
@@ -3261,10 +3267,12 @@ mode_line_point_painter::paint_point (HDC hdc)
   for (; e > b && e[-1] == ' '; e--)
     ;
 
-  ExtTextOut (hdc,
-              x0 + m_modeline_paramp->m_exts[b - nb],
-              1 + m_modeline_paramp->m_exlead,
-              ETO_OPAQUE | ETO_CLIPPED, &r, b, e - b, 0);
+  WCHAR wb[32];
+  u82u (wb, nb);
+  ExtTextOutW (hdc,
+               x0 + m_modeline_paramp->m_exts[b - nb],
+               1 + m_modeline_paramp->m_exlead,
+               ETO_OPAQUE | ETO_CLIPPED, &r, wb + (b - nb), e - b, 0);
   m_last_ml_column = m_column;
   m_last_ml_linenum = m_plinenum;
   return right;

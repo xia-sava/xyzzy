@@ -836,9 +836,9 @@ NormalProcess::find_tty (HWND hwnd, LPARAM arg)
   GetWindowThreadProcessId (hwnd, &pid);
   if (pid != ((dos_prompt *)arg)->pid)
     return 1;
-  char name[32];
-  if (!GetClassName (hwnd, name, sizeof name)
-      || lstrcmp (name, "tty"))
+  WCHAR name[32];
+  if (!GetClassNameW (hwnd, name, numberof (name))
+      || lstrcmpW (name, L"tty"))
     return 1;
   ((dos_prompt *)arg)->hwnd = hwnd;
   return 0;

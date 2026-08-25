@@ -131,7 +131,7 @@ ArchiverP::match_suffix (const char *path, int l,
 static LRESULT CALLBACK
 NotifyWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  static const UINT extract = RegisterWindowMessage (WM_ARCEXTRACT);
+  static const UINT extract = RegisterWindowMessageA (WM_ARCEXTRACT);
   if (msg == extract)
     {
       EXTRACTINGINFO *i = (EXTRACTINGINFO *)lparam;
@@ -174,26 +174,27 @@ NotifyWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         }
       return 0;
     }
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcA (hwnd, msg, wparam, lparam);
 }
 
 static const char NotifyClass[] = "ArcNotify";
 
+/* 知らせを受け取る相手が ANSI の DLL なので、この窓は ANSI のまま保つ */
 int
 register_wndclass ()
 {
-  WNDCLASS wc;
+  WNDCLASSA wc;
   wc.style = 0;
   wc.lpfnWndProc = NotifyWndProc;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
-  wc.hInstance = GetModuleHandle (0);
+  wc.hInstance = GetModuleHandleW (0);
   wc.hIcon = 0;
   wc.hCursor = 0;
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = NotifyClass;
-  return RegisterClass (&wc);
+  return RegisterClassA (&wc);
 }
 
 static HWND
@@ -202,8 +203,8 @@ create_notify_window (HWND parent)
   static int done;
   if (!done)
     done = register_wndclass ();
-  return CreateWindow (NotifyClass, "", parent ? WS_CHILD : WS_OVERLAPPEDWINDOW,
-                       0, 0, 0, 0, parent, 0, GetModuleHandle (0), 0);
+  return CreateWindowA (NotifyClass, "", parent ? WS_CHILD : WS_OVERLAPPEDWINDOW,
+                        0, 0, 0, 0, parent, 0, GetModuleHandleW (0), 0);
 }
 #endif /* NEED_EXTRACTINGINFO */
 
@@ -744,7 +745,7 @@ SevenZip::puts_create (FILE *fp, char *name, const char *path) const
       putc ('\\', fp);
     }
   fputs (name, fp);
-  DWORD a = GetFileAttributes (path);
+  DWORD a = GetFileAttributesA (path);
   if (a != ~0 && a & FILE_ATTRIBUTE_DIRECTORY)
     {
       if (!has_trail_slash (path))

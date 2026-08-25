@@ -112,27 +112,27 @@ XCOLORREF Window::w_textprop_xbackcolor[GLYPH_TEXTPROP_NCOLORS];
 
 const wcolor_index_name wcolor_index_names[] =
 {
-  {cfgTextColor, RGB (0, 0, 0), "文字色"},
-  {cfgBackColor, RGB (0xff, 0xff, 0xff), "背景色"},
-  {cfgCtlColor, RGB (0x80, 0x80, 0), "制御文字"},
-  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), "選択文字色"},
-  {cfgSelectionBackColor, RGB (0, 0, 0), "選択背景色"},
-  {cfgKwdColor1, RGB (0, 0, 0xff), "キーワード1"},
-  {cfgKwdColor2, RGB (0, 0x40, 0), "キーワード2"},
-  {cfgKwdColor3, RGB (0x80, 0, 0x80), "キーワード3"},
-  {cfgStringColor, RGB (0, 0x40, 0), "文字列"},
-  {cfgCommentColor, RGB (0, 0x80, 0), "コメント"},
-  {cfgTagColor, RGB (0x40, 0x40, 0), "タグ"},
-  {cfgCursorColor, RGB (0x80, 0, 0x80), "行カーソル"},
-  {cfgCaretColor, RGB (0, 0, 0), "キャレット"},
-  {cfgImeCaretColor, RGB (0x80, 0, 0), "IMEキャレット"},
-  {cfgLinenum, RGB (0, 0, 0), "行番号"},
-  {cfgReverse, RGB (0, 0, 0), "ニセ反転色"},
-  {cfgUnselectedModeLineFg, RGB (0, 0, 0), "モード行文字色"},
-  {cfgUnselectedModeLineBg, RGB (0, 0, 0), "モード行背景色"},
+  {cfgTextColor, RGB (0, 0, 0), L"文字色"},
+  {cfgBackColor, RGB (0xff, 0xff, 0xff), L"背景色"},
+  {cfgCtlColor, RGB (0x80, 0x80, 0), L"制御文字"},
+  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), L"選択文字色"},
+  {cfgSelectionBackColor, RGB (0, 0, 0), L"選択背景色"},
+  {cfgKwdColor1, RGB (0, 0, 0xff), L"キーワード1"},
+  {cfgKwdColor2, RGB (0, 0x40, 0), L"キーワード2"},
+  {cfgKwdColor3, RGB (0x80, 0, 0x80), L"キーワード3"},
+  {cfgStringColor, RGB (0, 0x40, 0), L"文字列"},
+  {cfgCommentColor, RGB (0, 0x80, 0), L"コメント"},
+  {cfgTagColor, RGB (0x40, 0x40, 0), L"タグ"},
+  {cfgCursorColor, RGB (0x80, 0, 0x80), L"行カーソル"},
+  {cfgCaretColor, RGB (0, 0, 0), L"キャレット"},
+  {cfgImeCaretColor, RGB (0x80, 0, 0), L"IMEキャレット"},
+  {cfgLinenum, RGB (0, 0, 0), L"行番号"},
+  {cfgReverse, RGB (0, 0, 0), L"ニセ反転色"},
+  {cfgUnselectedModeLineFg, RGB (0, 0, 0), L"モード行文字色"},
+  {cfgUnselectedModeLineBg, RGB (0, 0, 0), L"モード行背景色"},
 
-  {0, RGB (0, 0, 0), "選択モード行文字色"},
-  {0, RGB (0, 0, 0), "選択モード行背景色"},
+  {0, RGB (0, 0, 0), L"選択モード行文字色"},
+  {0, RGB (0, 0, 0), L"選択モード行背景色"},
 };
 
 ModelineParam::ModelineParam ()
@@ -167,7 +167,7 @@ ModelineParam::init (HFONT hf)
   for (int i = 0; i < 22; i++)
     {
       SIZE size;
-      GetTextExtentPoint32 (hdc, "0000000000:0000000000", i, &size);
+      GetTextExtentPoint32W (hdc, L"0000000000:0000000000", i, &size);
       m_exts[i] = size.cx;
     }
   SelectObject (hdc, of);
@@ -2738,8 +2738,8 @@ Flist_xyzzy_windows ()
       HWND hwnd = xh.next (i);
       if (!hwnd || i <= o)
         break;
-      char buf[256];
-      if (GetWindowText (hwnd, buf, sizeof buf))
+      WCHAR buf[256];
+      if (GetWindowTextW (hwnd, buf, numberof (buf)))
         p = xcons (xcons (make_fixnum (i), make_string (buf)), p);
     }
   return Fnreverse (p);
@@ -3348,10 +3348,10 @@ Window::paint_ruler (HDC hdc, const RECT &r, int x, int y, int column) const
 {
   if (!(column % 10))
     {
-      char buf[32];
-      int l = sprintf (buf, "%d", column);
-      ExtTextOut (hdc, x - l * sysdep.ruler_ext.cx / 2, r.top,
-                  ETO_CLIPPED, &r, buf, l, 0);
+      WCHAR buf[32];
+      int l = wsprintfW (buf, L"%d", column);
+      ExtTextOutW (hdc, x - l * sysdep.ruler_ext.cx / 2, r.top,
+                   ETO_CLIPPED, &r, buf, l, 0);
     }
   else if (!(column % 5))
     draw_vline (hdc, y - 2, y + 2, x, sysdep.window_text);

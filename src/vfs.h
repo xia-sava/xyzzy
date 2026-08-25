@@ -39,11 +39,14 @@ public:
                                    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
                                    DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
   static BOOL WINAPI DeleteFile (LPCSTR lpFileName);
+  static BOOL WINAPI CopyFile (LPCSTR lpExistingFileName, LPCSTR lpNewFileName,
+                               BOOL bFailIfExists);
   static HANDLE WINAPI FindFirstFile (LPCSTR lpFileName, find_data *lpFindFileData);
   static BOOL WINAPI FindNextFile (HANDLE hFindFile, find_data *lpFindFileData);
   static BOOL WINAPI GetDiskFreeSpace (LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster,
                                        LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters,
                                        LPDWORD lpTotalNumberOfClusters);
+  static UINT WINAPI GetDriveType (LPCSTR lpRootPathName);
   static DWORD WINAPI GetFileAttributes (LPCSTR lpFileName);
   static DWORD WINAPI GetFullPathName (LPCSTR lpFileName, DWORD nBufferLength, LPSTR lpBuffer, LPSTR *lpFilePart);
   static UINT WINAPI GetTempFileName (LPCSTR lpPathName, LPCSTR lpPrefixString, UINT uUnique, LPSTR lpTempFileName);
@@ -57,7 +60,7 @@ public:
   static BOOL WINAPI SetCurrentDirectory (LPCSTR lpPathName);
   static BOOL WINAPI SetFileAttributes (LPCSTR lpFileName, DWORD dwFileAttributes);
   static DWORD WINAPI WNetOpenEnum (DWORD dwScope, DWORD dwType, DWORD dwUsage,
-                                    LPNETRESOURCE lpNetResource, LPHANDLE lphEnum);
+                                    LPNETRESOURCEW lpNetResource, LPHANDLE lphEnum);
 
   /* パスを組み立てて返すものも、同じ形の文字列で受け取る */
   static DWORD WINAPI GetModuleFileName (HMODULE hModule, LPSTR lpFilename, DWORD nSize);

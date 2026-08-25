@@ -381,22 +381,22 @@ ime_composition (HWND hwnd, LPARAM lparam)
           ? !(app.kbdq.ime_property () & IME_PROP_UNICODE)
           : xsymbol_value (Vunicode_ime) != Qt)
         {
-          int l = app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTSTR, 0, 0);
+          int l = app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTSTR, 0, 0);
           if (l > 0)
             {
               char *s = (char *)alloca (l + 1);
-              if (app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTSTR, s, l) == l)
+              if (app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTSTR, s, l) == l)
                 {
                   app.kbdq.puts (s, l);
 
                   lparam &= ~GCS_RESULTSTR;
 
-                  int rl = app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTREADSTR, 0, 0);
+                  int rl = app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTREADSTR, 0, 0);
                   if (rl > 0)
                     {
                       char *rs = (char *)alloca (rl + 1);
-                      if (app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTREADSTR,
-                                                                 rs, rl) == rl)
+                      if (app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTREADSTR,
+                                                                  rs, rl) == rl)
                         {
                           s[l] = rs[rl] = 0;
                           app.ime_compq.push (s, l, rs, rl);
@@ -1020,8 +1020,8 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
       if (!sysdep.Win98p () && !sysdep.Win5p ())
         {
-          static const UINT msime = RegisterWindowMessage (WM_MSIME_RECONVERT);
-          static const UINT atok = RegisterWindowMessage (WM_ATOK_RECONVERT);
+          static const UINT msime = RegisterWindowMessageW (WM_MSIME_RECONVERT);
+          static const UINT atok = RegisterWindowMessageW (WM_ATOK_RECONVERT);
           if ((msg == msime || msg == atok)
               && wparam == IMR_RECONVERTSTRING)
             return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 1);

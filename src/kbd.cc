@@ -12,7 +12,7 @@ kbd_queue::kbd_queue ()
        reconv (0), putc_pending (-1), ime_prop (0), unicode_kbd (0), gc_timer (0)
 {
   GetKeyboardLayout =
-    (GETKEYBOARDLAYOUT)GetProcAddress (GetModuleHandle ("USER32"),
+    (GETKEYBOARDLAYOUT)GetProcAddress (GetModuleHandleW (L"USER32"),
                                        "GetKeyboardLayout");
 
   for (int i = 0; i < QUEUE_MAX; i++)
@@ -983,9 +983,9 @@ kbd_queue::get_kbd_layout () const
   if (GetKeyboardLayout)
     return GetKeyboardLayout (0);
 
-  char b[KL_NAMELENGTH];
-  if (GetKeyboardLayoutName (b))
-    return HKL (strtol (b, 0, 16));
+  WCHAR b[KL_NAMELENGTH];
+  if (GetKeyboardLayoutNameW (b))
+    return HKL (wcstol (b, 0, 16));
   return HKL (MAKELANGID (LANG_JAPANESE, SUBLANG_DEFAULT));
 }
 
@@ -1422,7 +1422,7 @@ get_kbd_layout_name (HKL hkl, WCHAR *buf, int size)
 
 typedef UINT (WINAPI *GETKEYBOARDLAYOUTLIST)(int, HKL *);
 static const GETKEYBOARDLAYOUTLIST pGetKeyboardLayoutList =
-  (GETKEYBOARDLAYOUTLIST)GetProcAddress (GetModuleHandle ("user32"),
+  (GETKEYBOARDLAYOUTLIST)GetProcAddress (GetModuleHandleW (L"user32"),
                                          "GetKeyboardLayoutList");
 
 lisp

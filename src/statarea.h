@@ -36,13 +36,13 @@ class status_area
   int time ();
   void parse_format (const Char *, int);
   static lisp format_modified_p ();
-  static int char_ext (HDC hdc, char c)
+  static int char_ext (HDC hdc, WCHAR c)
     {
       SIZE sz;
-      GetTextExtentPoint32 (hdc, &c, 1, &sz);
+      GetTextExtentPoint32W (hdc, &c, 1, &sz);
       return sz.cx;
     }
-  static int char_max_ext (HDC, char, char);
+  static int char_max_ext (HDC, WCHAR, WCHAR);
 public:
   void init (HWND);
   void resize ();

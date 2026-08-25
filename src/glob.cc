@@ -59,21 +59,21 @@ void
 file_masks::set_text (HWND hwnd) const
 {
   if (empty_p ())
-    SetWindowText (hwnd, "");
+    SetWindowTextW (hwnd, L"");
   else
     {
       int nbytes = 16;
       for (char **p = fm_masks; *p; p++)
         nbytes += strlen (*p) + 1;
 
-      char *b0 = (char *)alloca (nbytes);
-      char *b = stpcpy (b0, "Mask:");
+      WCHAR *b0 = (WCHAR *)alloca (sizeof (WCHAR) * nbytes);
+      WCHAR *b = stpcpy (b0, L"Mask:");
       for (char **p = fm_masks; *p; p++)
         {
           *b++ = ' ';
-          b = stpcpy (b, *p);
+          b = u82u (b, *p);
         }
-      SetWindowText (hwnd, b0);
+      SetWindowTextW (hwnd, b0);
     }
 }
 

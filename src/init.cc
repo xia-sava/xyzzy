@@ -827,7 +827,7 @@ static int
 init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 {
   SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
-  SetDllDirectory("");
+  SetDllDirectoryW (L"");
   app.toplev = 0;
 
   init_ucs2_table ();

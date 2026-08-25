@@ -1171,7 +1171,7 @@ Buffer::save_buffer (lisp encoding, lisp eol)
   lisp by_copying = symbol_value (Vbackup_by_copying, this);
   if (precious_flag != Qnil && by_copying == Kremote)
     {
-      switch (GetDriveType (root_path_name (tmpname, filename)))
+      switch (WINFS::GetDriveType (root_path_name (tmpname, filename)))
         {
         case DRIVE_REMOVABLE:
         case DRIVE_FIXED:
@@ -1217,7 +1217,7 @@ Buffer::save_buffer (lisp encoding, lisp eol)
             make_temp_file (backup, filename);
         }
 
-      if (*backup && !CopyFile (filename, backup, 0))
+      if (*backup && !WINFS::CopyFile (filename, backup, 0))
         {
           int e = GetLastError ();
           WINFS::DeleteFile (backup);

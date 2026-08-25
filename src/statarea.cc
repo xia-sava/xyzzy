@@ -5,7 +5,7 @@ const char status_area::s_nil[] = " ";
 const char status_area::s_eof[] = " EOF ";
 
 int
-status_area::char_max_ext (HDC hdc, char c1, char c2)
+status_area::char_max_ext (HDC hdc, WCHAR c1, WCHAR c2)
 {
   int cx = 0;
   for (; c1 <= c2; c1++)
@@ -96,7 +96,8 @@ status_area::get_extent (const char *s) const
   HDC hdc = GetDC (s_hwnd);
   HGDIOBJ of = SelectObject (hdc, s_hfont);
   SIZE sz;
-  GetTextExtentPoint32 (hdc, s, strlen (s), &sz);
+  WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (strlen (s) + 1));
+  GetTextExtentPoint32W (hdc, w, u82u (w, s) - w, &sz);
   SelectObject (hdc, of);
   ReleaseDC (s_hwnd, hdc);
   return sz.cx;

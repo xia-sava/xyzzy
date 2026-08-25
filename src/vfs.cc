@@ -7,8 +7,8 @@ class NetPassDlg
 {
   HWND hwnd;
 public:
-  char username[256];
-  char passwd[256];
+  WCHAR username[256];
+  WCHAR passwd[256];
   const char *remote;
 
 private:
@@ -35,8 +35,8 @@ NetPassDlg::do_command (int id, int code)
   switch (id)
     {
     case IDOK:
-      GetDlgItemText (hwnd, IDC_USERNAME, username, sizeof username);
-      GetDlgItemText (hwnd, IDC_PASSWD, passwd, sizeof passwd);
+      GetDlgItemTextW (hwnd, IDC_USERNAME, username, numberof (username));
+      GetDlgItemTextW (hwnd, IDC_PASSWD, passwd, numberof (passwd));
       /* fall thru... */
     case IDCANCEL:
       EndDialog (hwnd, id);
@@ -49,7 +49,9 @@ NetPassDlg::init_dialog ()
 {
   center_window (hwnd);
   set_window_icon (hwnd);
-  SetDlgItemText (hwnd, IDC_SHARE_NAME, remote);
+  WCHAR w[PATH_MAX + 1];
+  u82u (w, remote);
+  SetDlgItemTextW (hwnd, IDC_SHARE_NAME, w);
 }
 
 BOOL
@@ -92,8 +94,8 @@ NetPassDlg::netpass_dlgproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 int
 NetPassDlg::do_modal ()
 {
-  return DialogBoxParam (app.hinst, MAKEINTRESOURCE (IDD_NETPASSWD),
-                         get_active_window (), netpass_dlgproc, LPARAM (this)) == IDOK;
+  return DialogBoxParamW (app.hinst, MAKEINTRESOURCE (IDD_NETPASSWD),
+                          get_active_window (), netpass_dlgproc, LPARAM (this)) == IDOK;
 }
 
 #define WINFS_CALL1(TYPE, FAILED, PATH, FN) \
@@ -131,14 +133,17 @@ skip_share (const char *path, int noshare_ok)
 static int
 try_connect (char *remote, int e)
 {
-  NETRESOURCE nr;
+  WCHAR wremote[PATH_MAX + 1];
+  u82u (wremote, remote);
+
+  NETRESOURCEW nr;
   nr.dwType = RESOURCETYPE_DISK;
   nr.lpLocalName = 0;
-  nr.lpRemoteName = remote;
+  nr.lpRemoteName = wremote;
   nr.lpProvider = 0;
 
   if (e == ERROR_ACCESS_DENIED
-      && WNetAddConnection2 (&nr, 0, 0, 0) == NO_ERROR)
+      && WNetAddConnection2W (&nr, 0, 0, 0) == NO_ERROR)
     return 1;
 
   while (1)
@@ -147,7 +152,7 @@ try_connect (char *remote, int e)
       if (!d.do_modal ())
         return 0;
 
-      switch (WNetAddConnection2 (&nr, d.passwd, d.username, 0))
+      switch (WNetAddConnection2W (&nr, d.passwd, d.username, 0))
         {
         case NO_ERROR:
           return 1;
@@ -292,6 +297,15 @@ WINFS::DeleteFile (LPCSTR lpFileName)
   WINFS_CALL1 (BOOL, FALSE, lpFileName, DeleteFileW (w));
 }
 
+BOOL WINAPI
+WINFS::CopyFile (LPCSTR lpExistingFileName, LPCSTR lpNewFileName,
+                 BOOL bFailIfExists)
+{
+  wpath from (lpExistingFileName), to (lpNewFileName);
+  WINFS_CALL2 (BOOL, FALSE, lpExistingFileName, lpNewFileName,
+               CopyFileW (from, to, bFailIfExists));
+}
+
 static void
 store_find_data (find_data *a, const WIN32_FIND_DATAW &w)
 {
@@ -343,13 +357,14 @@ GetDiskFreeSpaceFAT32 (LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster,
   char buf[PATH_MAX + 1];
   if (!lpRootPathName)
     {
-      if (!GetCurrentDirectory (sizeof buf, buf))
+      if (!GetCurrentDirectoryA (sizeof buf, buf))
         return 0;
       lpRootPathName = root_path_name (buf, buf);
     }
 
-  dyn_handle hvwin32 (CreateFile ("\\\\.\\vwin32", 0, 0, 0, 0,
-                                  FILE_FLAG_DELETE_ON_CLOSE, 0));
+  /* 求める先が DOS の呼び出しなので、渡す文字列はバイト列のまま */
+  dyn_handle hvwin32 (CreateFileA ("\\\\.\\vwin32", 0, 0, 0, 0,
+                                   FILE_FLAG_DELETE_ON_CLOSE, 0));
   if (!hvwin32.valid ())
     return 0;
 
@@ -434,6 +449,13 @@ WINFS::internal_GetFileAttributes (LPCSTR lpFileName)
 {
   wpath w (lpFileName);
   WINFS_CALL1 (DWORD, -1, lpFileName, GetFileAttributesW (w));
+}
+
+UINT WINAPI
+WINFS::GetDriveType (LPCSTR lpRootPathName)
+{
+  wpath w (lpRootPathName);
+  return ::GetDriveTypeW (w);
 }
 
 DWORD WINAPI
@@ -587,14 +609,16 @@ WINFS::GetFullPathName (LPCSTR path, DWORD size, LPSTR buf, LPSTR *name)
 
 DWORD WINAPI
 WINFS::WNetOpenEnum (DWORD dwScope, DWORD dwType, DWORD dwUsage,
-                     LPNETRESOURCE lpNetResource, LPHANDLE lphEnum)
+                     LPNETRESOURCEW lpNetResource, LPHANDLE lphEnum)
 {
-  if (!lpNetResource)
-    return ::WNetOpenEnum (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
+  DWORD r = ::WNetOpenEnumW (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
+  if (r == NO_ERROR || !lpNetResource || !lpNetResource->lpRemoteName)
+    return r;
 
-  DWORD r = ::WNetOpenEnumA (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
-  if (r != NO_ERROR && askpass_noshare (lpNetResource->lpRemoteName))
-    r = ::WNetOpenEnumA (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
+  char path[PATH_MAX + 1];
+  u2u8 (path, lpNetResource->lpRemoteName);
+  if (askpass_noshare (path))
+    r = ::WNetOpenEnumW (dwScope, dwType, dwUsage, lpNetResource, lphEnum);
   return r;
 }
 

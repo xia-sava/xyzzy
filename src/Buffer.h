@@ -36,7 +36,7 @@ struct wcolor_index_name
 {
   const WCHAR *name;
   COLORREF rgb;
-  const char *display_name;
+  const WCHAR *display_name;
 };
 
 extern const wcolor_index_name wcolor_index_names[];

@@ -114,8 +114,9 @@ ifile::get_titles (FILE *fp)
         return 0;
       if_headers[i].ih_file[iheader::FILE_LENGTH] = 0;
       if_headers[i].ih_title[iheader::TITLE_LENGTH] = 0;
+      /* 索引の綴りは CP932 で決まっているので、バイト列のまま辿る */
       for (char *p = if_headers[i].ih_title, *pe = p + iheader::TITLE_LENGTH;
-           p < pe; p = CharNext (p))
+           p < pe; p = CharNextA (p))
         if (*p && *(u_char *)p < ' ')
           *p = ' ';
     }
@@ -249,14 +250,18 @@ iset::init_files (HWND dlg)
     for (int i = 0; i < f->if_nfiles; i++)
       if (is_match_all || f->if_headers[i].ih_match)
         {
-          int idx = SendDlgItemMessage (dlg, IDC_FILES, LB_ADDSTRING, 0,
-                                        LPARAM (f->if_headers[i].ih_title));
+          WCHAR title[iheader::TITLE_LENGTH + 1];
+          s2u (title, f->if_headers[i].ih_title);
+          int idx = SendDlgItemMessageW (dlg, IDC_FILES, LB_ADDSTRING, 0,
+                                         LPARAM (title));
           if (idx != LB_ERR)
-            SendDlgItemMessage (dlg, IDC_FILES, LB_SETITEMDATA,
-                                idx, LPARAM (&f->if_headers[i]));
+            SendDlgItemMessageW (dlg, IDC_FILES, LB_SETITEMDATA,
+                                 idx, LPARAM (&f->if_headers[i]));
         }
-  SendDlgItemMessage (dlg, IDC_FILES, LB_SETCURSEL, 0, 0);
-  SetDlgItemText (dlg, IDC_TOPIC, is_topic);
+  SendDlgItemMessageW (dlg, IDC_FILES, LB_SETCURSEL, 0, 0);
+  WCHAR wtopic[256];
+  s2u (wtopic, is_topic);
+  SetDlgItemTextW (dlg, IDC_TOPIC, wtopic);
 }
 
 inline
@@ -323,8 +328,11 @@ select_dialog_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
         case IDOK:
           {
             iset *is = (iset *)GetWindowLong (dlg, DWL_USER);
+            WCHAR w[256];
+            GetDlgItemTextW (dlg, IDC_TOPIC, w, numberof (w));
             char buf[256];
-            GetDlgItemText (dlg, IDC_TOPIC, buf, sizeof buf);
+            if (!WideCharToMultiByte (CP_ACP, 0, w, -1, buf, sizeof buf, 0, 0))
+              *buf = 0;
             if (strcmp (buf, is->is_topic))
               {
                 strcpy (is->is_topic, buf);
@@ -366,7 +374,7 @@ iset::lookup ()
 static void
 trim_spaces (char *p)
 {
-  for (; *p && *p != ' ' && *p != '\t'; p = CharNext (p))
+  for (; *p && *p != ' ' && *p != '\t'; p = CharNextA (p))
     ;
   *p = 0;
 }

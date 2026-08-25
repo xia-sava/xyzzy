@@ -369,7 +369,7 @@ shell_context_menu (HWND hwnd, IShellFolder *sf,
   ci.cbSize = sizeof ci;
   ci.fMask = 0;
   ci.hwnd = hwnd;
-  ci.lpVerb = MAKEINTRESOURCE (id - 1);
+  ci.lpVerb = MAKEINTRESOURCEA (id - 1);
   ci.lpParameters = "";
   ci.lpDirectory = "";
   ci.nShow = SW_SHOWNORMAL;
@@ -1047,7 +1047,7 @@ text_drop_target::DragLeave ()
   return S_OK;
 }
 
-static UINT CF_XYZZYTEXT = RegisterClipboardFormat ("xyzzy internal text");
+static UINT CF_XYZZYTEXT = RegisterClipboardFormatW (L"xyzzy internal text");
 
 struct xyzzytext_header
 {

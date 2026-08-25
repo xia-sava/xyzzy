@@ -3,8 +3,8 @@
 #include "privctlimpl.h"
 
 static BOOL PrivateControlsInitialized;
-static const char PropName[] = "PropPrivCtrl";
-static const char OwnerDrawName[] = "PropOwnerDraw";
+static const WCHAR PropName[] = L"PropPrivCtrl";
+static const WCHAR OwnerDrawName[] = L"PropOwnerDraw";
 
 static LRESULT CALLBACK
 ParentWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -12,8 +12,8 @@ ParentWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   switch (msg)
     {
     case WM_NCDESTROY:
-      return CallWindowProc (WNDPROC (RemoveProp (hwnd, ATOM2STR (hprop))),
-                             hwnd, msg, wparam, lparam);
+      return CallWindowProcW (WNDPROC (RemovePropW (hwnd, ATOM2STR (hprop))),
+                              hwnd, msg, wparam, lparam);
 
     case WM_DRAWITEM:
       {
@@ -23,8 +23,8 @@ ParentWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         break;
       }
     }
-  return CallWindowProc (WNDPROC (GetProp (hwnd, ATOM2STR (hprop))),
-                         hwnd, msg, wparam, lparam);
+  return CallWindowProcW (WNDPROC (GetPropW (hwnd, ATOM2STR (hprop))),
+                          hwnd, msg, wparam, lparam);
 }
 
 int
@@ -33,12 +33,12 @@ subclass_parent (HWND hwnd)
   HWND parent = GetParent (hwnd);
   if (!parent)
     return 0;
-  if (GetProp (parent, ATOM2STR (hprop)))
+  if (GetPropW (parent, ATOM2STR (hprop)))
     return 1;
-  if (!SetProp (parent, ATOM2STR (hprop),
-                HANDLE (GetWindowLong (parent, GWL_WNDPROC))))
+  if (!SetPropW (parent, ATOM2STR (hprop),
+                 HANDLE (GetWindowLongW (parent, GWL_WNDPROC))))
     return 0;
-  return SetWindowLong (parent, GWL_WNDPROC, LONG (ParentWndProc));
+  return SetWindowLongW (parent, GWL_WNDPROC, LONG (ParentWndProc));
 }
 
 item_data *
@@ -81,10 +81,10 @@ DllMain (HINSTANCE hinst, DWORD reason, LPVOID)
     {
     case DLL_PROCESS_ATTACH:
       hinstDLL = hinst;
-      hprop = GlobalAddAtom (PropName);
+      hprop = GlobalAddAtomW (PropName);
       if (!hprop)
         return 0;
-      hownerdraw = GlobalAddAtom (OwnerDrawName);
+      hownerdraw = GlobalAddAtomW (OwnerDrawName);
       if (!hownerdraw)
         return 0;
       InitPrivateControls ();

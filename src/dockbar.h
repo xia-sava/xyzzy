@@ -35,7 +35,7 @@ private:
   u_char b_border;
   u_char b_dockable;
   u_char b_status;
-  static const char b_dock_bar_prop[];
+  static const WCHAR b_dock_bar_prop[];
 public:
   enum
     {
@@ -114,7 +114,7 @@ private:
 public:
   const RECT &rect () const {return b_rect;}
   static dock_bar *from_hwnd (HWND hwnd)
-    {return (dock_bar *)GetProp (hwnd, b_dock_bar_prop);}
+    {return (dock_bar *)GetPropW (hwnd, b_dock_bar_prop);}
   LRESULT sendmsg (UINT msg, WPARAM wparam, LPARAM lparam) const
     {return CallWindowProcW (b_wndproc, b_hwnd, msg, wparam, lparam);}
   int create (DWORD exstyle, const WCHAR *class_name, const WCHAR *window_name,
@@ -271,7 +271,7 @@ protected:
 private:
   int t_erasebkgnd_called;
   int t_dots;
-  static const char b_tab_bar_spin_prop[];
+  static const WCHAR b_tab_bar_spin_prop[];
 protected:
   enum {IDC_TAB_SPIN = 1};
   enum {GRIPPER_SIZE = 3};

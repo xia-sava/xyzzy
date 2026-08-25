@@ -372,9 +372,9 @@ FilerView::set_mask_text (const char *mask) const
 {
   if (mask)
     {
-      char *b = (char *)alloca (strlen (mask) + 16);
-      stpcpy (stpcpy (b, "Mask: "), mask);
-      SetWindowText (fv_hwnd_mask, b);
+      WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (strlen (mask) + 16));
+      u82u (stpcpy (b, L"Mask: "), mask);
+      SetWindowTextW (fv_hwnd_mask, b);
     }
   else
     fv_masks.set_text (fv_hwnd_mask);
@@ -422,13 +422,13 @@ FilerView::init_view (HWND hwnd, HWND hwnd_mask, HWND hwnd_marks,
     }
   else
     {
-      SHFILEINFO fi;
+      SHFILEINFOW fi;
       int flags = (SHGFI_SYSICONINDEX | SHGFI_USEFILEATTRIBUTES
                    | (filer_font.size ().cy >= dpi_scale (32) ? SHGFI_LARGEICON : SHGFI_SMALLICON));
       HIMAGELIST hil =
-        HIMAGELIST (SHGetFileInfo ("", 0, &fi, sizeof fi, flags));
+        HIMAGELIST (SHGetFileInfoW (L"", 0, &fi, sizeof fi, flags));
       fv_regular_file_index = fi.iIcon;
-      if (SHGetFileInfo ("", FILE_ATTRIBUTE_DIRECTORY, &fi, sizeof fi, flags))
+      if (SHGetFileInfoW (L"", FILE_ATTRIBUTE_DIRECTORY, &fi, sizeof fi, flags))
         fv_directory_index = fi.iIcon;
       ListView_SetImageList (fv_hwnd, hil, LVSIL_SMALL);
       hil = dpi_scale_imagelist (app.hinst,
@@ -703,19 +703,21 @@ FilerView::sort (int param)
 void
 FilerView::set_title (const char *mask) const
 {
-  int l = xstring_length (fv_ldir) * 2 + 1;
+  int l = w2ul (xstring_contents (fv_ldir), xstring_length (fv_ldir)) + 1;
   lisp title = fv_parent->title ();
   if (stringp (title))
-    l += xstring_length (title) * 2 + 3;
+    l += w2ul (xstring_contents (title), xstring_length (title)) + 3;
   if (mask)
     l += strlen (mask) + 1;
-  char *b0 = (char *)alloca (l);
-  char *b = w2s (b0, fv_ldir);
+  WCHAR *b0 = (WCHAR *)alloca (sizeof (WCHAR) * l);
+  WCHAR *b = w2u (b0, xstring_contents (fv_ldir), xstring_length (fv_ldir));
   if (mask)
-    b = stpcpy (b, mask);
+    b = u82u (b, mask);
   if (stringp (title))
-    b = w2s (stpcpy (b, " - "), title);
-  SetWindowText (fv_parent->id_hwnd, b0);
+    b = w2u (stpcpy (b, L" - "), xstring_contents (title),
+             xstring_length (title));
+  *b = 0;
+  SetWindowTextW (fv_parent->id_hwnd, b0);
 }
 
 void
@@ -736,9 +738,11 @@ FilerView::set_path () const
 {
   if (fv_parent->dual_window_p ())
     {
-      char *b = (char *)alloca (xstring_length (fv_ldir) * 2 + 1);
-      w2s (b, fv_ldir);
-      SetWindowText (fv_hwnd_path, b);
+      WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR)
+                                  * (w2ul (xstring_contents (fv_ldir),
+                                           xstring_length (fv_ldir)) + 1));
+      *w2u (b, xstring_contents (fv_ldir), xstring_length (fv_ldir)) = 0;
+      SetWindowTextW (fv_hwnd_path, b);
     }
 }
 
@@ -776,8 +780,8 @@ FilerView::reload (lisp lmask)
   char *mask;
   if (stringp (fv_lmask))
     {
-      mask = (char *)alloca (xstring_length (fv_lmask) * 2 + 1);
-      w2s (mask, fv_lmask);
+      mask = (char *)alloca (w2u8l (fv_lmask) + 1);
+      w2u8 (mask, fv_lmask);
     }
   else
     mask = 0;
@@ -785,7 +789,7 @@ FilerView::reload (lisp lmask)
   set_path ();
   if (fv_parent->primary_window_p (this))
     set_title (mask);
-  SetDlgItemText (fv_parent->id_hwnd, IDC_NAME, "");
+  SetDlgItemTextW (fv_parent->id_hwnd, IDC_NAME, L"");
   if (load_contents (mask))
     {
       restart_thread ();
@@ -844,15 +848,18 @@ FilerView::show_marks (int force)
 
   if (ndirs + nfiles)
     {
-      char b[256], nb[128];
+      WCHAR b[256];
+      char nb[128];
       disk_space (nbytes, nb, (charp (xsymbol_value (Vfiler_mark_file_size_unit))
                                ? xchar_code (xsymbol_value (Vfiler_mark_file_size_unit))
                                : -1));
-      sprintf (b, "Marks: %d dirs, %d files, total: %sytes", ndirs, nfiles, nb);
-      SetWindowText (fv_hwnd_marks, b);
+      WCHAR wnb[128];
+      u82u (wnb, nb);
+      wsprintfW (b, L"Marks: %d dirs, %d files, total: %sytes", ndirs, nfiles, wnb);
+      SetWindowTextW (fv_hwnd_marks, b);
     }
   else
-    SetWindowText (fv_hwnd_marks, "");
+    SetWindowTextW (fv_hwnd_marks, L"");
 }
 
 int
@@ -1217,9 +1224,11 @@ FilerView::calc_directory_size (int based_on_bytes)
               *buf = '[';
               disk_space (d->bytes, buf + 1, -1);
               strcat (buf, "]");
+              WCHAR wbuf[128];
+              u82u (wbuf, buf);
               lvi.mask = LVIF_TEXT;
               lvi.iSubItem = 1;
-              lvi.pszText = buf;
+              lvi.pszText = wbuf;
               ListView_SetItem (fv_hwnd, &lvi);
             }
         }
@@ -1385,10 +1394,12 @@ FilerView::thread_main ()
             attr = fd->attr;
           }
 
-          SHFILEINFO fi;
-          if (!SHGetFileInfo (path, attr, &fi, sizeof fi,
-                              (SHGFI_ICON | SHGFI_OVERLAYINDEX
-                               | ((filer_font.size ().cy >= dpi_scale (32) ? SHGFI_LARGEICON : SHGFI_SMALLICON)))))
+          WCHAR wpath[PATH_MAX + 1];
+          u82u (wpath, path);
+          SHFILEINFOW fi;
+          if (!SHGetFileInfoW (wpath, attr, &fi, sizeof fi,
+                               (SHGFI_ICON | SHGFI_OVERLAYINDEX
+                                | ((filer_font.size ().cy >= dpi_scale (32) ? SHGFI_LARGEICON : SHGFI_SMALLICON)))))
             continue;
 
           DestroyIcon (fi.hIcon);
@@ -1555,9 +1566,9 @@ expand_combobox (int n, int d)
   for (HWND hwnd = GetTopWindow (0); hwnd;
        hwnd = GetNextWindow (hwnd, GW_HWNDNEXT))
     {
-      char name[16];
-      if (GetClassName (hwnd, name, 10) == 9
-          && !strcmp (name, "ComboLBox"))
+      WCHAR name[16];
+      if (GetClassNameW (hwnd, name, 10) == 9
+          && !wcscmp (name, L"ComboLBox"))
         {
           DWORD pid;
           GetWindowThreadProcessId (hwnd, &pid);
@@ -1893,7 +1904,7 @@ Filer::Notify (NMHDR *nm)
           return 1;
 
         case NM_DBLCLK:
-          SetDlgItemText (id_hwnd, IDC_NAME, "");
+          SetDlgItemTextW (id_hwnd, IDC_NAME, L"");
           PostMessage (id_hwnd, WM_COMMAND, IDOK, 0);
           return 1;
 
@@ -2100,10 +2111,10 @@ paint_text (HDC hdc, lisp string, const RECT &r)
   if (!stringp (string))
     return;
 
-  char *s = (char *)alloca (w2sl (string) + 1);
-  w2s (s, string);
-  ExtTextOut (hdc, r.left, r.top, ETO_CLIPPED | ETO_OPAQUE,
-              &r, s, strlen (s), 0);
+  int l = w2ul (xstring_contents (string), xstring_length (string));
+  WCHAR *s = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
+  w2u (s, xstring_contents (string), xstring_length (string));
+  ExtTextOutW (hdc, r.left, r.top, ETO_CLIPPED | ETO_OPAQUE, &r, s, l, 0);
 }
 
 void
@@ -2356,11 +2367,11 @@ lisp
 Filer::get_text ()
 {
   HWND hwnd = GetDlgItem (id_hwnd, IDC_NAME);
-  int l = GetWindowTextLength (hwnd);
+  int l = GetWindowTextLengthW (hwnd);
   if (!l)
     return Qnil;
-  char *b = (char *)alloca (l + 2);
-  GetWindowText (hwnd, b, l + 1);
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (l + 2));
+  GetWindowTextW (hwnd, b, l + 1);
   return make_string (b);
 }
 
@@ -2368,9 +2379,11 @@ void
 Filer::set_text (lisp string)
 {
   check_string (string);
-  char *b = (char *)alloca (xstring_length (string) * 2 + 1);
-  w2s (b, string);
-  SetDlgItemText (id_hwnd, IDC_NAME, b);
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR)
+                              * (w2ul (xstring_contents (string),
+                                       xstring_length (string)) + 1));
+  *w2u (b, xstring_contents (string), xstring_length (string)) = 0;
+  SetDlgItemTextW (id_hwnd, IDC_NAME, b);
 }
 
 int
@@ -2931,7 +2944,7 @@ Ffiler (lisp path, lisp multi, lisp title, lisp dual, lisp lmodeless)
 }
 
 int ViewerWindow::vw_initialized;
-const char ViewerWindow::vw_classname[] = "viewer";
+const WCHAR ViewerWindow::vw_classname[] = L"viewer";
 
 static inline void
 set_window (HWND hwnd, ViewerWindow *wp)
@@ -2993,7 +3006,7 @@ ViewerWindow::ViewerWindow ()
 
   if (!vw_initialized)
     {
-      WNDCLASS wc;
+      WNDCLASSW wc;
       wc.style = 0;
       wc.lpfnWndProc = vw_wndproc;
       wc.cbClsExtra = 0;
@@ -3004,7 +3017,7 @@ ViewerWindow::ViewerWindow ()
       wc.hbrBackground = 0;
       wc.lpszMenuName = 0;
       wc.lpszClassName = vw_classname;
-      if (RegisterClass (&wc))
+      if (RegisterClassW (&wc))
         vw_initialized = 1;
     }
 }
@@ -3022,10 +3035,10 @@ ViewerWindow::init (HWND parent, ViewerBuffer *bp)
   w_point.p_point = 0;
   w_point.p_chunk = bp->b_chunkb;
   w_point.p_offset = 0;
-  return (int)CreateWindowEx (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
-                              vw_classname, "",
-                              WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
-                              0, 0, 0, 0, parent, 0, app.hinst, this);
+  return (int)CreateWindowExW (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
+                               vw_classname, L"",
+                               WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                               0, 0, 0, 0, parent, 0, app.hinst, this);
 }
 
 void

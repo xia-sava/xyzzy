@@ -327,10 +327,10 @@ printer_device::create_dc ()
     return 0;
   DEVMODE *dm = pd_devmode ? (DEVMODE *)GlobalLock (pd_devmode) : 0;
 
-  HDC hdc = CreateDC ((const char *)dn + dn->wDriverOffset,
-                      (const char *)dn + dn->wDeviceOffset,
-                      (const char *)dn + dn->wOutputOffset,
-                      dm);
+  HDC hdc = CreateDCW ((const WCHAR *)dn + dn->wDriverOffset,
+                       (const WCHAR *)dn + dn->wDeviceOffset,
+                       (const WCHAR *)dn + dn->wOutputOffset,
+                       dm);
   GlobalUnlock (pd_devnames);
   if (dm)
     GlobalUnlock (pd_devmode);
@@ -368,13 +368,13 @@ printer_device::get_dev_spec ()
         {
           DEVMODE *dm = pd_devmode ? (DEVMODE *)GlobalLock (pd_devmode) : 0;
           pd_max_copies =
-            DeviceCapabilities ((const char *)dn + dn->wDeviceOffset,
-                                (const char *)dn + dn->wOutputOffset,
-                                DC_COPIES, 0, dm);
+            DeviceCapabilitiesW ((const WCHAR *)dn + dn->wDeviceOffset,
+                                 (const WCHAR *)dn + dn->wOutputOffset,
+                                 DC_COPIES, 0, dm);
           pd_dm_fields =
-            DeviceCapabilities ((const char *)dn + dn->wDeviceOffset,
-                                (const char *)dn + dn->wOutputOffset,
-                                DC_FIELDS, 0, dm);
+            DeviceCapabilitiesW ((const WCHAR *)dn + dn->wDeviceOffset,
+                                 (const WCHAR *)dn + dn->wOutputOffset,
+                                 DC_FIELDS, 0, dm);
           if (dm)
             GlobalUnlock (pd_devmode);
           GlobalUnlock (pd_devnames);
@@ -832,9 +832,9 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
 {
   if (cc != ' ')
     {
-      char c = cc < 0x80 ? char (cc) : 0;
+      WCHAR c = cc < 0x80 ? WCHAR (cc) : 0;
       SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
-      ExtTextOut (ctx.hdc, ctx.x, ctx.y, 0, 0, &c, 1, 0);
+      ExtTextOutW (ctx.hdc, ctx.x, ctx.y, 0, 0, &c, 1, 0);
     }
   ctx.column++;
   ctx.x += (pe_fixed_pitch
@@ -1694,19 +1694,23 @@ print_engine::doprint1 (HWND hwnd)
                          pe_settings.ps_range_end))
     return bad_range (hwnd);
 
-  char *docname;
+  WCHAR *docname;
   lisp name;
   if (stringp (name = pe_bp->lfile_name)
       || stringp (name = pe_bp->lalternate_file_name))
     {
-      docname = (char *)alloca (xstring_length (name) * 2 + 32);
-      w2s (docname, name);
+      docname = (WCHAR *)alloca (sizeof (WCHAR)
+                                 * (w2ul (xstring_contents (name),
+                                          xstring_length (name)) + 32));
+      *w2u (docname, xstring_contents (name), xstring_length (name)) = 0;
     }
   else
     {
       int l = xstring_length (pe_bp->lbuffer_name) * 2 + 32;
-      docname = (char *)alloca (l);
-      pe_bp->buffer_name (docname, docname + l);
+      char *b = (char *)alloca (l);
+      pe_bp->buffer_name (b, b + l);
+      docname = (WCHAR *)alloca (sizeof (WCHAR) * (strlen (b) + 1));
+      s2u (docname, b);
     }
 
   SetAbortProc (pe_dev, abort_proc);
@@ -1717,9 +1721,9 @@ print_engine::doprint1 (HWND hwnd)
   di.lpszDocName = docname;
 
   user_abort = 0;
-  HWND printing = CreateDialog (app.hinst, MAKEINTRESOURCE (IDD_PRINTING),
-                                app.toplev, printing_dlgproc);
-  SetDlgItemText (printing, IDC_DOCNAME, docname);
+  HWND printing = CreateDialogW (app.hinst, MAKEINTRESOURCE (IDD_PRINTING),
+                                 app.toplev, printing_dlgproc);
+  SetDlgItemTextW (printing, IDC_DOCNAME, docname);
   ShowWindow (printing, SW_SHOW);
   UpdateWindow (printing);
   EnableWindow (app.toplev, 0);
@@ -1736,9 +1740,9 @@ print_engine::doprint1 (HWND hwnd)
 
   do
     {
-      char b[32];
-      sprintf (b, "Page %u", page++);
-      SetDlgItemText (printing, IDC_PAGENUM, b);
+      WCHAR b[32];
+      wsprintfW (b, L"Page %u", page++);
+      SetDlgItemTextW (printing, IDC_PAGENUM, b);
 
       if (StartPage (pe_dev) == SP_ERROR)
         {
@@ -1955,9 +1959,9 @@ get_glyph_width (Char cc, const glyph_width &gw)
   ucs2_t wc = ucs2_t (cc);
   if (cc < 0x80)
     {
-      char c = char (cc);
+      WCHAR c = WCHAR (cc);
       SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-      GetTextExtentPoint32 (gw.hdc, &c, 1, &sz);
+      GetTextExtentPoint32W (gw.hdc, &c, 1, &sz);
     }
   else if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
     {

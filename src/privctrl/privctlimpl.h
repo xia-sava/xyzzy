@@ -16,7 +16,7 @@ EXTERN HINSTANCE hinstDLL;
 
 EXTERN ATOM hprop;
 EXTERN ATOM hownerdraw;
-#define ATOM2STR(a) LPSTR (a)
+#define ATOM2STR(a) LPWSTR (a)
 
 int subclass_parent (HWND);
 
@@ -32,13 +32,13 @@ struct item_data
 inline item_data *
 get_item_data (HWND hwnd)
 {
-  return (item_data *)GetProp (hwnd, ATOM2STR (hprop));
+  return (item_data *)GetPropW (hwnd, ATOM2STR (hprop));
 }
 
 inline BOOL
 set_item_data (HWND hwnd, item_data *data)
 {
-  return SetProp (hwnd, ATOM2STR (hprop), HANDLE (data));
+  return SetPropW (hwnd, ATOM2STR (hprop), HANDLE (data));
 }
 
 inline DWORD
@@ -64,13 +64,13 @@ typedef LONG (WINAPI *OWNERDRAWPROC)(UINT, DRAWITEMSTRUCT *);
 inline OWNERDRAWPROC
 get_owner_draw_proc (HWND hwnd)
 {
-  return OWNERDRAWPROC (GetProp (hwnd, ATOM2STR (hownerdraw)));
+  return OWNERDRAWPROC (GetPropW (hwnd, ATOM2STR (hownerdraw)));
 }
 
 inline BOOL
 set_owner_draw_proc (HWND hwnd, OWNERDRAWPROC proc)
 {
-  return SetProp (hwnd, ATOM2STR (hownerdraw), proc);
+  return SetPropW (hwnd, ATOM2STR (hownerdraw), proc);
 }
 
 item_data *alloc_item_data (HWND, DWORD);
@@ -78,7 +78,7 @@ item_data *alloc_item_data (HWND, DWORD);
 inline void
 free_item_data (HWND hwnd)
 {
-  LocalFree (HLOCAL (RemoveProp (hwnd, ATOM2STR (hprop))));
+  LocalFree (HLOCAL (RemovePropW (hwnd, ATOM2STR (hprop))));
 }
 
 #endif

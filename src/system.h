@@ -14,11 +14,11 @@ rpc_error (RPC_STATUS r)
 class safe_rpc_str
 {
 protected:
-  RPC_CSTR u;
+  RPC_WSTR u;
 public:
   safe_rpc_str () : u (0) {}
-  ~safe_rpc_str () {if (u) RpcStringFree (&u);}
-  RPC_CSTR *operator & () {return &u;}
+  ~safe_rpc_str () {if (u) RpcStringFreeW (&u);}
+  RPC_WSTR *operator & () {return &u;}
   lisp make_string () {return ::make_string (u);}
 };
 

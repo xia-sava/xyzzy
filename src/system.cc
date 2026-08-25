@@ -12,7 +12,7 @@ Fsi_uuid_create (lisp keys)
     rpc_error (UuidCreate (&uuid));
 
   safe_rpc_str uuidstr;
-  rpc_error (UuidToString (&uuid, &uuidstr));
+  rpc_error (UuidToStringW (&uuid, &uuidstr));
 
   multiple_value::count () = 2;
   multiple_value::value (1) = make_list (

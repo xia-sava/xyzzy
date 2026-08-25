@@ -6,7 +6,7 @@
 #include "conf.h"
 
 int preview_page_window::wndclass_initialized;
-const char preview_page_window::PageClassName[] = "PreviewPage";
+const WCHAR preview_page_window::PageClassName[] = L"PreviewPage";
 
 const preview_page_window::ids2scale preview_page_window::ids2scales[] =
 {
@@ -699,7 +699,7 @@ preview_page_window::register_wndclass (HINSTANCE hinst)
 {
   if (wndclass_initialized)
     return 1;
-  WNDCLASS wc;
+  WNDCLASSW wc;
   wc.style = CS_HREDRAW | CS_VREDRAW;
   wc.lpfnWndProc = wndproc;
   wc.cbClsExtra = 0;
@@ -710,7 +710,7 @@ preview_page_window::register_wndclass (HINSTANCE hinst)
   wc.hbrBackground = HBRUSH (COLOR_WINDOW + 1);
   wc.lpszMenuName = 0;
   wc.lpszClassName = PageClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
   wndclass_initialized = 1;
   return 1;
@@ -722,8 +722,8 @@ preview_page_window::create (HWND hwnd, const RECT &r)
   if (!register_wndclass (app.hinst))
     return 0;
 
-  if (!CreateWindowEx (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
-                       PageClassName, "",
+  if (!CreateWindowExW (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
+                        PageClassName, L"",
                        (WS_HSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD
                         | WS_CLIPSIBLINGS | WS_TABSTOP
                         | (sysdep.Win4p () ? 0 : WS_BORDER)),
@@ -762,9 +762,9 @@ preview_dialog::set_scale_combo ()
         SendDlgItemMessage (p_hwnd, IDC_SCALE, CB_SETCURSEL, i, 0);
         return;
       }
-  char b[64];
-  sprintf (b, "%d%%", p_page.get_scale ());
-  SetDlgItemText (p_hwnd, IDC_SCALE, b);
+  WCHAR b[64];
+  wsprintfW (b, L"%d%%", p_page.get_scale ());
+  SetDlgItemTextW (p_hwnd, IDC_SCALE, b);
 }
 
 int
@@ -791,12 +791,12 @@ preview_dialog::init_dialog (HWND)
 
   for (int i = 0; i < numberof (preview_page_window::ids2scales); i++)
     {
-      char b[128];
-      LoadString (app.hinst, preview_page_window::ids2scales[i].ids,
-                  b, sizeof b);
-      UINT idx = SendDlgItemMessage (p_hwnd, IDC_SCALE, CB_ADDSTRING, 0, LPARAM (b));
-      SendDlgItemMessage (p_hwnd, IDC_SCALE, CB_SETITEMDATA,
-                          idx, preview_page_window::ids2scales[i].scale);
+      WCHAR b[128];
+      LoadStringW (app.hinst, preview_page_window::ids2scales[i].ids,
+                   b, numberof (b));
+      UINT idx = SendDlgItemMessageW (p_hwnd, IDC_SCALE, CB_ADDSTRING, 0, LPARAM (b));
+      SendDlgItemMessageW (p_hwnd, IDC_SCALE, CB_SETITEMDATA,
+                           idx, preview_page_window::ids2scales[i].scale);
     }
 
   set_scale_combo ();
@@ -867,17 +867,17 @@ preview_dialog::scale_command (int code)
 
     case CBN_KILLFOCUS:
       {
-        char buf[128];
-        GetDlgItemText (p_hwnd, IDC_SCALE, buf, sizeof buf);
-        int i = SendDlgItemMessage (p_hwnd, IDC_SCALE, CB_FINDSTRINGEXACT,
-                                    WPARAM (-1), LPARAM (buf));
+        WCHAR buf[128];
+        GetDlgItemTextW (p_hwnd, IDC_SCALE, buf, numberof (buf));
+        int i = SendDlgItemMessageW (p_hwnd, IDC_SCALE, CB_FINDSTRINGEXACT,
+                                     WPARAM (-1), LPARAM (buf));
         if (i != CB_ERR)
           return 1;
-        char *b;
+        WCHAR *b;
         for (b = buf; *b == ' '; b++)
           ;
-        char *be;
-        long v = strtol (b, &be, 10);
+        WCHAR *be;
+        long v = wcstol (b, &be, 10);
         if (v > 0 && be != b)
           {
             for (; *be == ' '; be++)

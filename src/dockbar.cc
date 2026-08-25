@@ -3,9 +3,9 @@
 #include "dockbar.h"
 #include "mman.h"
 
-const char dock_bar::b_dock_bar_prop[] = "dock_bar::prop";
+const WCHAR dock_bar::b_dock_bar_prop[] = L"dock_bar::prop";
 WCHAR dock_bar::b_ttbuf[TTBUFSIZE];
-const char tab_bar::b_tab_bar_spin_prop[] = "tab_bar::spin::prop";
+const WCHAR tab_bar::b_tab_bar_spin_prop[] = L"tab_bar::spin::prop";
 
 dock_bar::dock_bar (dock_frame &frame, lisp name, int dockable)
      : b_hwnd (0), b_wndproc (0), b_frame (frame), b_lname (name),
@@ -34,12 +34,12 @@ dock_bar::check_edge (int edge) const
 int
 dock_bar::subclass ()
 {
-  if (!SetProp (b_hwnd, b_dock_bar_prop, HANDLE (this)))
+  if (!SetPropW (b_hwnd, b_dock_bar_prop, HANDLE (this)))
     return 0;
   b_wndproc = (WNDPROC)SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (WNDPROC (wndproc)));
   if (b_wndproc)
     return 1;
-  RemoveProp (b_hwnd, b_dock_bar_prop);
+  RemovePropW (b_hwnd, b_dock_bar_prop);
   return 0;
 }
 
@@ -49,7 +49,7 @@ dock_bar::unsubclass ()
   if (b_wndproc)
     {
       SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (b_wndproc));
-      RemoveProp (b_hwnd, b_dock_bar_prop);
+      RemovePropW (b_hwnd, b_dock_bar_prop);
       b_wndproc = 0;
     }
 }
@@ -528,10 +528,10 @@ tab_bar::modify_spin ()
   if (style & UDS_HORZ ? !dock_vert_p () : dock_vert_p ())
     return;
 
-  HWND hwnd = CreateWindowEx (GetWindowLong (hwnd_spin, GWL_EXSTYLE),
-                              UPDOWN_CLASS, "", (style ^ UDS_HORZ) & ~UDS_WRAP,
-                              0, 0, 0, 0, b_hwnd, HMENU (IDC_TAB_SPIN),
-                              app.hinst, 0);
+  HWND hwnd = CreateWindowExW (GetWindowLongW (hwnd_spin, GWL_EXSTYLE),
+                               UPDOWN_CLASSW, L"", (style ^ UDS_HORZ) & ~UDS_WRAP,
+                               0, 0, 0, 0, b_hwnd, HMENU (IDC_TAB_SPIN),
+                               app.hinst, 0);
   if (!hwnd)
     return;
 
@@ -617,7 +617,7 @@ tab_bar::calc_tab_height ()
   HDC hdc = GetDC (b_hwnd);
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   SIZE sz;
-  GetTextExtentPoint32 (hdc, "...", 3, &sz);
+  GetTextExtentPoint32W (hdc, L"...", 3, &sz);
   t_dots = sz.cx;
   SelectObject (hdc, of);
   ReleaseDC (b_hwnd, hdc);
@@ -1123,7 +1123,7 @@ tab_bar::nc_calc_size (RECT &r) const
 LRESULT CALLBACK
 tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  WNDPROC oproc = WNDPROC (GetProp (hwnd, b_tab_bar_spin_prop));
+  WNDPROC oproc = WNDPROC (GetPropW (hwnd, b_tab_bar_spin_prop));
   switch (msg)
     {
     case UDM_SETRANGE:
@@ -1133,7 +1133,7 @@ tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_NCDESTROY:
       SetWindowLongW (hwnd, GWL_WNDPROC, LONG (oproc));
-      RemoveProp (hwnd, b_tab_bar_spin_prop);
+      RemovePropW (hwnd, b_tab_bar_spin_prop);
       break;
     }
   return oproc ? CallWindowProcW (oproc, hwnd, msg, wparam, lparam) : 0;
@@ -1146,7 +1146,7 @@ tab_bar::parent_notify (UINT msg, UINT id, HWND hwnd)
       && !(GetWindowLong (hwnd, GWL_STYLE) & UDS_HORZ))
     {
       WNDPROC o = (WNDPROC)GetWindowLongW (hwnd, GWL_WNDPROC);
-      if (o && SetProp (hwnd, b_tab_bar_spin_prop, HANDLE (o)))
+      if (o && SetPropW (hwnd, b_tab_bar_spin_prop, HANDLE (o)))
         SetWindowLongW (hwnd, GWL_WNDPROC, LONG (spin_wndproc));
     }
 }

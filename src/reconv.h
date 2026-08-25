@@ -23,7 +23,7 @@ typedef struct tagRECONVERTSTRING
 
 #endif
 
-#define WM_MSIME_RECONVERT "MSIMEReconvert"
-#define WM_ATOK_RECONVERT "Atok Message for ReconvertString"
+#define WM_MSIME_RECONVERT L"MSIMEReconvert"
+#define WM_ATOK_RECONVERT L"Atok Message for ReconvertString"
 
 #endif /* _reconv_h_ */

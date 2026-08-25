@@ -228,7 +228,7 @@ print_modules (FILE *fp, DWORD addr, MEMORY_BASIC_INFORMATION *bi)
   char path[MAX_PATH + IMAGE_SIZEOF_SHORT_NAME + 2];
   if (!get_module_base_name (HMODULE (bi->AllocationBase), path, MAX_PATH))
     return;
-  char *p = path + lstrlen (path);
+  char *p = path + lstrlenA (path);
   if (get_section_name (bi->AllocationBase, bi->BaseAddress, p + 1, path + sizeof path - p - 1))
     *p = '!';
   fprintf (fp, "%08x - %08x: %s\n", addr, addr + bi->RegionSize, path);
@@ -352,7 +352,7 @@ print_object (FILE *fp, lisp object, int f)
                 {
                   const Char *p = xstring_contents (object);
                   const Char *const pe = p + xstring_length (object);
-                  if (IsBadStringPtr ((char *)p, sizeof *p * xstring_length (object)))
+                  if (IsBadStringPtrA ((char *)p, sizeof *p * xstring_length (object)))
                     fprintf (fp, "(Invalid String)");
                   else
                     for (; p < pe; p++)
@@ -426,7 +426,7 @@ cleanup_exception ()
     {
       fprintf (fp, "%ls %ls Crash log:\n\n", ProgramName, VersionString);
 
-      fprintf (fp, "Windows %s %d.%02d.%d %s\n\n",
+      fprintf (fp, "Windows %s %d.%02d.%d %ls\n\n",
                sysdep.windows_name,
                sysdep.os_ver.dwMajorVersion,
                sysdep.os_ver.dwMinorVersion,

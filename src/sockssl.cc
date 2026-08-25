@@ -149,7 +149,8 @@ sockssl::setup_credentials (DWORD protcols) const
     | SCH_CRED_IGNORE_REVOCATION_OFFLINE;
 
   TimeStamp expiry;
-  SECURITY_STATUS status = AcquireCredentialsHandle (
+  /* 相手の名前は DNS 名なので、この層はバイト列でやりとりする */
+  SECURITY_STATUS status = AcquireCredentialsHandleA (
     nullptr,
     UNISP_NAME_A,
     SECPKG_CRED_OUTBOUND,
@@ -181,7 +182,7 @@ sockssl::perform_handshake ()
   safe_secbuf <1> out_buf (true);
   out_buf.set_token (0, nullptr, 0);
 
-  SECURITY_STATUS status = InitializeSecurityContext (
+  SECURITY_STATUS status = InitializeSecurityContextA (
     ss_client_creds,
     nullptr,
     const_cast <SEC_CHAR *> (ss_server_name),

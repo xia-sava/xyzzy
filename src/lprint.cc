@@ -1359,15 +1359,16 @@ print_error (wStream &stream, const print_control &, lisp object)
         stream.add (s);
       else
         {
+          /* 受け取る側がバイト列なので、綴りは CP932 のまま組み立てる */
           char buf[1024];
           static char *args[] = {"", "", "", "", 0,};
-          if (!FormatMessage ((FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY
-                               | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                              0, xerror_number (object), GetUserDefaultLangID (),
-                              buf, sizeof buf, args))
+          if (!FormatMessageA ((FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY
+                                | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                               0, xerror_number (object), GetUserDefaultLangID (),
+                               buf, sizeof buf, args))
             *buf = 0;
           if (!*buf)
-            wsprintf (buf, "Undocumented win32 error: %d", xerror_number (object));
+            wsprintfA (buf, "Undocumented win32 error: %d", xerror_number (object));
           stream.add (buf);
         }
     }

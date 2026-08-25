@@ -6,9 +6,9 @@ clipboard::clipboard ()
        : AddClipboardFormatListenerProc (nullptr),
          RemoveClipboardFormatListenerProc (nullptr)
 {
-  HMODULE user32 = GetModuleHandle ("user32");
+  HMODULE user32 = GetModuleHandleW (L"user32");
   if (!user32)
-    user32 = LoadLibrary ("user32");
+    user32 = LoadLibraryW (L"user32");
   if (!user32)
     return;
 

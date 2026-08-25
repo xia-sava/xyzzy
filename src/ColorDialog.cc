@@ -6,7 +6,7 @@
 #include "font.h"
 
 static void
-paint_color_list (DRAWITEMSTRUCT *dis, const char *string, COLORREF color)
+paint_color_list (DRAWITEMSTRUCT *dis, const WCHAR *string, COLORREF color)
 {
   COLORREF bg = (dis->itemState & ODS_SELECTED
                  ? sysdep.highlight : sysdep.window);
@@ -18,12 +18,12 @@ paint_color_list (DRAWITEMSTRUCT *dis, const char *string, COLORREF color)
   if (dis->itemID != UINT (-1))
     {
       SIZE size;
-      GetTextExtentPoint32 (dis->hDC, "M", 1, &size);
+      GetTextExtentPoint32W (dis->hDC, L"M", 1, &size);
       size.cx = size.cx * 5 / 2;
-      ExtTextOut (dis->hDC,
-                  r.left + size.cx,
-                  (r.top + r.bottom - size.cy) / 2,
-                  ETO_OPAQUE | ETO_CLIPPED, &r, string, strlen (string), 0);
+      ExtTextOutW (dis->hDC,
+                   r.left + size.cx,
+                   (r.top + r.bottom - size.cy) / 2,
+                   ETO_OPAQUE | ETO_CLIPPED, &r, string, wcslen (string), 0);
 
       HGDIOBJ open = SelectObject (dis->hDC, sysdep.hpen_black);
       HBRUSH hbr = CreateSolidBrush (color);
@@ -171,11 +171,11 @@ void
 SelectColor::draw_combo (DRAWITEMSTRUCT *dis)
 {
   if (dis->itemID == UINT (-1))
-    paint_color_list (dis, "", RGB (0, 0, 0));
+    paint_color_list (dis, L"", RGB (0, 0, 0));
   else
     {
-      char b[256];
-      if (!LoadString (app.hinst, dis->itemData, b, sizeof b))
+      WCHAR b[256];
+      if (!LoadStringW (app.hinst, dis->itemData, b, numberof (b)))
         *b = 0;
       paint_color_list (dis, b, GetSysColor (dis->itemData - IDS_COLOR_SCROLLBAR));
     }
@@ -494,17 +494,17 @@ ChangeColorsPageP::draw_item (int id, DRAWITEMSTRUCT *dis)
     {
     case IDC_COLOR_LIST:
       if (dis->itemID == UINT (-1))
-        paint_color_list (dis, "", RGB (0, 0, 0));
+        paint_color_list (dis, L"", RGB (0, 0, 0));
       else if (prop_fg_p (dis->itemData))
         {
-          char b[32];
-          sprintf (b, "文字%d", dis->itemData - PROP_FG_OFFSET + 1);
+          WCHAR b[32];
+          wsprintfW (b, L"文字%d", dis->itemData - PROP_FG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (prop_bg_p (dis->itemData))
         {
-          char b[32];
-          sprintf (b, "背景%d", dis->itemData - PROP_BG_OFFSET + 1);
+          WCHAR b[32];
+          wsprintfW (b, L"背景%d", dis->itemData - PROP_BG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (misc_p (dis->itemData))

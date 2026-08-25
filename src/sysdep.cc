@@ -73,12 +73,12 @@ stretch_bitmap (HBITMAP src, int w, int h)
 }
 
 HIMAGELIST
-dpi_scale_imagelist (HINSTANCE hinst, LPCSTR name, int cx, COLORREF mask)
+dpi_scale_imagelist (HINSTANCE hinst, LPCWSTR name, int cx, COLORREF mask)
 {
   if (screen_dpi () == BASE_SCREEN_DPI)
     return ImageList_LoadBitmap (hinst, name, cx, 1, mask);
 
-  HBITMAP src = LoadBitmap (hinst, name);
+  HBITMAP src = LoadBitmapW (hinst, name);
   if (!src)
     return 0;
 
@@ -136,8 +136,8 @@ Sysdep::Sysdep ()
 
   perf_counter_present_p = QueryPerformanceFrequency ((LARGE_INTEGER *)&perf_freq);
 
-  comctl32_version = get_dll_version ("comctl32.dll");
-  shell32_version = get_dll_version ("shell32.dll");
+  comctl32_version = get_dll_version (L"comctl32.dll");
+  shell32_version = get_dll_version (L"shell32.dll");
 
   load_colors ();
   load_settings ();
@@ -273,7 +273,7 @@ void
 Sysdep::init_process_type ()
 {
   typedef BOOL (WINAPI *ISWOW64PROCESS) (HANDLE, PBOOL);
-  ISWOW64PROCESS IsWow64Process = (ISWOW64PROCESS)GetProcAddress (GetModuleHandle ("kernel32"),
+  ISWOW64PROCESS IsWow64Process = (ISWOW64PROCESS)GetProcAddress (GetModuleHandleW (L"kernel32"),
                                                                   "IsWow64Process");
   BOOL isWow64 = FALSE;
   if (!IsWow64Process || !IsWow64Process (GetCurrentProcess (), &isWow64))
@@ -403,9 +403,9 @@ typedef HRESULT (CALLBACK *DLLGETVERSIONPROC)(DLLVERSIONINFO *);
 #endif /* not DLLVER_PLATFORM_WINDOWS */
 
 DWORD
-Sysdep::get_dll_version (const char *name)
+Sysdep::get_dll_version (const WCHAR *name)
 {
-  HINSTANCE hinst = GetModuleHandle (name);
+  HINSTANCE hinst = GetModuleHandleW (name);
   if (!hinst)
     return 0;
 

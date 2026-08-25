@@ -365,7 +365,7 @@ listview_draw_item (UINT id, DRAWITEMSTRUCT *dis)
     }
 
   SIZE dots;
-  GetTextExtentPoint32 (hdc, "...", 3, &dots);
+  GetTextExtentPoint32W (hdc, L"...", 3, &dots);
 
   RECT label;
   ListView_GetItemRect (hwnd, dis->itemID, &label, LVIR_LABEL);
@@ -380,7 +380,7 @@ listview_draw_item (UINT id, DRAWITEMSTRUCT *dis)
       SetTextColor (hdc, fg);
       SetBkColor (hdc, bg);
       label.left = rest;
-      ExtTextOut (hdc, 0, 0, ETO_OPAQUE, &label, "", 0, 0);
+      ExtTextOutW (hdc, 0, 0, ETO_OPAQUE, &label, L"", 0, 0);
     }
   else
     paint_item_text (hwnd, hdc, dis->itemID, 0, LVCFMT_LEFT, label,
@@ -400,7 +400,7 @@ listview_draw_item (UINT id, DRAWITEMSTRUCT *dis)
     {
       label.left = label.right;
       label.right = data->client.cx;
-      ExtTextOut (hdc, 0, 0, ETO_OPAQUE, &label, "", 0, 0);
+      ExtTextOutW (hdc, 0, 0, ETO_OPAQUE, &label, L"", 0, 0);
     }
 
   if (focus && lvi.state & LVIS_FOCUSED)
@@ -565,9 +565,9 @@ find_header (HWND hwnd)
   for (hwnd = GetWindow (hwnd, GW_CHILD); hwnd;
        hwnd = GetWindow (hwnd, GW_HWNDNEXT))
     {
-      char b[128];
-      GetClassName (hwnd, b, sizeof b);
-      if (!strcmp (b, WC_HEADERA))
+      WCHAR b[128];
+      GetClassNameW (hwnd, b, sizeof b / sizeof *b);
+      if (!wcscmp (b, WC_HEADERW))
         {
           data->hwnd_header = hwnd;
           break;
@@ -861,7 +861,7 @@ process_keydown (HWND hwnd, int vkey, listview_item_data *data)
   send_keydown (hwnd, vkey);
 }
 
-#define upcase(c) CharUpper (LPSTR (c & 0xff))
+#define upcase(c) CharUpperW (LPWSTR (c & 0xffff))
 #define eql(c1, c2) (upcase (c1) == upcase (c2))
 
 static int
@@ -872,21 +872,21 @@ isearch (HWND hwnd, int cc, int wrap, listview_item_data *data)
 
   DWORD tick = GetTickCount ();
   LV_ITEM lvi;
-  char *text = (char *)alloca (data->icc + 3);
+  WCHAR *text = (WCHAR *)alloca (sizeof (WCHAR) * (data->icc + 3));
   if (cur == data->isearch_cur && cur >= 0 && data->icc)
     {
       *text = 0;
       lvi.iSubItem = 0;
       lvi.pszText = text;
       lvi.cchTextMax = data->icc + 2;
-      size_t l = CallWindowProc (ListViewProc, hwnd, LVM_GETITEMTEXT,
-                                 cur, LPARAM (&lvi));
+      size_t l = CallWindowProcW (ListViewProc, hwnd, LVM_GETITEMTEXT,
+                                  cur, LPARAM (&lvi));
       if (lvi.pszText != text)
         {
-          memcpy (text, lvi.pszText, data->icc + 2);
+          memcpy (text, lvi.pszText, sizeof (WCHAR) * (data->icc + 2));
           text[data->icc + 2] = 0;
         }
-      if (strlen (text) < data->icc)
+      if (wcslen (text) < data->icc)
         data->icc = 0;
     }
   else
@@ -895,7 +895,7 @@ isearch (HWND hwnd, int cc, int wrap, listview_item_data *data)
   if (data->icc)
     {
       if ((!data->f_ikeyup && data->icc == 1)
-          || tick > data->itick + (data->icc == 1 && *text == char (cc)
+          || tick > data->itick + (data->icc == 1 && *text == WCHAR (cc)
                                    ? ISEARCH_TIMEOUT1 : ISEARCH_TIMEOUT2))
         data->icc = 0;
       else if (eql (text[data->icc], cc))
@@ -907,7 +907,7 @@ isearch (HWND hwnd, int cc, int wrap, listview_item_data *data)
         }
     }
 
-  text[data->icc] = char (cc);
+  text[data->icc] = WCHAR (cc);
   text[data->icc + 1] = 0;
 
   data->itick = tick;
@@ -1116,9 +1116,9 @@ ListViewExProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
                 HWND h = GetParent (hwnd);
                 if (h)
                   {
-                    char cls[16];
-                    if (GetClassName (h, cls, sizeof cls)
-                        && !strcmp (cls, "#32770"))
+                    WCHAR cls[16];
+                    if (GetClassNameW (h, cls, sizeof cls / sizeof *cls)
+                        && !wcscmp (cls, L"#32770"))
                       {
                         DWORD id = SendMessage (h, DM_GETDEFID, 0, 0);
                         if (HIWORD (id) == DC_HASDEFID)
@@ -1325,9 +1325,9 @@ ListViewExProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 int
 init_listview_class ()
 {
-  HMODULE hcomctl32 = GetModuleHandle ("comctl32.dll");
-  WNDCLASS wc;
-  if (!GetClassInfo (hcomctl32, WC_LISTVIEWA, &wc))
+  HMODULE hcomctl32 = GetModuleHandleW (L"comctl32.dll");
+  WNDCLASSW wc;
+  if (!GetClassInfoW (hcomctl32, WC_LISTVIEWW, &wc))
     return 0;
 
   ListViewProc = wc.lpfnWndProc;
@@ -1336,5 +1336,5 @@ init_listview_class ()
   wc.hInstance = hinstDLL;
   wc.lpszClassName = WC_LISTVIEWEX;
 
-  return RegisterClass (&wc);
+  return RegisterClassW (&wc);
 }

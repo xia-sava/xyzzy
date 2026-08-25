@@ -16,7 +16,7 @@ Debug (char *format, ...)
 
   char buf[BUF_SIZE * 2];
   sprintf_s (buf, BUF_SIZE * 2, "%s\n", msg);
-  OutputDebugString (buf);
+  OutputDebugStringA (buf);
 }
 
 void

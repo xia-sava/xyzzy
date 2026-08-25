@@ -1052,14 +1052,14 @@ Dialog::draw_item (int id, DRAWITEMSTRUCT *dis)
           if (cr.right < r.right)
             {
               cr.right = r.right;
-              ExtTextOut (dis->hDC, cr.left, cr.top, ETO_OPAQUE, &cr, "", 0, 0);
+              ExtTextOutW (dis->hDC, cr.left, cr.top, ETO_OPAQUE, &cr, L"", 0, 0);
             }
         }
       else
         ::draw_item (dis->hDC, r, r.left, consp (item) ? xcar (item) : item, 0);
     }
   else
-    ExtTextOut (dis->hDC, r.left, r.top, ETO_OPAQUE, &r, "", 0, 0);
+    ExtTextOutW (dis->hDC, r.left, r.top, ETO_OPAQUE, &r, L"", 0, 0);
 
   if (dis->itemState & ODS_FOCUS)
     DrawFocusRect (dis->hDC, &r);
@@ -1323,13 +1323,13 @@ PropSheetFont::load ()
   if (!face_len)
     {
       face_len = -1;
-      HINSTANCE hinst = GetModuleHandle ("COMCTL32.DLL");
+      HINSTANCE hinst = GetModuleHandleW (L"COMCTL32.DLL");
       if (hinst)
         {
           const DLGTEMPLATE *tmpl = (DLGTEMPLATE *)
-            LoadResource (hinst, FindResource (hinst,
-                                               MAKEINTRESOURCE (IDD_PROPSHEET),
-                                               RT_DIALOG));
+            LoadResource (hinst, FindResourceW (hinst,
+                                                MAKEINTRESOURCE (IDD_PROPSHEET),
+                                                RT_DIALOG));
           if (tmpl)
             find_font (tmpl);
         }
@@ -1381,13 +1381,13 @@ PropSheetFont::change_font (const DLGTEMPLATE *rtmpl, DWORD size)
 }
 
 HGLOBAL
-PropSheetFont::change_font (const char *id)
+PropSheetFont::change_font (const WCHAR *id)
 {
   if (!PropSheetFont::load ())
     return 0;
 
   HGLOBAL result = 0;
-  HRSRC hrsrc = FindResource (app.hinst, id, RT_DIALOG);
+  HRSRC hrsrc = FindResourceW (app.hinst, id, RT_DIALOG);
   const DLGTEMPLATE *tmpl = (DLGTEMPLATE *)LoadResource (app.hinst, hrsrc);
   if (tmpl)
     {

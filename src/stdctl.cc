@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "ed.h"
 
-static const char csComboBox[] = "ComboBox";
-static const char csEdit[] = "Edit";
-static const char csListBox[] = "ListBox";
+static const WCHAR csComboBox[] = L"ComboBox";
+static const WCHAR csEdit[] = L"Edit";
+static const WCHAR csListBox[] = L"ListBox";
 
 static WNDPROC org_lbx_wndproc;
 static WNDPROC org_edt_wndproc;
@@ -170,11 +170,11 @@ edt_char (HWND hwnd, int ch)
   if (op < 0)
     return 0;
 
-  char class_name[16];
+  WCHAR class_name[16];
   HWND hwnd_parent = GetParent (hwnd);
   if (!hwnd_parent
-      || !GetClassName (hwnd_parent, class_name, sizeof class_name)
-      || _stricmp (class_name, csComboBox))
+      || !GetClassNameW (hwnd_parent, class_name, numberof (class_name))
+      || _wcsicmp (class_name, csComboBox))
     return 0;
 
   if (op == VK_RETURN)
@@ -196,17 +196,17 @@ edt_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 }
 
 static int
-init_hook (HINSTANCE hinst, const char *class_name,
+init_hook (HINSTANCE hinst, const WCHAR *class_name,
            WNDPROC wndproc, WNDPROC &org_wndproc)
 {
-  WNDCLASS wc;
-  if (!GetClassInfo (0, class_name, &wc))
+  WNDCLASSW wc;
+  if (!GetClassInfoW (0, class_name, &wc))
     return 0;
 
   org_wndproc = wc.lpfnWndProc;
   wc.lpfnWndProc = wndproc;
   wc.hInstance = hinst;
-  return RegisterClass (&wc);
+  return RegisterClassW (&wc);
 }
 
 void

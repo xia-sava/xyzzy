@@ -20,11 +20,11 @@ ChooseFontP::add_lang (HWND hwnd)
 {
   for (int i = 0; i < FONT_MAX; i++)
     {
-      char buf[128];
+      WCHAR buf[128];
       *buf = 0;
-      LoadString (app.hinst, FontSet::lang_id (i), buf, sizeof buf);
-      int idx = SendDlgItemMessage (hwnd, IDC_LANG, CB_ADDSTRING, 0, LPARAM (buf));
-      SendDlgItemMessage (hwnd, IDC_LANG, CB_SETITEMDATA, idx, i);
+      LoadStringW (app.hinst, FontSet::lang_id (i), buf, numberof (buf));
+      int idx = SendDlgItemMessageW (hwnd, IDC_LANG, CB_ADDSTRING, 0, LPARAM (buf));
+      SendDlgItemMessageW (hwnd, IDC_LANG, CB_SETITEMDATA, idx, i);
     }
 }
 
@@ -290,15 +290,15 @@ ChooseFontP::draw_font_list (HWND, DRAWITEMSTRUCT *dis)
   const RECT &r = dis->rcItem;
   if (dis->itemID != UINT (-1))
     {
-      char b[LF_FACESIZE];
+      WCHAR b[LF_FACESIZE];
       *b = 0;
-      SendMessage (dis->hwndItem, LB_GETTEXT, dis->itemID, LPARAM (b));
+      SendMessageW (dis->hwndItem, LB_GETTEXT, dis->itemID, LPARAM (b));
 
       SIZE size;
-      GetTextExtentPoint32 (dis->hDC, "0", 1, &size);
+      GetTextExtentPoint32W (dis->hDC, L"0", 1, &size);
 
-      ExtTextOut (dis->hDC, r.left + dpi_scale (18), (r.top + r.bottom - size.cy) / 2,
-                  ETO_OPAQUE, &r, b, strlen (b), 0);
+      ExtTextOutW (dis->hDC, r.left + dpi_scale (18), (r.top + r.bottom - size.cy) / 2,
+                   ETO_OPAQUE, &r, b, wcslen (b), 0);
 
       if (dis->itemData & TRUETYPE_FONTTYPE)
         ImageList_Draw (cf_hil, 0, dis->hDC,
@@ -311,6 +311,8 @@ ChooseFontP::draw_font_list (HWND, DRAWITEMSTRUCT *dis)
   SetBkColor (dis->hDC, obg);
 }
 
+/* 見本はその文字集合のバイト列。組の文字集合を持つフォントで描くので、
+   バイト列のまま渡す */
 static const struct {BYTE charset; const char *string;} samples[] =
 {
   {0, "AaBbCcXxYyZz"},
@@ -349,11 +351,11 @@ ChooseFontP::draw_sample (HWND hwnd, DRAWITEMSTRUCT *dis)
   COLORREF obg = SetBkColor (dis->hDC, cf_bg);
   int l = strlen (sample);
   SIZE size = {0};
-  GetTextExtentPoint32 (dis->hDC, sample, l, &size);
+  GetTextExtentPoint32A (dis->hDC, sample, l, &size);
   const RECT &r = dis->rcItem;
-  ExtTextOut (dis->hDC, (r.left + r.right - size.cx) / 2,
-              (r.top + r.bottom - size.cy) / 2,
-              ETO_CLIPPED | ETO_OPAQUE, &r, sample, l, 0);
+  ExtTextOutA (dis->hDC, (r.left + r.right - size.cx) / 2,
+               (r.top + r.bottom - size.cy) / 2,
+               ETO_CLIPPED | ETO_OPAQUE, &r, sample, l, 0);
 
   SetTextColor (dis->hDC, ofg);
   SetBkColor (dis->hDC, obg);

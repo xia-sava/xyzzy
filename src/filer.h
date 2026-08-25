@@ -248,7 +248,7 @@ public:
 class ViewerWindow: public Window
 {
   static int vw_initialized;
-  static const char vw_classname[];
+  static const WCHAR vw_classname[];
 public:
   ViewerWindow ();
   ~ViewerWindow ();

@@ -316,14 +316,14 @@ FontSet::paint_backsl_bitmap (HDC hdc)
 {
   HGDIOBJ of = SelectObject (hdc, fs_font[FONT_ASCII]);
 
-  TextOut (hdc, fs_cell.cx * backsl, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * backsl, 0, L"/", 1);
   StretchBlt (hdc, fs_cell.cx * backsl, 0, fs_cell.cx, fs_cell.cy,
               hdc, fs_cell.cx * (backsl + 1) - 1, 0, -fs_cell.cx, fs_cell.cy,
               SRCCOPY);
 
-  TextOut (hdc, fs_cell.cx * bold_backsl, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * bold_backsl, 0, L"/", 1);
   int omode = SetBkMode (hdc, TRANSPARENT);
-  TextOut (hdc, fs_cell.cx * bold_backsl + 1, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * bold_backsl + 1, 0, L"/", 1);
   SetBkMode (hdc, omode);
   StretchBlt (hdc, fs_cell.cx * bold_backsl, 0, fs_cell.cx, fs_cell.cy,
               hdc, fs_cell.cx * (bold_backsl + 1) - 1, 0, -fs_cell.cx, fs_cell.cy,
@@ -424,9 +424,9 @@ FontSet::paint_fold_bitmap (HDC hdc)
 
   const FontObject &f = fs_font[FONT_ASCII];
   HGDIOBJ of = SelectObject (hdc, f);
-  char c = '<';
-  ExtTextOut (hdc, m0 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
-  ExtTextOut (hdc, m1 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
+  WCHAR c = '<';
+  ExtTextOutW (hdc, m0 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
+  ExtTextOutW (hdc, m1 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
   SelectObject (hdc, of);
 
   for (int y = 0; y < fs_cell.cy; y += 2)
