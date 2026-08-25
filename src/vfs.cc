@@ -471,16 +471,67 @@ WINFS::GetFileAttributes (LPCSTR lpFileName)
   return attr;
 }
 
+/* 名前を決めて、空のファイルをその名前で作る。API の GetTempFileNameW は
+   MAX_PATH より短いところにしか作れないので、同じ約束を自前で果たす。
+   番号を渡されたときは名前を組み立てるだけで、ファイルは作らない */
+static UINT
+make_temp_file (LPCWSTR dir, LPCWSTR prefix, UINT uUnique, LPWSTR buf)
+{
+  WCHAR pre[4];
+  int prel;
+  for (prel = 0; prel < 3 && prefix[prel]; prel++)
+    pre[prel] = prefix[prel];
+  pre[prel] = 0;
+
+  if (lstrlenW (dir) + prel + 10 > PATH_MAX)
+    {
+      SetLastError (ERROR_BUFFER_OVERFLOW);
+      return 0;
+    }
+
+  WCHAR *p = stpcpy (buf, dir);
+  if (p != buf && p[-1] != '\\' && p[-1] != '/')
+    *p++ = '\\';
+  p = stpcpy (p, pre);
+
+  UINT u = (uUnique ? uUnique : GetTickCount ()) & 0xffff;
+  for (int retry = 0; retry < 0x10000; retry++, u = (u + 1) & 0xffff)
+    {
+      if (!u)
+        continue;
+      wsprintfW (p, L"%04X.tmp", u);
+      if (uUnique)
+        return u;
+      HANDLE h = ::CreateFileW (buf, GENERIC_WRITE, 0, 0, CREATE_NEW,
+                                FILE_ATTRIBUTE_NORMAL, 0);
+      if (h != INVALID_HANDLE_VALUE)
+        {
+          CloseHandle (h);
+          return u;
+        }
+      if (GetLastError () != ERROR_FILE_EXISTS)
+        return 0;
+    }
+  SetLastError (ERROR_FILE_EXISTS);
+  return 0;
+}
+
 UINT WINAPI
 WINFS::GetTempFileName (LPCSTR lpPathName, LPCSTR lpPrefixString, UINT uUnique, LPSTR lpTempFileName)
 {
   wpath w (lpPathName), prefix (lpPrefixString);
   WCHAR buf[PATH_MAX + 1];
-  UINT r = ::GetTempFileNameW (w, prefix, uUnique, buf);
+  UINT r = make_temp_file (w, prefix, uUnique, buf);
   if (!r && askpass (lpPathName))
-    r = ::GetTempFileNameW (w, prefix, uUnique, buf);
-  if (r)
-    store_path (lpTempFileName, PATH_MAX + 1, buf);
+    r = make_temp_file (w, prefix, uUnique, buf);
+  if (!r)
+    return 0;
+  if (!store_path (lpTempFileName, PATH_MAX + 1, buf))
+    {
+      ::DeleteFileW (buf);
+      SetLastError (ERROR_BUFFER_OVERFLOW);
+      return 0;
+    }
   return r;
 }
 
