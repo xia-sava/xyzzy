@@ -40,4 +40,4 @@ xcopy /F /G /H /R /K /Y /S /E docs %DISTDIR%\docs\
 xcopy /F /G /H /R /K /Y /S /E reference %DISTDIR%\reference\
 
 cd %DISTROOT%
-7za a %DIST_ARCHIVE% %DISTDIR%
+7z a %DIST_ARCHIVE% %DISTDIR%

@@ -77,17 +77,6 @@ jobs:
         shell: cmd
         run: .\build.bat Release Build normal "/p:GenerateDebugInformation=false"
 
-      # archive.bat が呼ぶ 7za はランナーに無い。入っている 7z を同じ名前で見えるように
-      # 複製して PATH へ足す（書庫を作る引数の書式は同じ）。
-      - name: Provide 7za
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $bin = Join-Path $env:RUNNER_TEMP "bin"
-          New-Item -ItemType Directory -Force -Path $bin | Out-Null
-          Copy-Item "$env:ProgramFiles\7-Zip\7z.exe" (Join-Path $bin "7za.exe")
-          Add-Content -Path $env:GITHUB_PATH -Value $bin
-
       - name: Package
         shell: cmd
         run: .\archive.bat ${{ steps.version.outputs.version }}
