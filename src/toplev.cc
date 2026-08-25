@@ -295,14 +295,14 @@ do_dnd (HDROP hdrop)
                   ForceSetForegroundWindow (app.toplev);
                 }
               lisp list = Qnil;
-              int nfiles = DragQueryFile (hdrop, UINT (-1), 0, 0);
+              int nfiles = DragQueryFileW (hdrop, UINT (-1), 0, 0);
               save_cursor_depth cursor_depth;
               try
                 {
                   for (int i = 0; i < nfiles; i++)
                     {
-                      char path[PATH_MAX];
-                      DragQueryFile (hdrop, i, path, sizeof path);
+                      WCHAR path[PATH_MAX];
+                      DragQueryFileW (hdrop, i, path, numberof (path));
                       list = xcons (make_string (path), list);
                     }
                   DragFinish (hdrop);
