@@ -46,7 +46,7 @@ center_window (HWND hwnd)
 
 void
 init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
-                  int id_start, const char *entry, const char *key)
+                  int id_start, const WCHAR *entry, const WCHAR *key)
 {
   int *v = (int *)alloca (sizeof *v * ncolumns);
   if (read_conf (entry, key, v, ncolumns))
@@ -59,23 +59,23 @@ init_list_column (HWND list, int ncolumns, const int *width, const int *fmts,
       width = v;
     }
 
-  LV_COLUMN lvc;
+  LV_COLUMNW lvc;
   lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 
   for (int i = 0; i < ncolumns; i++)
     {
-      char buf[64];
+      WCHAR buf[64];
       lvc.cx = width[i];
-      LoadString (app.hinst, id_start + i, buf, sizeof buf);
+      LoadStringW (app.hinst, id_start + i, buf, numberof (buf));
       lvc.pszText = buf;
       lvc.iSubItem = i;
       lvc.fmt = fmts[i];
-      ListView_InsertColumn (list, i, &lvc);
+      SendMessageW (list, LVM_INSERTCOLUMNW, i, LPARAM (&lvc));
     }
 }
 
 void
-save_list_column_width (HWND list, int ncolumns, const char *entry, const char *key)
+save_list_column_width (HWND list, int ncolumns, const WCHAR *entry, const WCHAR *key)
 {
   if (!IsWindow (list))
     return;
@@ -131,36 +131,36 @@ buffer_list_save_column (HWND list)
 }
 
 static int
-store_buffer_name (HWND list, const Buffer *bp, LV_ITEM *lvi)
+store_buffer_name (HWND list, const Buffer *bp, LV_ITEMW *lvi)
 {
-  int l = xstring_length (bp->lbuffer_name) * 2 + 32;
-  char *b = (char *)alloca (l + 1);
+  int l = xstring_length (bp->lbuffer_name) + 32;
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
   bp->buffer_name (b, b + l);
   lvi->pszText = b;
-  return ListView_InsertItem (list, lvi);
+  return SendMessageW (list, LVM_INSERTITEMW, 0, LPARAM (lvi));
 }
 
 static void
-store_buffer_size (HWND list, const Buffer *bp, LV_ITEM *lvi)
+store_buffer_size (HWND list, const Buffer *bp, LV_ITEMW *lvi)
 {
-  char b[32];
-  sprintf (b, "%d", bp->b_nchars);
+  WCHAR b[32];
+  wsprintfW (b, L"%d", bp->b_nchars);
   lvi->pszText = b;
-  ListView_SetItem (list, lvi);
+  SendMessageW (list, LVM_SETITEMW, 0, LPARAM (lvi));
 }
 
 static void
-store_string (HWND list, lisp string, LV_ITEM *lvi)
+store_string (HWND list, lisp string, LV_ITEMW *lvi)
 {
   if (stringp (string))
     {
-      char *b = (char *)alloca (xstring_length (string) * 2 + 1);
-      w2s (b, string);
+      WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (string) + 1));
+      w2u (b, string);
       lvi->pszText = b;
     }
   else
-    lvi->pszText = "";
-  ListView_SetItem (list, lvi);
+    lvi->pszText = (WCHAR *)L"";
+  SendMessageW (list, LVM_SETITEMW, 0, LPARAM (lvi));
 }
 
 static void
@@ -179,7 +179,7 @@ buffer_list_init_item (HWND list)
       {
         if (bp == selected_buffer ())
           cur = i;
-        LV_ITEM lvi;
+        LV_ITEMW lvi;
         lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
         lvi.iItem = i++;
         lvi.iSubItem = 0;
@@ -444,7 +444,6 @@ resize_child_window (HWND dlg, UINT id, int dx, int dy)
 static BOOL CALLBACK
 select_buffer_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  static const char cfgBufferSelector[] = "BufferSelector";
   static RECT init_rect;
   static RECT last_rect;
   select_buffer_comparator *comparator = nullptr;
@@ -582,7 +581,7 @@ count_filter_size (lisp filters)
       lisp a = xcar (f), d = xcdr (f);
       check_string (a);
       check_string (d);
-      size += w2sl (a) + w2sl (d) + 2;
+      size += w2ul (a) + w2ul (d) + 2;
     }
   if (size)
     size++;
@@ -590,14 +589,14 @@ count_filter_size (lisp filters)
 }
 
 static void
-make_filter_string (char *b, lisp filters)
+make_filter_string (WCHAR *b, lisp filters)
 {
   for (; consp (filters); filters = xcdr (filters))
     {
       lisp f = xcar (filters);
       lisp a = xcar (f), d = xcdr (f);
-      b = w2s (b, a) + 1;
-      b = w2s (b, d) + 1;
+      b = w2u (b, a) + 1;
+      b = w2u (b, d) + 1;
     }
   *b = 0;
 }
@@ -645,9 +644,9 @@ OFN::init_eol_list ()
   for (int i = 0; eol_list[i].id >= 0; i++)
     if (!ofn_save || eol_list[i].id != IDS_EOL_AUTO)
       {
-        char b[64];
-        LoadString (app.hinst, eol_list[i].id, b, sizeof b);
-        int j = SendDlgItemMessage (ofn_hwnd, IDC_EOL_CODE, CB_ADDSTRING, 0, LPARAM (b));
+        WCHAR b[64];
+        LoadStringW (app.hinst, eol_list[i].id, b, numberof (b));
+        int j = SendDlgItemMessageW (ofn_hwnd, IDC_EOL_CODE, CB_ADDSTRING, 0, LPARAM (b));
         if (j != CB_ERR)
           {
             SendDlgItemMessage (ofn_hwnd, IDC_EOL_CODE, CB_SETITEMDATA, j, eol_list[i].code);
@@ -668,9 +667,9 @@ OFN::init_encoding_list ()
       if (char_encoding_p (encoding)
           && (!ofn_save || xchar_encoding_type (encoding) != encoding_auto_detect))
         {
-          char b[256];
-          w2s (b, b + sizeof b, xchar_encoding_display_name (encoding));
-          int j = SendDlgItemMessage (ofn_hwnd, IDC_CHAR_ENCODING, CB_ADDSTRING, 0, LPARAM (b));
+          WCHAR b[256];
+          w2u (b, b + numberof (b) - 1, xchar_encoding_display_name (encoding));
+          int j = SendDlgItemMessageW (ofn_hwnd, IDC_CHAR_ENCODING, CB_ADDSTRING, 0, LPARAM (b));
           if (j != CB_ERR)
             {
               SendDlgItemMessage (ofn_hwnd, IDC_CHAR_ENCODING, CB_SETITEMDATA,
@@ -816,7 +815,7 @@ OFN::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
                 {
                   hwnd = GetParent (ofn_hwnd);
                   if (ofn_ok_button)
-                    CommDlg_OpenSave_SetControlText (hwnd, IDOK, "OK");
+                    SendMessageW (hwnd, CDM_SETCONTROLTEXT, IDOK, LPARAM (L"OK"));
                 }
               else
                 hwnd = ofn_hwnd;
@@ -847,7 +846,7 @@ file_name_dialog_hook (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   OFN *ofn;
   if (msg == WM_INITDIALOG)
     {
-      lparam = ((OPENFILENAME *)lparam)->lCustData;
+      lparam = ((OPENFILENAMEW *)lparam)->lCustData;
       SetWindowLong (hwnd, DWL_USER, lparam);
       ofn = (OFN *)lparam;
       ofn->ofn_hwnd = hwnd;
@@ -888,20 +887,22 @@ Ffile_name_dialog (lisp keys)
   if (!leol_code)
     leol_code = find_keyword (Knewline_code, keys);
 
-  char dir[PATH_MAX + 1];
-  *dir = 0;
+  char dir8[PATH_MAX + 1];
+  *dir8 = 0;
   lisp ldir = find_keyword (Kinitial_directory, keys);
   if (ldir != Qnil)
     {
-      pathname2cstr (ldir, dir);
-      DWORD a = WINFS::GetFileAttributes (dir);
+      pathname2cstr (ldir, dir8);
+      DWORD a = WINFS::GetFileAttributes (dir8);
       if (a == DWORD (-1) || !(a & FILE_ATTRIBUTE_DIRECTORY))
-        *dir = 0;
+        *dir8 = 0;
     }
 
-  if (!*dir)
-    pathname2cstr (selected_buffer ()->ldirectory, dir);
-  map_sl_to_backsl (dir);
+  if (!*dir8)
+    pathname2cstr (selected_buffer ()->ldirectory, dir8);
+  map_sl_to_backsl (dir8);
+  WCHAR dir[PATH_MAX + 1];
+  u82u (dir, dir8);
 
   OFN ofn;
   bzero (&ofn, sizeof ofn);
@@ -913,18 +914,18 @@ Ffile_name_dialog (lisp keys)
   ofn.hInstance = app.hinst;
   ofn.lCustData = DWORD (&ofn);
 
-  char buf[1024 * 32];
-  if (stringp (ldefault) && xstring_length (ldefault) < sizeof buf / 2 - 1)
+  WCHAR buf[1024 * 32];
+  if (stringp (ldefault) && xstring_length (ldefault) < numberof (buf) - 1)
     {
-      w2s (buf, ldefault);
+      w2u (buf, ldefault);
       map_sl_to_backsl (buf);
     }
   else if (!filter_size)
-    strcpy (buf, "*.*");
+    wcscpy (buf, L"*.*");
   else
     *buf = 0;
   ofn.lpstrFile = buf;
-  ofn.nMaxFile = sizeof buf;
+  ofn.nMaxFile = numberof (buf);
 
   ofn.Flags = (OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | OFN_LONGNAMES
                | OFN_ENABLEHOOK | OFN_ENABLESIZING | OFN_SHAREAWARE);
@@ -945,38 +946,38 @@ Ffile_name_dialog (lisp keys)
   if (sysdep.Win5p ())
     ofn.Flags |= OFN_DONTADDTORECENT | OFN_FORCESHOWHIDDEN;
 
-  char *filter = 0;
+  WCHAR *filter = 0;
   if (filter_size)
     {
-      filter = (char *)alloca (filter_size);
+      filter = (WCHAR *)alloca (sizeof (WCHAR) * filter_size);
       make_filter_string (filter, lfilters);
     }
   ofn.lpstrFilter = filter;
   ofn.nFilterIndex = filter_index;
 
   ofn.lpstrInitialDir = dir;
-  int l = strlen (dir);
-  if (!memicmp (dir, buf, l))
+  int l = wcslen (dir);
+  if (!_wcsnicmp (dir, buf, l))
     {
       if (buf[l] == '\\')
         l++;
-      strcpy (buf, buf + l);
+      wcscpy (buf, buf + l);
     }
 
-  char *title = 0;
+  WCHAR *title = 0;
   if (stringp (ltitle))
     {
       ofn.ofn_ok_button = 1;
-      title = (char *)alloca (xstring_length (ltitle) * 2 + 1);
-      w2s (title, ltitle);
+      title = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (ltitle) + 1));
+      w2u (title, ltitle);
     }
   ofn.lpstrTitle = title;
 
-  char *ext = 0;
+  WCHAR *ext = 0;
   if (stringp (lext))
     {
-      ext = (char *)alloca (xstring_length (lext) * 2 + 1);
-      w2s (ext, lext);
+      ext = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lext) + 1));
+      w2u (ext, lext);
     }
   ofn.lpstrDefExt = ext;
 
@@ -1016,22 +1017,22 @@ Ffile_name_dialog (lisp keys)
     {
       ofn.Flags |= OFN_ENABLETEMPLATE;
       ofn.lpTemplateName = (multiple
-                            ? MAKEINTRESOURCE (MULTIFILEOPENORD)
-                            : MAKEINTRESOURCE (FILEOPENORD));
+                            ? MAKEINTRESOURCEW (MULTIFILEOPENORD)
+                            : MAKEINTRESOURCEW (FILEOPENORD));
       if (!ofn.lpstrTitle && save)
         {
-          title = (char *)alloca (256);
-          LoadString (app.hinst, IDS_SAVE_AS, title, 256);
+          title = (WCHAR *)alloca (sizeof (WCHAR) * 256);
+          LoadStringW (app.hinst, IDS_SAVE_AS, title, 256);
           ofn.lpstrTitle = title;
         }
     }
   else if (ofn.ofn_eol_req || ofn.ofn_encoding_req)
     {
       ofn.Flags |= OFN_ENABLETEMPLATE;
-      ofn.lpTemplateName = MAKEINTRESOURCE (IDD_CUST_EXPLORER);
+      ofn.lpTemplateName = MAKEINTRESOURCEW (IDD_CUST_EXPLORER);
     }
 
-  if (save ? !GetSaveFileName (&ofn) : !GetOpenFileName (&ofn))
+  if (save ? !GetSaveFileNameW (&ofn) : !GetOpenFileNameW (&ofn))
     return Qnil;
 
   multiple_value::count () = 4;
@@ -1052,41 +1053,42 @@ Ffile_name_dialog (lisp keys)
   lisp result = Qnil;
   if (ofn.Flags & OFN_EXPLORER)
     {
-      char *b = buf + strlen (buf);
+      WCHAR *b = buf + wcslen (buf);
       map_backsl_to_sl (buf);
       if (!b[1])
         return xcons (make_string (buf), Qnil);
-      char *e = b++;
-      if (jrindex (buf, '/') != e - 1)
+      WCHAR *e = b++;
+      if (wcsrchr (buf, '/') != e - 1)
         *e++ = '/';
       while (*b)
         {
-          char *p = stpcpy (e, b);
+          wcscpy (e, b);
+          WCHAR *p = e + wcslen (e);
           b += p - e + 1;
           result = xcons (make_string (buf), result);
         }
     }
   else
     {
-      char *b = jindex (buf, ' ');
+      WCHAR *b = wcschr (buf, ' ');
       if (!b)
         {
           map_backsl_to_sl (buf);
           return xcons (make_string (buf), Qnil);
         }
-      char *e = b++;
+      WCHAR *e = b++;
       *e = 0;
-      if (jrindex (buf, '/') != e - 1)
+      if (wcsrchr (buf, '/') != e - 1)
         *e++ = '/';
       while (1)
         {
-          char *b2 = jindex (b, ' ');
+          WCHAR *b2 = wcschr (b, ' ');
           if (b2)
             *b2 = 0;
-          strcpy (e, b);
-          char path[PATH_MAX], *name;
-          if (WINFS::GetFullPathName (buf, sizeof path, path, &name))
-            strcpy (e, name);
+          wcscpy (e, b);
+          WCHAR path[PATH_MAX], *name;
+          if (GetFullPathNameW (buf, numberof (path), path, &name))
+            wcscpy (e, name);
           map_backsl_to_sl (buf);
           result = xcons (make_string (buf), result);
           if (!b2)
@@ -1098,9 +1100,9 @@ Ffile_name_dialog (lisp keys)
   return result;
 }
 
-struct ODN: public tagOFNA
+struct ODN: public tagOFNW
 {
-  char odn_result[PATH_MAX + 1];
+  WCHAR odn_result[PATH_MAX + 1];
   void store_dirname (HWND);
   void selch (HWND, int);
   int ok (HWND);
@@ -1110,22 +1112,22 @@ struct ODN: public tagOFNA
 void
 ODN::store_dirname (HWND hwnd)
 {
-  SetDlgItemText (hwnd, IDC_PATH, odn_result);
+  SetDlgItemTextW (hwnd, IDC_PATH, odn_result);
 }
 
 void
 ODN::selch (HWND hwnd, int id)
 {
-  char path[PATH_MAX];
-  GetCurrentDirectory (sizeof path, path);
-  if (!strcmp (path, odn_result))
+  WCHAR path[PATH_MAX];
+  GetCurrentDirectoryW (numberof (path), path);
+  if (!wcscmp (path, odn_result))
     {
       if (id == lst2)
         PostMessage (hwnd, WM_COMMAND, IDOK, 0);
     }
   else
     {
-      strcpy (odn_result, path);
+      wcscpy (odn_result, path);
       store_dirname (hwnd);
     }
 }
@@ -1133,12 +1135,12 @@ ODN::selch (HWND hwnd, int id)
 int
 ODN::error (HWND hwnd, int e)
 {
-  char buf[1024];
-  FormatMessage ((FORMAT_MESSAGE_FROM_SYSTEM
-                  | FORMAT_MESSAGE_IGNORE_INSERTS
-                  | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                 0, e, GetUserDefaultLangID (),
-                 buf, sizeof buf, 0);
+  WCHAR buf[1024];
+  FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
+                   | FORMAT_MESSAGE_IGNORE_INSERTS
+                   | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                  0, e, GetUserDefaultLangID (),
+                  buf, numberof (buf), 0);
   MsgBox (hwnd, buf, TitleBarString, MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
   return 1;
@@ -1147,20 +1149,22 @@ ODN::error (HWND hwnd, int e)
 int
 ODN::ok (HWND hwnd)
 {
-  char path[PATH_MAX];
-  GetDlgItemText (hwnd, IDC_PATH, path, sizeof path);
+  WCHAR path[PATH_MAX];
+  GetDlgItemTextW (hwnd, IDC_PATH, path, numberof (path));
   if (!*path)
     return 1;
-  DWORD atr = WINFS::GetFileAttributes (path);
+  char path8[PATH_MAX + 1];
+  u2u8 (path8, path);
+  DWORD atr = WINFS::GetFileAttributes (path8);
   if (atr == -1)
     return error (hwnd, GetLastError ());
   if (!(atr & FILE_ATTRIBUTE_DIRECTORY))
     return error (hwnd, ERROR_DIRECTORY);
 
   HWND drive = GetDlgItem (hwnd, cmb2);
-  int l = strlen (path);
-  strcpy (path + l, " ");
-  int i = SendMessage (drive, CB_FINDSTRING, WPARAM (-1), LPARAM (path));
+  int l = wcslen (path);
+  wcscpy (path + l, L" ");
+  int i = SendMessageW (drive, CB_FINDSTRING, WPARAM (-1), LPARAM (path));
   path[l] = 0;
   if (i != CB_ERR)
     {
@@ -1172,8 +1176,8 @@ ODN::ok (HWND hwnd)
       return 1;
     }
 
-  char *tem;
-  WINFS::GetFullPathName (path, sizeof odn_result, odn_result, &tem);
+  WCHAR *tem;
+  GetFullPathNameW (path, numberof (odn_result), odn_result, &tem);
   return 0;
 }
 
@@ -1182,7 +1186,7 @@ directory_name_dialog_hook (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   if (msg == WM_INITDIALOG)
     {
-      lparam = ((OPENFILENAME *)lparam)->lCustData;
+      lparam = ((OPENFILENAMEW *)lparam)->lCustData;
       SetWindowLong (hwnd, DWL_USER, lparam);
       ((ODN *)lparam)->store_dirname (hwnd);
       center_window (hwnd);
@@ -1227,10 +1231,10 @@ Fdirectory_name_dialog (lisp keys)
   odn.hwndOwner = get_active_window ();
   odn.hInstance = app.hinst;
 
-  char buf[PATH_MAX];
-  strcpy (buf, "FOO");
+  WCHAR buf[PATH_MAX];
+  wcscpy (buf, L"FOO");
   odn.lpstrFile = buf;
-  odn.nMaxFile = sizeof buf;
+  odn.nMaxFile = numberof (buf);
 
   odn.Flags = (OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | OFN_LONGNAMES
                | OFN_ENABLEHOOK | OFN_HIDEREADONLY | OFN_ENABLETEMPLATE
@@ -1238,27 +1242,27 @@ Fdirectory_name_dialog (lisp keys)
   if (sysdep.Win5p ())
     odn.Flags |= OFN_DONTADDTORECENT | OFN_FORCESHOWHIDDEN;
   odn.lpfnHook = directory_name_dialog_hook;
-  odn.lpTemplateName = MAKEINTRESOURCE (IDD_DIRECTORY);
+  odn.lpTemplateName = MAKEINTRESOURCEW (IDD_DIRECTORY);
 
-  if (xstring_length (ldefault) < sizeof odn.odn_result / 2 - 1)
+  if (xstring_length (ldefault) < numberof (odn.odn_result) - 1)
     {
-      w2s (odn.odn_result, ldefault);
+      w2u (odn.odn_result, ldefault);
       map_sl_to_backsl (odn.odn_result);
       odn.lpstrInitialDir = odn.odn_result;
     }
   else
-    strcpy (odn.odn_result, sysdep.curdir);
+    u82u (odn.odn_result, sysdep.curdir);
 
-  char *title = 0;
+  WCHAR *title = 0;
   if (stringp (ltitle))
     {
-      title = (char *)alloca (xstring_length (ltitle) * 2 + 1);
-      w2s (title, ltitle);
+      title = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (ltitle) + 1));
+      w2u (title, ltitle);
     }
   odn.lpstrTitle = title;
   odn.lCustData = DWORD (&odn);
 
-  if (!GetOpenFileName (&odn))
+  if (!GetOpenFileNameW (&odn))
     return Qnil;
 
   map_backsl_to_sl (odn.odn_result);
@@ -1348,8 +1352,8 @@ IdleDialog::DoModal (HWND owner, UINT id)
       enable_owner = 1;
     }
 
-  id_hwnd = CreateDialogParam (app.hinst, MAKEINTRESOURCE (id), owner,
-                               WndProc, LPARAM (this));
+  id_hwnd = CreateDialogParamW (app.hinst, MAKEINTRESOURCEW (id), owner,
+                                WndProc, LPARAM (this));
   if (id_hwnd)
     {
       ShowWindow (id_hwnd, SW_SHOW);
@@ -1373,8 +1377,8 @@ int
 IdleDialog::Create (HWND owner, UINT id)
 {
   id_modeless = 1;
-  id_hwnd = CreateDialogParam (app.hinst, MAKEINTRESOURCE (id), owner,
-                               WndProc, LPARAM (this));
+  id_hwnd = CreateDialogParamW (app.hinst, MAKEINTRESOURCEW (id), owner,
+                                WndProc, LPARAM (this));
   if (!id_hwnd)
     return 0;
   ShowWindow (id_hwnd, SW_SHOW);
@@ -1419,13 +1423,14 @@ list_volume_name::thread_main ()
       for (int c = 'a'; c <= 'z' && m_hwnd; c++)
         if (m_drives & (1 << (c - 'a')))
           {
-            char name[5];
-            sprintf (name, "%c:\\", c);
-            int type = GetDriveType (name);
-            char volname[1024];
+            WCHAR name[5];
+            wsprintfW (name, L"%c:\\", c);
+            int type = GetDriveTypeW (name);
+            WCHAR volname[1024];
             if (type != DRIVE_REMOVABLE
-                && GetVolumeInformation (name, volname + 1, sizeof volname - 1,
-                                         0, 0, 0, 0, 0)
+                && GetVolumeInformationW (name, volname + 1,
+                                          numberof (volname) - 1,
+                                          0, 0, 0, 0, 0)
                 && volname[1])
               {
                 *volname = c;
@@ -1504,9 +1509,9 @@ DriveDialog::insert_drives (HWND hwnd)
           if (c == dd_defalt)
             cur = item;
 
-          char name[5];
-          sprintf (name, "%c:\\", c);
-          int type = GetDriveType (name);
+          WCHAR name[5];
+          wsprintfW (name, L"%c:\\", c);
+          int type = GetDriveTypeW (name);
 
           LV_ITEM lvi;
           lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
@@ -1523,7 +1528,7 @@ DriveDialog::insert_drives (HWND hwnd)
           ListView_InsertItem (hwnd, &lvi);
 
           SIZE sz;
-          GetTextExtentPoint32 (hdc, name, 2, &sz);
+          GetTextExtentPoint32W (hdc, name, 2, &sz);
           dd_maxw = max (dd_maxw, sz.cx);
         }
       else
@@ -1549,16 +1554,16 @@ DriveDialog::insert_volnames ()
   LONG maxw = 0;
   for (const xstring_node *p = dd_thread->list ().head (); p; p = p->next ())
     {
-      const char *volname = *p;
+      const WCHAR *volname = *p;
       if (lower_char_p (*volname & 255))
         {
           int i = dd_indexes[*volname - 'a'];
           if (i >= 0)
             {
               volname++;
-              ListView_SetItemText (hwnd, i, 1, (char *)volname);
+              ListView_SetItemText (hwnd, i, 1, (WCHAR *)volname);
               SIZE sz;
-              GetTextExtentPoint32 (hdc, volname, strlen (volname), &sz);
+              GetTextExtentPoint32W (hdc, volname, wcslen (volname), &sz);
               maxw = max (maxw, sz.cx);
             }
         }

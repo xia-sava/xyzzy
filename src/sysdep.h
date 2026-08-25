@@ -90,7 +90,7 @@ public:
   HFONT ui_font270 ();
 
   char curdir[PATH_MAX];
-  char host_name[MAX_COMPUTERNAME_LENGTH + 1];
+  WCHAR host_name[MAX_COMPUTERNAME_LENGTH + 1];
   DWORD process_id;
 
   int64_t perf_freq;
@@ -103,7 +103,7 @@ public:
   void load_settings ();
   void load_cursors ();
 
-  static DWORD get_dll_version (const char *);
+  static DWORD get_dll_version (const WCHAR *);
 
 #define PACK_VERSION(MAJ, MIN) MAKELONG ((MIN), (MAJ))
   enum
@@ -147,6 +147,6 @@ int dpi_scale (int);
 
 // BASE_SCREEN_DPI 基準のビットマップ資源から、画面の DPI に合わせて拡大した
 // イメージリストを作る。cx は拡大前の 1 枚あたりの幅
-HIMAGELIST dpi_scale_imagelist (HINSTANCE, LPCSTR name, int cx, COLORREF mask);
+HIMAGELIST dpi_scale_imagelist (HINSTANCE, LPCWSTR name, int cx, COLORREF mask);
 
 #endif

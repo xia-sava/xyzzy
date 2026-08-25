@@ -783,7 +783,7 @@ static symbols sys[] =
   SI_DEFUN3 (*set-function-name, 2, 0, 0),
 
   /* bytecode.cc */
-  SI_DEFSF3 (*byte-code),
+  SI_DEFSF3 (*byte-code-2),
 
   /* backquote.cc */
   SI_DEFUN3 (*bq-completely-process, 1, 0, 0),
@@ -1786,6 +1786,8 @@ static symbols ed[] =
   DEFUN3 (buffer-eol-code, 0, 1, 0),
   DEFUN3 (set-buffer-fileio-encoding, 1, 1, 0),
   DEFUN3 (set-buffer-eol-code, 1, 1, 0),
+  DEFUN3 (buffer-char-language, 0, 1, 0),
+  DEFUN3 (set-buffer-char-language, 1, 1, 0),
   DEFUN3 (buffer-list, 0, 0, FFneed_rest),
   DEFUN3 (enum-buffers, 1, 0, 0),
   DEFUN3 (find-name-buffer, 1, 0, 0),
@@ -2360,9 +2362,8 @@ static symbols ed[] =
   DEFUN3 (kana-char-p, 1, 0, 0),
   DEFUN3 (char-unicode, 1, 0, 0),
   DEFUN3 (unicode-char, 1, 0, 0),
-  DEFUN3 (iso-char-code, 1, 1, 0),
+  DEFUN3 (char-external-code, 1, 1, 0),
   DEFUN3 (iso-code-char, 2, 1, 0),
-  DEFUN3 (iso-char-charset, 1, 1, 0),
   DEFUN3 (word-char-p, 1, 0, 0),
 
   /* pathname.cc */
@@ -2688,7 +2689,6 @@ static symbols ed[] =
   DEFVAR2 (*char-encoding-list*),
   DEFUN3 (parse-char-encoding-region, 3, 0, 0),
   DEFUN3 (parse-char-encoding-string, 2, 0, FFneed_rest),
-  DEFVAR2 (*unicode-to-half-width*),
   DEFVAR2 (*vender-depend-code-mapping*),
 
   /* listen.cc */

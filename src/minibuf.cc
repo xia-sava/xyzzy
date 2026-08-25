@@ -595,7 +595,7 @@ completion::complete_filename (const char *path, lisp show_dots, lisp ignores)
 {
   int ignored = 0;
 
-  WIN32_FIND_DATA *fd = (WIN32_FIND_DATA *)alloca (sizeof *fd + 2);
+  find_data *fd = (find_data *)alloca (sizeof *fd + 2);
   HANDLE h = WINFS::FindFirstFile (path, fd);
   if (h == INVALID_HANDLE_VALUE)
     {
@@ -619,7 +619,7 @@ completion::complete_filename (const char *path, lisp show_dots, lisp ignores)
       else if (c_type == Kdirectory_name)
         continue;
 
-      lisp name = make_string (fd->cFileName);
+      lisp name = make_path (fd->cFileName, 0);
       for (lisp p = ignores; consp (p); p = xcdr (p))
         {
           lisp ext = xcar (p);
@@ -743,8 +743,8 @@ completion::complete_filename ()
 
   if (!complete_UNC (directory))
     {
-      char *path = (char *)alloca (2 * xstring_length (directory) + 10);
-      w2s (path, directory);
+      char *path = (char *)alloca (3 * xstring_length (directory) + 10);
+      w2u8 (path, directory);
       map_sl_to_backsl (path);
       strcat (path, "*");
 

@@ -8,13 +8,15 @@ Frun_winhelp (lisp file, lisp topic)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (file, path);
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
   if (!topic || topic == Qnil)
-    return boole (WinHelp (app.toplev, path, HELP_CONTENTS, 0));
+    return boole (WinHelpW (app.toplev, wpath, HELP_CONTENTS, 0));
 
   check_string (topic);
-  char *b = (char *)alloca (xstring_length (topic) * 2 + 1);
-  w2s (b, topic);
-  return boole (WinHelp (app.toplev, path, HELP_PARTIALKEY, DWORD (b)));
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (topic) + 1));
+  w2u (b, topic);
+  return boole (WinHelpW (app.toplev, wpath, HELP_PARTIALKEY, DWORD (b)));
 }
 
 lisp
@@ -22,7 +24,9 @@ Fkill_winhelp (lisp file)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (file, path);
-  return boole (WinHelp (app.toplev, path, HELP_QUIT, 0));
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
+  return boole (WinHelpW (app.toplev, wpath, HELP_QUIT, 0));
 }
 
 struct iheader
@@ -110,8 +114,9 @@ ifile::get_titles (FILE *fp)
         return 0;
       if_headers[i].ih_file[iheader::FILE_LENGTH] = 0;
       if_headers[i].ih_title[iheader::TITLE_LENGTH] = 0;
+      /* 索引の綴りは CP932 で決まっているので、バイト列のまま辿る */
       for (char *p = if_headers[i].ih_title, *pe = p + iheader::TITLE_LENGTH;
-           p < pe; p = CharNext (p))
+           p < pe; p = CharNextA (p))
         if (*p && *(u_char *)p < ' ')
           *p = ' ';
     }
@@ -245,14 +250,18 @@ iset::init_files (HWND dlg)
     for (int i = 0; i < f->if_nfiles; i++)
       if (is_match_all || f->if_headers[i].ih_match)
         {
-          int idx = SendDlgItemMessage (dlg, IDC_FILES, LB_ADDSTRING, 0,
-                                        LPARAM (f->if_headers[i].ih_title));
+          WCHAR title[iheader::TITLE_LENGTH + 1];
+          s2u (title, f->if_headers[i].ih_title);
+          int idx = SendDlgItemMessageW (dlg, IDC_FILES, LB_ADDSTRING, 0,
+                                         LPARAM (title));
           if (idx != LB_ERR)
-            SendDlgItemMessage (dlg, IDC_FILES, LB_SETITEMDATA,
-                                idx, LPARAM (&f->if_headers[i]));
+            SendDlgItemMessageW (dlg, IDC_FILES, LB_SETITEMDATA,
+                                 idx, LPARAM (&f->if_headers[i]));
         }
-  SendDlgItemMessage (dlg, IDC_FILES, LB_SETCURSEL, 0, 0);
-  SetDlgItemText (dlg, IDC_TOPIC, is_topic);
+  SendDlgItemMessageW (dlg, IDC_FILES, LB_SETCURSEL, 0, 0);
+  WCHAR wtopic[256];
+  s2u (wtopic, is_topic);
+  SetDlgItemTextW (dlg, IDC_TOPIC, wtopic);
 }
 
 inline
@@ -275,8 +284,10 @@ iset::load (lisp filename)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (filename, path);
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
   ifile *f = new ifile;
-  FILE *fp = _fsopen (path, "rb", _SH_DENYNO);
+  FILE *fp = _wfsopen (wpath, L"rb", _SH_DENYNO);
   if (!fp)
     {
       delete f;
@@ -317,8 +328,11 @@ select_dialog_proc (HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam)
         case IDOK:
           {
             iset *is = (iset *)GetWindowLong (dlg, DWL_USER);
+            WCHAR w[256];
+            GetDlgItemTextW (dlg, IDC_TOPIC, w, numberof (w));
             char buf[256];
-            GetDlgItemText (dlg, IDC_TOPIC, buf, sizeof buf);
+            if (!WideCharToMultiByte (CP_ACP, 0, w, -1, buf, sizeof buf, 0, 0))
+              *buf = 0;
             if (strcmp (buf, is->is_topic))
               {
                 strcpy (is->is_topic, buf);
@@ -360,7 +374,7 @@ iset::lookup ()
 static void
 trim_spaces (char *p)
 {
-  for (; *p && *p != ' ' && *p != '\t'; p = CharNext (p))
+  for (; *p && *p != ' ' && *p != '\t'; p = CharNextA (p))
     ;
   *p = 0;
 }
@@ -397,7 +411,7 @@ Ffind_winhelp_path (lisp index_file, lisp ltopic)
   return make_string (is.is_match->ih_file);
 }
 
-typedef HWND (WINAPI *HTMLHELPPROC)(HWND, LPCSTR, UINT, DWORD);
+typedef HWND (WINAPI *HTMLHELPPROC)(HWND, LPCWSTR, UINT, DWORD);
 
 #define HH_KEYWORD_LOOKUP 0xd
 #define HH_GET_LAST_ERROR 0x14
@@ -406,11 +420,11 @@ typedef struct tagHH_AKLINK
 {
   int cbStruct;
   BOOL fReserved;
-  LPCTSTR pszKeywords;
-  LPCTSTR pszUrl;
-  LPCTSTR pszMsgText;
-  LPCTSTR pszMsgTitle;
-  LPCTSTR pszWindow;
+  LPCWSTR pszKeywords;
+  LPCWSTR pszUrl;
+  LPCWSTR pszMsgText;
+  LPCWSTR pszMsgTitle;
+  LPCWSTR pszWindow;
   BOOL fIndexOnFail;
 } HH_AKLINK;
 
@@ -427,15 +441,15 @@ Fhtml_help (lisp lfile, lisp lkeyword)
   check_string (lfile);
   check_string (lkeyword);
 
-  static HTMLHELPPROC HtmlHelp = (HTMLHELPPROC)GetProcAddress (LoadLibrary ("hhctrl.ocx"),
-                                                               "HtmlHelpA");
+  static HTMLHELPPROC HtmlHelp = (HTMLHELPPROC)GetProcAddress (LoadLibraryW (L"hhctrl.ocx"),
+                                                               "HtmlHelpW");
   if (!HtmlHelp)
     FEsimple_error (Ehtml_help_does_not_supported);
 
-  char *file = (char *)alloca (xstring_length (lfile) * 2 + 1);
-  w2s (file, lfile);
-  char *keyword = (char *)alloca (xstring_length (lkeyword) * 2 + 1);
-  w2s (keyword, lkeyword);
+  WCHAR *file = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lfile) + 1));
+  w2u (file, lfile);
+  WCHAR *keyword = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lkeyword) + 1));
+  w2u (keyword, lkeyword);
 
   HH_AKLINK link = {sizeof link};
   link.pszKeywords = keyword;

@@ -112,27 +112,27 @@ XCOLORREF Window::w_textprop_xbackcolor[GLYPH_TEXTPROP_NCOLORS];
 
 const wcolor_index_name wcolor_index_names[] =
 {
-  {cfgTextColor, RGB (0, 0, 0), "文字色"},
-  {cfgBackColor, RGB (0xff, 0xff, 0xff), "背景色"},
-  {cfgCtlColor, RGB (0x80, 0x80, 0), "制御文字"},
-  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), "選択文字色"},
-  {cfgSelectionBackColor, RGB (0, 0, 0), "選択背景色"},
-  {cfgKwdColor1, RGB (0, 0, 0xff), "キーワード1"},
-  {cfgKwdColor2, RGB (0, 0x40, 0), "キーワード2"},
-  {cfgKwdColor3, RGB (0x80, 0, 0x80), "キーワード3"},
-  {cfgStringColor, RGB (0, 0x40, 0), "文字列"},
-  {cfgCommentColor, RGB (0, 0x80, 0), "コメント"},
-  {cfgTagColor, RGB (0x40, 0x40, 0), "タグ"},
-  {cfgCursorColor, RGB (0x80, 0, 0x80), "行カーソル"},
-  {cfgCaretColor, RGB (0, 0, 0), "キャレット"},
-  {cfgImeCaretColor, RGB (0x80, 0, 0), "IMEキャレット"},
-  {cfgLinenum, RGB (0, 0, 0), "行番号"},
-  {cfgReverse, RGB (0, 0, 0), "ニセ反転色"},
-  {cfgUnselectedModeLineFg, RGB (0, 0, 0), "モード行文字色"},
-  {cfgUnselectedModeLineBg, RGB (0, 0, 0), "モード行背景色"},
+  {cfgTextColor, RGB (0, 0, 0), L"文字色"},
+  {cfgBackColor, RGB (0xff, 0xff, 0xff), L"背景色"},
+  {cfgCtlColor, RGB (0x80, 0x80, 0), L"制御文字"},
+  {cfgSelectionTextColor, RGB (0xff, 0xff, 0xff), L"選択文字色"},
+  {cfgSelectionBackColor, RGB (0, 0, 0), L"選択背景色"},
+  {cfgKwdColor1, RGB (0, 0, 0xff), L"キーワード1"},
+  {cfgKwdColor2, RGB (0, 0x40, 0), L"キーワード2"},
+  {cfgKwdColor3, RGB (0x80, 0, 0x80), L"キーワード3"},
+  {cfgStringColor, RGB (0, 0x40, 0), L"文字列"},
+  {cfgCommentColor, RGB (0, 0x80, 0), L"コメント"},
+  {cfgTagColor, RGB (0x40, 0x40, 0), L"タグ"},
+  {cfgCursorColor, RGB (0x80, 0, 0x80), L"行カーソル"},
+  {cfgCaretColor, RGB (0, 0, 0), L"キャレット"},
+  {cfgImeCaretColor, RGB (0x80, 0, 0), L"IMEキャレット"},
+  {cfgLinenum, RGB (0, 0, 0), L"行番号"},
+  {cfgReverse, RGB (0, 0, 0), L"ニセ反転色"},
+  {cfgUnselectedModeLineFg, RGB (0, 0, 0), L"モード行文字色"},
+  {cfgUnselectedModeLineBg, RGB (0, 0, 0), L"モード行背景色"},
 
-  {0, RGB (0, 0, 0), "選択モード行文字色"},
-  {0, RGB (0, 0, 0), "選択モード行背景色"},
+  {0, RGB (0, 0, 0), L"選択モード行文字色"},
+  {0, RGB (0, 0, 0), L"選択モード行背景色"},
 };
 
 ModelineParam::ModelineParam ()
@@ -153,9 +153,9 @@ ModelineParam::init (HFONT hf)
     m_hfont = HFONT (GetStockObject (SYSTEM_FONT));
   else
     {
-      LOGFONT lf;
-      GetObject (hf, sizeof lf, &lf);
-      m_hfont = CreateFontIndirect (&lf);
+      LOGFONTW lf;
+      GetObjectW (hf, sizeof lf, &lf);
+      m_hfont = CreateFontIndirectW (&lf);
     }
   TEXTMETRIC tm;
   HDC hdc = GetDC (0);
@@ -167,7 +167,7 @@ ModelineParam::init (HFONT hf)
   for (int i = 0; i < 22; i++)
     {
       SIZE size;
-      GetTextExtentPoint32 (hdc, "0000000000:0000000000", i, &size);
+      GetTextExtentPoint32W (hdc, L"0000000000:0000000000", i, &size);
       m_exts[i] = size.cx;
     }
   SelectObject (hdc, of);
@@ -184,14 +184,14 @@ StatusWindow::StatusWindow ()
 void
 StatusWindow::restore ()
 {
-  SendMessage (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
+  SendMessageW (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
   UpdateWindow (sw_hwnd);
 }
 
 int
-StatusWindow::text (const char *s)
+StatusWindow::text (const WCHAR *s)
 {
-  SendMessage (sw_hwnd, SB_SETTEXT, 0, LPARAM (s));
+  SendMessageW (sw_hwnd, SB_SETTEXT, 0, LPARAM (s));
   UpdateWindow (sw_hwnd);
   sw_last.textf = 1;
   return sw_last.l;
@@ -225,7 +225,7 @@ StatusWindow::putc (Char c)
           *sw_b++ = char (c == CC_DEL ? '?' : c + '@');
         }
       else
-        *sw_b++ = i2w (c);
+        *sw_b++ = ucs2_t (c);
     }
   return 1;
 }
@@ -247,7 +247,7 @@ StatusWindow::flush ()
       memcpy (sw_last.buf, sw_buf, sizeof *sw_buf * l);
       sw_last.l = l;
       sw_last.textf = 0;
-      SendMessage (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
+      SendMessageW (sw_hwnd, SB_SETTEXT, SBT_OWNERDRAW | 0, LPARAM (&sw_last));
       UpdateWindow (sw_hwnd);
     }
 }
@@ -258,11 +258,11 @@ StatusWindow::puts (const char *s, int fl)
   for (const u_char *p = (const u_char *)s; *p;)
     if (SJISP (*p) && p[1])
       {
-        putc ((*p << 8) | p[1]);
+        putc (s2w_char ((*p << 8) | p[1]));
         p += 2;
       }
     else
-      putc (*p++);
+      putc (s2w_char (*p++));
 
   if (fl)
     newline ();
@@ -283,7 +283,7 @@ StatusWindow::clear (int no_update)
       sw_last.textf = 0;
       if (!no_update)
         {
-          SendMessage (sw_hwnd, SB_SETTEXT, 0, LPARAM (""));
+          SendMessageW (sw_hwnd, SB_SETTEXT, 0, LPARAM (L""));
           UpdateWindow (sw_hwnd);
         }
     }
@@ -438,19 +438,19 @@ Window::init (int minibufp, int temporary)
 
   lwp = make_window ();
 
-  if (!CreateWindowEx (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
-                       Application::ClientClassName, "",
-                       (WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE
-                        | WS_VSCROLL | WS_HSCROLL),
-                       0, 0, 0, 0, app.active_frame.hwnd, 0, app.hinst, this))
+  if (!CreateWindowExW (sysdep.Win4p () ? WS_EX_CLIENTEDGE : 0,
+                        Application::ClientClassName, L"",
+                        (WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE
+                         | WS_VSCROLL | WS_HSCROLL),
+                        0, 0, 0, 0, app.active_frame.hwnd, 0, app.hinst, this))
     FEstorage_error ();
 
   if (minibufp)
     w_hwnd_ml = 0;
-  else if (!CreateWindow (Application::ModelineClassName, "",
-                          WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
-                          0, 0, 0, 0,
-                          app.active_frame.hwnd, 0, app.hinst, this))
+  else if (!CreateWindowW (Application::ModelineClassName, L"",
+                           WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                           0, 0, 0, 0,
+                           app.active_frame.hwnd, 0, app.hinst, this))
     {
       DestroyWindow (w_hwnd);
       FEstorage_error ();
@@ -698,10 +698,10 @@ Window::init_colors (const XCOLORREF *colors, const XCOLORREF *mlcolors,
   write_conf (cfgColors, cfgModeLineBg, modeline_xcolors[MLCI_BACKGROUND].rgb, 1);
   for (i = 1; i < numberof (w_textprop_forecolor); i++)
     {
-      char b[32];
-      sprintf (b, "%s%d", cfgFg, i);
+      WCHAR b[32];
+      wsprintfW (b, L"%s%d", cfgFg, i);
       write_conf (cfgColors, b, w_textprop_xforecolor[i].rgb, 1);
-      sprintf (b, "%s%d", cfgBg, i);
+      wsprintfW (b, L"%s%d", cfgBg, i);
       write_conf (cfgColors, b, w_textprop_xbackcolor[i].rgb, 1);
     }
   flush_conf ();
@@ -714,6 +714,15 @@ Window::invalidate_glyphs ()
     w_glyphs.g_rep->copy (0);
   w_disp_flags |= WDF_WINDOW | WDF_WINSIZE_CHANGED;
   w_cursor_line.ypixel = -1;
+}
+
+// その文字列を映している窓の升目を捨てて、描き直させる
+void
+Window::invalidate_glyphs (const Buffer *bp)
+{
+  for (Window *wp = app.active_frame.windows; wp; wp = wp->w_next)
+    if (wp->w_bufp == bp)
+      wp->invalidate_glyphs ();
 }
 
 void
@@ -796,11 +805,11 @@ Window::create_default_windows ()
     mlcc[1] = c;
   for (int i = 1; i < GLYPH_TEXTPROP_NCOLORS; i++)
     {
-      char b[32];
-      sprintf (b, "%s%d", cfgFg, i);
+      WCHAR b[32];
+      wsprintfW (b, L"%s%d", cfgFg, i);
       if (read_conf (cfgColors, b, c))
         fg[i] = c;
-      sprintf (b, "%s%d", cfgBg, i);
+      wsprintfW (b, L"%s%d", cfgBg, i);
       if (read_conf (cfgColors, b, c))
         bg[i] = c;
     }
@@ -2729,8 +2738,8 @@ Flist_xyzzy_windows ()
       HWND hwnd = xh.next (i);
       if (!hwnd || i <= o)
         break;
-      char buf[256];
-      if (GetWindowText (hwnd, buf, sizeof buf))
+      WCHAR buf[256];
+      if (GetWindowTextW (hwnd, buf, numberof (buf)))
         p = xcons (xcons (make_fixnum (i), make_string (buf)), p);
     }
   return Fnreverse (p);
@@ -3339,10 +3348,10 @@ Window::paint_ruler (HDC hdc, const RECT &r, int x, int y, int column) const
 {
   if (!(column % 10))
     {
-      char buf[32];
-      int l = sprintf (buf, "%d", column);
-      ExtTextOut (hdc, x - l * sysdep.ruler_ext.cx / 2, r.top,
-                  ETO_CLIPPED, &r, buf, l, 0);
+      WCHAR buf[32];
+      int l = wsprintfW (buf, L"%d", column);
+      ExtTextOutW (hdc, x - l * sysdep.ruler_ext.cx / 2, r.top,
+                   ETO_CLIPPED, &r, buf, l, 0);
     }
   else if (!(column % 5))
     draw_vline (hdc, y - 2, y + 2, x, sysdep.window_text);

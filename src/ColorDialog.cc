@@ -6,7 +6,7 @@
 #include "font.h"
 
 static void
-paint_color_list (DRAWITEMSTRUCT *dis, const char *string, COLORREF color)
+paint_color_list (DRAWITEMSTRUCT *dis, const WCHAR *string, COLORREF color)
 {
   COLORREF bg = (dis->itemState & ODS_SELECTED
                  ? sysdep.highlight : sysdep.window);
@@ -18,12 +18,12 @@ paint_color_list (DRAWITEMSTRUCT *dis, const char *string, COLORREF color)
   if (dis->itemID != UINT (-1))
     {
       SIZE size;
-      GetTextExtentPoint32 (dis->hDC, "M", 1, &size);
+      GetTextExtentPoint32W (dis->hDC, L"M", 1, &size);
       size.cx = size.cx * 5 / 2;
-      ExtTextOut (dis->hDC,
-                  r.left + size.cx,
-                  (r.top + r.bottom - size.cy) / 2,
-                  ETO_OPAQUE | ETO_CLIPPED, &r, string, strlen (string), 0);
+      ExtTextOutW (dis->hDC,
+                   r.left + size.cx,
+                   (r.top + r.bottom - size.cy) / 2,
+                   ETO_OPAQUE | ETO_CLIPPED, &r, string, wcslen (string), 0);
 
       HGDIOBJ open = SelectObject (dis->hDC, sysdep.hpen_black);
       HBRUSH hbr = CreateSolidBrush (color);
@@ -77,8 +77,8 @@ SelectColor::SelectColor ()
       initialized = 1;
       for (int i = 0; i < numberof (cust); i++)
         {
-          char name[16];
-          sprintf (name, "%s%d", cfgCustColor, i);
+          WCHAR name[16];
+          wsprintfW (name, L"%s%d", cfgCustColor, i);
           if (!read_conf (cfgColors, name, cust[i]))
             cust[i] = RGB (255, 255, 255);
         }
@@ -93,8 +93,8 @@ SelectColor::~SelectColor ()
 {
   for (int i = 0; i < numberof (cust); i++)
     {
-      char name[16];
-      sprintf (name, "%s%d", cfgCustColor, i);
+      WCHAR name[16];
+      wsprintfW (name, L"%s%d", cfgCustColor, i);
       write_conf (cfgColors, name, cust[i], 1);
     }
   flush_conf ();
@@ -171,11 +171,11 @@ void
 SelectColor::draw_combo (DRAWITEMSTRUCT *dis)
 {
   if (dis->itemID == UINT (-1))
-    paint_color_list (dis, "", RGB (0, 0, 0));
+    paint_color_list (dis, L"", RGB (0, 0, 0));
   else
     {
-      char b[256];
-      if (!LoadString (app.hinst, dis->itemData, b, sizeof b))
+      WCHAR b[256];
+      if (!LoadStringW (app.hinst, dis->itemData, b, numberof (b)))
         *b = 0;
       paint_color_list (dis, b, GetSysColor (dis->itemData - IDS_COLOR_SCROLLBAR));
     }
@@ -360,7 +360,7 @@ ChangeColorsPageP::ccp_dialog_proc (HWND hwnd, UINT msg,
   ChangeColorsPageP *p;
   if (msg == WM_INITDIALOG)
     {
-      p = (ChangeColorsPageP *)((PROPSHEETPAGE *)lparam)->lParam;
+      p = (ChangeColorsPageP *)((PROPSHEETPAGEW *)lparam)->lParam;
       SetWindowLong (hwnd, DWL_USER, LPARAM (p));
       p->ccp_hwnd = hwnd;
       if (!p->ccp_parent->ps_moved)
@@ -386,7 +386,7 @@ ChangeColorsPageP::ccp_dialog_proc (HWND hwnd, UINT msg,
 
 void
 ChangeColorsPageP::init_page (UINT idd, PropSheet *sheet, int page_no,
-                              PROPSHEETPAGE *psp)
+                              PROPSHEETPAGEW *psp)
 {
   ccp_page_no = page_no;
   ccp_parent = sheet;
@@ -398,7 +398,7 @@ ChangeColorsPageP::init_page (UINT idd, PropSheet *sheet, int page_no,
   if (ccp_hg)
     psp->pResource = (DLGTEMPLATE *)GlobalLock (ccp_hg);
   else
-    psp->pszTemplate = MAKEINTRESOURCE (idd);
+    psp->pszTemplate = MAKEINTRESOURCEW (idd);
   psp->pszIcon = 0;
   psp->pszTitle = 0;
   psp->lParam = LPARAM (this);
@@ -494,17 +494,17 @@ ChangeColorsPageP::draw_item (int id, DRAWITEMSTRUCT *dis)
     {
     case IDC_COLOR_LIST:
       if (dis->itemID == UINT (-1))
-        paint_color_list (dis, "", RGB (0, 0, 0));
+        paint_color_list (dis, L"", RGB (0, 0, 0));
       else if (prop_fg_p (dis->itemData))
         {
-          char b[32];
-          sprintf (b, "文字%d", dis->itemData - PROP_FG_OFFSET + 1);
+          WCHAR b[32];
+          wsprintfW (b, L"文字%d", dis->itemData - PROP_FG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (prop_bg_p (dis->itemData))
         {
-          char b[32];
-          sprintf (b, "背景%d", dis->itemData - PROP_BG_OFFSET + 1);
+          WCHAR b[32];
+          wsprintfW (b, L"背景%d", dis->itemData - PROP_BG_OFFSET + 1);
           paint_color_list (dis, b, ccp_curcc[dis->itemData]);
         }
       else if (misc_p (dis->itemData))
@@ -591,8 +591,8 @@ ChooseFontPage::notify_color (int n)
 int
 ChooseFontPage::get_result ()
 {
-  char b[128];
-  if (!GetDlgItemText (ccp_hwnd, IDC_LSP, b, sizeof b))
+  WCHAR b[128];
+  if (!GetDlgItemTextW (ccp_hwnd, IDC_LSP, b, numberof (b)))
     *b = 0;
   int lsp;
   if (!check_integer_format (b, &lsp) || lsp < 0 || lsp > 30)
@@ -632,7 +632,7 @@ ChooseFontPage::get_result ()
   for (i = 0; i < FONT_MAX; i++)
     if (cfp_font.cf_param.fs_logfont[i].lfHeight != cfp_param.fs_logfont[i].lfHeight
         || cfp_font.cf_param.fs_logfont[i].lfCharSet != cfp_param.fs_logfont[i].lfCharSet
-        || strcmp (cfp_font.cf_param.fs_logfont[i].lfFaceName, cfp_param.fs_logfont[i].lfFaceName))
+        || wcscmp (cfp_font.cf_param.fs_logfont[i].lfFaceName, cfp_param.fs_logfont[i].lfFaceName))
       {
         cfp_param.fs_logfont[i] = cfp_font.cf_param.fs_logfont[i];
         ccp_modified = 1;
@@ -677,12 +677,12 @@ ChooseFontPage::do_destroy ()
 }
 
 void
-ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
+ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
 {
   ChangeColorsPageP::init_page (IDD_FONT, sheet, page_no, psp);
 
   for (int i = 0; i < FONT_MAX; i++)
-    GetObject (app.text_font.font (i), sizeof cfp_param.fs_logfont[i],
+    GetObjectW (app.text_font.font (i), sizeof cfp_param.fs_logfont[i],
                &cfp_param.fs_logfont[i]);
   cfp_param.fs_line_spacing = app.text_font.line_spacing ();
   cfp_param.fs_use_backsl = app.text_font.use_backsl_p ();
@@ -799,7 +799,7 @@ ChangeColorsDialog::get_result ()
 }
 
 void
-ChangeColorsDialog::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGE *psp)
+ChangeColorsDialog::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
 {
   ChangeColorsPageP::init_page (IDD_COLOR, sheet, page_no, psp);
 

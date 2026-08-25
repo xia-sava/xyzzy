@@ -33,16 +33,14 @@ Fmake_syntax_table ()
   for (; i <= 0x7e; i++)
     xchar_syntax (p, i) = SCpunct;
   xchar_syntax (p, i++) = SCjunk; // 7f
-  xchar_syntax (p, i++) = SCjunk; // 80
   for (; i < 0xa0; i++)
-    xchar_syntax (p, i) = SCkanji;
-  xchar_syntax (p, i++) = SCjunk; // a0
-  for (; i <= 0xdf; i++)
-    xchar_syntax (p, i) = SCkana;
-  for (; i <= 0xfc; i++)
-    xchar_syntax (p, i) = SCkanji;
+    xchar_syntax (p, i) = SCjunk;   // 制御文字
+  for (; i < 0xc0; i++)
+    xchar_syntax (p, i) = SCpunct;  // 記号と約物
   for (; i <= 0xff; i++)
-    xchar_syntax (p, i) = SCjunk;
+    xchar_syntax (p, i) = SCword;   // ラテン文字
+  xchar_syntax (p, 0xd7) = SCpunct; // MULTIPLICATION SIGN
+  xchar_syntax (p, 0xf7) = SCpunct; // DIVISION SIGN
 #if 0
   for (const char *s = "&*+-/<=>_|"; *s; s++)
     xchar_syntax (p, *s) = SCsymbol;
@@ -518,19 +516,19 @@ const word_state::category_range word_state::ws_range[] =
   {0xff10, 0xff19, WC2alphanumeric},     // FULLWIDTH DIGIT
   {0xff21, 0xff3a, WC2alphanumeric},     // FULLWIDTH LATIN CAPITAL LETTER
   {0xff41, 0xff5a, WC2alphanumeric},     // FULLWIDTH LATIN SMALL LETTER
+  {0xff61, 0xff9f, WCkana},              // HALFWIDTH KATAKANA
 };
 
 word_state::word_category
 word_state::char_category (const syntax_table *tab, Char c)
 {
-  if (DBCP (c))
+  if (!ascii_char_p (c))
     {
-      ucs2_t wc = i2w (c);
       for (int i = 0; i < numberof (ws_range); i++)
         {
-          if (wc < ws_range[i].from)
+          if (c < ws_range[i].from)
             return WC2symbol;
-          if (wc <= ws_range[i].to)
+          if (c <= ws_range[i].to)
             return (!ws_range[i].cat2 || charset_width (c) == 1
                     ? ws_range[i].cat1
                     : ws_range[i].cat2);

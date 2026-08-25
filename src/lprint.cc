@@ -927,33 +927,22 @@ print_char (wStream &stream, Char c, int escape)
               quote = 1;
             }
 
-          if (DBCP (c))
+          if (escape && !cp932_roundtrip_p (c))
             {
-              if (!escape || SJISP (c >> 8))
-                stream.add (c);
-              else
+              stream.add ('x');
+              if (DBCP (c))
                 {
-                  stream.add ('x');
                   stream.add (downcase_digit_char[(c >> 12) & 15]);
                   stream.add (downcase_digit_char[(c >> 8) & 15]);
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
                 }
+              stream.add (downcase_digit_char[(c >> 4) & 15]);
+              stream.add (downcase_digit_char[(c >> 0) & 15]);
             }
           else
             {
-              if (escape && SJISP (c))
-                {
-                  stream.add ('x');
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
-                }
-              else
-                {
-                  if (escape && quote)
-                    quote_char (stream, c);
-                  stream.add (c);
-                }
+              if (escape && quote && !DBCP (c))
+                quote_char (stream, c);
+              stream.add (c);
             }
         }
     }
@@ -983,35 +972,25 @@ print_string (wStream &stream, const print_control &pc, lisp object)
            p < pe; p++)
         {
           Char c = *p;
-          if (DBCP (c))
+          if (!cp932_roundtrip_p (c))
             {
-              if (SJISP (c >> 8))
-                stream.add (c);
-              else
+              stream.add ('\\');
+              if (DBCP (c))
                 {
-                  stream.add ('\\');
                   stream.add ('X');
                   stream.add (downcase_digit_char[(c >> 12) & 15]);
                   stream.add (downcase_digit_char[(c >> 8) & 15]);
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
                 }
+              else
+                stream.add ('x');
+              stream.add (downcase_digit_char[(c >> 4) & 15]);
+              stream.add (downcase_digit_char[(c >> 0) & 15]);
             }
           else
             {
-              if (SJISP (c))
-                {
-                  stream.add ('\\');
-                  stream.add ('x');
-                  stream.add (downcase_digit_char[(c >> 4) & 15]);
-                  stream.add (downcase_digit_char[(c >> 0) & 15]);
-                }
-              else
-                {
-                  if (c == '"' || c == '\\')
-                    stream.add ('\\');
-                  stream.add (c);
-                }
+              if (c == '"' || c == '\\')
+                stream.add ('\\');
+              stream.add (c);
             }
         }
       stream.add ('"');
@@ -1380,15 +1359,16 @@ print_error (wStream &stream, const print_control &, lisp object)
         stream.add (s);
       else
         {
+          /* 受け取る側がバイト列なので、綴りは CP932 のまま組み立てる */
           char buf[1024];
           static char *args[] = {"", "", "", "", 0,};
-          if (!FormatMessage ((FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY
-                               | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                              0, xerror_number (object), GetUserDefaultLangID (),
-                              buf, sizeof buf, args))
+          if (!FormatMessageA ((FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY
+                                | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                               0, xerror_number (object), GetUserDefaultLangID (),
+                               buf, sizeof buf, args))
             *buf = 0;
           if (!*buf)
-            wsprintf (buf, "Undocumented win32 error: %d", xerror_number (object));
+            wsprintfA (buf, "Undocumented win32 error: %d", xerror_number (object));
           stream.add (buf);
         }
     }
@@ -3919,27 +3899,27 @@ Fmessage_box (lisp lmsg, lisp ltitle, lisp styles, lisp args)
   check_string (lmsg);
   int l = count_crlf (xstring_contents (lmsg),
                       xstring_contents (lmsg) + xstring_length (lmsg));
-  char *msg = (char *)alloca (l * 2 + 3);
-  copy_crlf ((Char *)msg + 1,
-             xstring_contents (lmsg),
+  Char *b = (Char *)alloca (sizeof (Char) * (l + 1));
+  copy_crlf (b, xstring_contents (lmsg),
              xstring_contents (lmsg) + xstring_length (lmsg));
-  w2s (msg, (Char *)msg + 1, l);
+  WCHAR *msg = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
+  w2u (msg, b, l);
 
-  const char *title;
+  const WCHAR *title;
   if (!ltitle || ltitle == Qnil)
     title = TitleBarString;
   else
     {
       check_string (ltitle);
-      title = (char *)alloca (xstring_length (ltitle) * 2 + 1);
-      w2s ((char *)title, ltitle);
+      title = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (ltitle) + 1));
+      w2u ((WCHAR *)title, ltitle);
     }
 
   msgbox_styles mb;
   msgbox_style (mb, styles);
 
   lisp lcaptions[5];
-  const char *captions[numberof (lcaptions)];
+  const WCHAR *captions[numberof (lcaptions)];
   memset (lcaptions, 0, sizeof lcaptions);
   memset (captions, 0, sizeof captions);
   msgbox_captions (lcaptions, args);
@@ -3950,8 +3930,8 @@ Fmessage_box (lisp lmsg, lisp ltitle, lisp styles, lisp args)
       if (x && x != Qnil)
         {
           check_string (x);
-          char *s = (char *)alloca (xstring_length (x) * 2 + 1);
-          w2s (s, x);
+          WCHAR *s = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (x) + 1));
+          w2u (s, x);
           captions[i] = s;
         }
     }
@@ -3980,18 +3960,19 @@ putmsg (wStream &stream, int msgboxp, int style, int beep)
 {
   stream.finish ();
   int l = stream.length ();
-  Char *b = (Char *)alloca (sizeof (Char) * l + sizeof (Char) + 1);
-  stream.copy (b + 1);
+  Char *b = (Char *)alloca (sizeof (Char) * (l + 1));
+  stream.copy (b);
 
   if (msgboxp)
     {
-      w2s ((char *)b, b + 1, l);
+      WCHAR *msg = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
+      w2u (msg, b, l);
       app.status_window.clear ();
-      return MsgBox (get_active_window (), (char *)b, TitleBarString, style, beep);
+      return MsgBox (get_active_window (), msg, TitleBarString, style, beep);
     }
   else
     {
-      app.status_window.puts (b + 1, l);
+      app.status_window.puts (b, l);
       app.status_window.putc ('\n');
       if (beep)
         Fding ();
@@ -4172,8 +4153,8 @@ print_stack_trace (lisp lstream, lisp cc)
         {
         case stack_trace::special_form:
         case stack_trace::macro:
-          if (p->fn == Ssi_byte_code)
-            stream.add ("(system:*byte-code ...)\n");
+          if (p->fn == Ssi_byte_code_2)
+            stream.add ("(system:*byte-code-2 ...)\n");
           else
             {
               stream.add ('(');
@@ -4344,7 +4325,9 @@ format_yes_or_no_p (message_code m, ...)
   char buf[2048];
   vsprintf (buf, fmt, ap);
   va_end (ap);
-  return MsgBox (get_active_window (), buf, TitleBarString,
+  WCHAR wbuf[numberof (buf)];
+  s2u (wbuf, buf);
+  return MsgBox (get_active_window (), wbuf, TitleBarString,
                  MB_YESNO | MB_ICONQUESTION, 1) == IDYES;
 }
 

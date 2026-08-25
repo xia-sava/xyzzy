@@ -81,15 +81,15 @@ FKWin::paint_text (HDC hdc, int n, const RECT &br, int offset) const
   if (fk_vkey & FVK_CONTROL)
     n += CTRL_OFFSET;
 
-  char buf[1024 + 1];
+  WCHAR buf[512 + 1];
   lisp label = xvector_contents (xsymbol_value (Vfunction_bar_labels))[n];
   if (stringp (label))
-    w2s (buf, xstring_contents (label), min (xstring_length (label), 512));
+    w2u (buf, xstring_contents (label), min (xstring_length (label), 512));
   else
     *buf = 0;
 
-  ExtTextOut (hdc, r.left + 2, r.top + 2, ETO_CLIPPED | ETO_OPAQUE,
-              &r, buf, strlen (buf), 0);
+  ExtTextOutW (hdc, r.left + 2, r.top + 2, ETO_CLIPPED | ETO_OPAQUE,
+               &r, buf, wcslen (buf), 0);
 
   SetBkColor (hdc, obg);
   SetTextColor (hdc, ofg);
@@ -416,7 +416,7 @@ fnkey_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       get_window (hwnd)->OnCancelMode ();
       break;
     }
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 lisp

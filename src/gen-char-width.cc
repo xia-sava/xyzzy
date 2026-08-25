@@ -35,12 +35,6 @@ gen_char_width (int argc, char **argv)
   memcpy (&width[CCS_JISX0212_MIN / 8], jisx0212_width_table,
           sizeof jisx0212_width_table);
 
-  for (int i = 0; i < 256; i++)
-    {
-      OFF (CCS_UTF16_UNDEF_CHAR_HIGH + i);
-      OFF (CCS_UTF16_UNDEF_CHAR_LOW + i);
-    }
-
   for (int i = CCS_UTF16_SURROGATE_HIGH_MIN; i <= CCS_UTF16_SURROGATE_LOW_MAX; i++)
     OFF (i);
 

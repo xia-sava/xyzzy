@@ -11,6 +11,8 @@ char *xstrdup (const char *);
 void *xmemdup (const void *, size_t);
 char *stpcpy (char *, const char *);
 char *stpncpy (char *, const char *, int);
+WCHAR *stpcpy (WCHAR *, const WCHAR *);
+WCHAR *stpncpy (WCHAR *, const WCHAR *, int);
 long log2_floor (u_long);
 
 # define NF_BAD 0
@@ -25,7 +27,7 @@ long log2_floor (u_long);
 # define  NF_FLOAT_L (NF_FLOAT | 'l')
 
 int parse_number_format (const Char *, const Char *, int);
-int check_integer_format (const char *, int *);
+int check_integer_format (const WCHAR *, int *);
 int default_float_format ();
 
 int streq (const Char *, int, const char *);
@@ -42,6 +44,8 @@ char *jindex (const char *, int);
 char *jrindex (const char *, int);
 char *find_last_slash (const char *);
 char *find_slash (const char *);
+WCHAR *find_last_slash (const WCHAR *);
+WCHAR *find_slash (const WCHAR *);
 void convert_backsl_with_sl (char *, int, int);
 
 inline void
@@ -54,6 +58,22 @@ inline void
 map_sl_to_backsl (char *s)
 {
   convert_backsl_with_sl (s, '/', '\\');
+}
+
+inline void
+map_sl_to_backsl (WCHAR *s)
+{
+  for (; *s; s++)
+    if (*s == '/')
+      *s = '\\';
+}
+
+inline void
+map_backsl_to_sl (WCHAR *s)
+{
+  for (; *s; s++)
+    if (*s == '\\')
+      *s = '/';
 }
 
 inline char *

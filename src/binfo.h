@@ -7,36 +7,36 @@ class buffer_info
 {
   const Window *const b_wp;
   const Buffer *const b_bufp;
-  char **const b_posp;
-  char **const b_percentp;
+  WCHAR **const b_posp;
+  WCHAR **const b_percentp;
   int *const b_ime;
-  static const char *const b_eol_name[];
+  static const WCHAR *const b_eol_name[];
 
-  char *minor_mode (lisp, char *, char *, int &) const;
+  WCHAR *minor_mode (lisp, WCHAR *, WCHAR *, int &) const;
 public:
-  buffer_info (const Window *wp, const Buffer *bp, char **posp, int *ime, char **percentp)
+  buffer_info (const Window *wp, const Buffer *bp, WCHAR **posp, int *ime, WCHAR **percentp)
        : b_wp (wp), b_bufp (bp), b_posp (posp), b_ime (ime), b_percentp(percentp) {}
-  char *format (lisp, char *, char *) const;
-  char *modified (char *, int) const;
-  char *read_only (char *, int) const;
-  char *progname (char *b, char *be) const
+  WCHAR *format (lisp, WCHAR *, WCHAR *) const;
+  WCHAR *modified (WCHAR *, int) const;
+  WCHAR *read_only (WCHAR *, int) const;
+  WCHAR *progname (WCHAR *b, WCHAR *be) const
     {return stpncpy (b, ProgramName, be - b);}
-  char *version (char *, char *, int) const;
-  char *buffer_name (char *, char *) const;
-  char *file_name (char *, char *, int) const;
-  char *file_or_buffer_name (char *, char *, int) const;
-  char *mode_name (char *, char *, int) const;
-  char *encoding (char *b, char *be) const
-    {return w2s (b, be, xchar_encoding_name (b_bufp->lchar_encoding));}
-  char *encoding_lang (char *, char *) const;
-  char *eol_code (char *b, char *be) const
+  WCHAR *version (WCHAR *, WCHAR *, int) const;
+  WCHAR *buffer_name (WCHAR *, WCHAR *) const;
+  WCHAR *file_name (WCHAR *, WCHAR *, int) const;
+  WCHAR *file_or_buffer_name (WCHAR *, WCHAR *, int) const;
+  WCHAR *mode_name (WCHAR *, WCHAR *, int) const;
+  WCHAR *encoding (WCHAR *b, WCHAR *be) const
+    {return w2u (b, be, xchar_encoding_name (b_bufp->lchar_encoding));}
+  WCHAR *encoding_lang (WCHAR *, WCHAR *) const;
+  WCHAR *eol_code (WCHAR *b, WCHAR *be) const
     {return stpncpy (b, b_eol_name[b_bufp->b_eol_code], be - b);}
-  char *ime_mode (char *, char *) const;
-  char *position (char *, char *) const;
-  char *host_name (char *, char *, int) const;
-  char *process_id (char *, char *) const;
-  char *admin_user (char *, char *) const;
-  char *percent(char *, char *) const;
+  WCHAR *ime_mode (WCHAR *, WCHAR *) const;
+  WCHAR *position (WCHAR *, WCHAR *) const;
+  WCHAR *host_name (WCHAR *, WCHAR *, int) const;
+  WCHAR *process_id (WCHAR *, WCHAR *) const;
+  WCHAR *admin_user (WCHAR *, WCHAR *) const;
+  WCHAR *percent(WCHAR *, WCHAR *) const;
 };
 
 #endif

@@ -25,20 +25,20 @@ public:
   int enable (ATOM *, int);
   void disable () {cleanup ();}
   int enable_p () const {return int (gi_app);}
-  LRESULT DefWindowProc (HWND, UINT, WPARAM, LPARAM);
+  LRESULT DefWindowProcW (HWND, UINT, WPARAM, LPARAM);
   BOOL TranslateMessage (const MSG *);
-  LONG ImmGetCompositionString (HIMC, DWORD, void *, DWORD);
+  LONG ImmGetCompositionStringA (HIMC, DWORD, void *, DWORD);
   LONG ImmGetCompositionStringW (HIMC, DWORD, void *, DWORD);
   HIMC ImmGetContext (HWND);
   BOOL ImmGetOpenStatus (HIMC);
   BOOL ImmReleaseContext (HWND, HIMC);
-  BOOL ImmSetCompositionFont (HIMC, LOGFONT *);
+  BOOL ImmSetCompositionFontW (HIMC, LOGFONTW *);
   BOOL ImmSetCompositionWindow (HIMC, COMPOSITIONFORM *);
   BOOL ImmSetOpenStatus (HIMC, BOOL);
-  BOOL ImmSetCompositionString (HIMC, DWORD, void *, DWORD, void *, DWORD);
-  BOOL ImmConfigureIME (HKL, HWND, DWORD, REGISTERWORD *);
+  BOOL ImmSetCompositionStringW (HIMC, DWORD, void *, DWORD, void *, DWORD);
+  BOOL ImmConfigureIMEW (HKL, HWND, DWORD, REGISTERWORDW *);
   UINT ImmGetVirtualKey (HWND);
-  UINT ImmGetDescription (HKL, LPTSTR, UINT);
+  UINT ImmGetDescriptionW (HKL, LPWSTR, UINT);
   DWORD ImmGetProperty (HKL, DWORD);
 };
 

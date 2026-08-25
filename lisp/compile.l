@@ -1830,9 +1830,9 @@
     (dolist (i insn)
       (funcall (car i) i))
     (if *constant-list*
-	(list 'si:*byte-code *bytecode-stream*
+	(list 'si:*byte-code-2 *bytecode-stream*
 	      (apply 'vector (nreverse *constant-list*)))
-      (list 'si:*byte-code *bytecode-stream*))))
+      (list 'si:*byte-code-2 *bytecode-stream*))))
 
 (defun output-code (n)
   (vector-push-extend (code-char n) *bytecode-stream*))

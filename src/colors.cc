@@ -6,26 +6,26 @@
 #include "mainframe.h"
 
 static XCOLORREF xcolors[MC_NCOLORS];
-static struct {const char *name, *disp;} xnames[] =
+static struct {const WCHAR *name; const WCHAR *disp;} xnames[] =
 {
-  {cfgTextColor, "ファイラ文字色"},
-  {cfgBackColor, "ファイラ背景色"},
-  {"highlightTextColor", "ファイラ選択文字色"},
-  {"highlightBackColor", "ファイラ選択背景色"},
-  {cfgCursorColor, "ファイラカーソル色"},
-  {"buftabSelFg", "選択バッファタブ文字色"},
-  {"buftabSelBg", "選択バッファタブ背景色"},
-  {"buftabDispFg", "表示バッファタブ文字色"},
-  {"buftabDispBg", "表示バッファタブ背景色"},
-  {"buftabFg", "バッファタブ文字色"},
-  {"buftabBg", "バッファタブ背景色"},
-  {"tabSelFg", "選択タブ文字色"},
-  {"tabSelBg", "選択タブ背景色"},
-  {"tabFg", "タブ文字色"},
-  {"tabBg", "タブ背景色"},
+  {cfgTextColor, L"ファイラ文字色"},
+  {cfgBackColor, L"ファイラ背景色"},
+  {L"highlightTextColor", L"ファイラ選択文字色"},
+  {L"highlightBackColor", L"ファイラ選択背景色"},
+  {cfgCursorColor, L"ファイラカーソル色"},
+  {L"buftabSelFg", L"選択バッファタブ文字色"},
+  {L"buftabSelBg", L"選択バッファタブ背景色"},
+  {L"buftabDispFg", L"表示バッファタブ文字色"},
+  {L"buftabDispBg", L"表示バッファタブ背景色"},
+  {L"buftabFg", L"バッファタブ文字色"},
+  {L"buftabBg", L"バッファタブ背景色"},
+  {L"tabSelFg", L"選択タブ文字色"},
+  {L"tabSelBg", L"選択タブ背景色"},
+  {L"tabFg", L"タブ文字色"},
+  {L"tabBg", L"タブ背景色"},
 };
 
-const char *
+const WCHAR *
 misc_color_name (int i)
 {
   return xnames[i].disp;

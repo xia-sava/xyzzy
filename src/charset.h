@@ -2,7 +2,9 @@
 #define _charset_h_
 
 /*
-  INTERNAL CODE
+  文字集合ごとに区画を分けた符号。バッファと文字列が持つのは Unicode の
+  符号位置（UTF-16）で、この符号はもう中身ではない。文字集合を単位とする
+  符号との間で写すときの足場として、i2w / w2i と各 wc2*_table が使う。
 
   0000-007F  US-ASCII
   0080-00FF  JIS X 0201-KANA
@@ -59,18 +61,16 @@
 #define ccs_big5_1                 15
 #define ccs_big5_2                 16
 #define  ccs_big5                  ccs_big5_1
-#define ccs_utf16_undef_char_high  17
-#define ccs_utf16_undef_char_low   18
-#define ccs_utf16_surrogate_high   19
-#define ccs_utf16_surrogate_low    20
-#define ccs_cns11643_1             21
-#define ccs_cns11643_2             22
-#define ccs_ipa                    23
-#define ccs_smlcdm                 24
-#define ccs_georgian               25
-#define ccs_ujp                    26
-#define ccs_ulatin                 27
-#define ccs_max                    28
+#define ccs_utf16_surrogate_high   17
+#define ccs_utf16_surrogate_low    18
+#define ccs_cns11643_1             19
+#define ccs_cns11643_2             20
+#define ccs_ipa                    21
+#define ccs_smlcdm                 22
+#define ccs_georgian               23
+#define ccs_ujp                    24
+#define ccs_ulatin                 25
+#define ccs_max                    26
 #define ccs_pseudo_cp932           30
 #define ccs_invalid                31
 
@@ -102,9 +102,6 @@
 #define CCS_BIG5_MIN                 0xa000
 #define CCS_BIG5_MAX                 0xd5f7
 
-#define CCS_UTF16_UNDEF_CHAR_HIGH    0xd600
-#define CCS_UTF16_UNDEF_CHAR_LOW     0xd700
-
 #define CCS_UTF16_SURROGATE_HIGH_MIN 0xd800
 #define CCS_UTF16_SURROGATE_HIGH_MAX 0xdbff
 #define CCS_UTF16_SURROGATE_LOW_MIN  0xdc00
@@ -116,10 +113,13 @@
 
 #define UNICODE_IPA_MIN      0x0250
 #define UNICODE_IPA_MAX      0x02af
+#define UNICODE_IDEOGRAPHIC_SPACE 0x3000
 #define UNICODE_SMLCDM_MIN   0x02b0
 #define UNICODE_SMLCDM_MAX   0x036f
 #define UNICODE_GEORGIAN_MIN 0x10a0
 #define UNICODE_GEORGIAN_MAX 0x10f0
+#define UNICODE_HALFWIDTH_KANA_MIN 0xff61
+#define UNICODE_HALFWIDTH_KANA_MAX 0xff9f
 
 #define ccsf_iso8859_1              (1 << ccs_iso8859_1)
 #define ccsf_iso8859_2              (1 << ccs_iso8859_2)
@@ -135,8 +135,6 @@
 #define ccsf_ksc5601                (1 << ccs_ksc5601)
 #define ccsf_gb2312                 (1 << ccs_gb2312)
 #define ccsf_big5                   (1 << ccs_big5)
-#define ccsf_utf16_undef_char_high  (1 << ccs_utf16_undef_char_high)
-#define ccsf_utf16_undef_char_low   (1 << ccs_utf16_undef_char_low)
 #define ccsf_utf16_surrogate_high   (1 << ccs_utf16_surrogate_high)
 #define ccsf_utf16_surrogate_low    (1 << ccs_utf16_surrogate_low)
 #define ccsf_georgian               (1 << ccs_georgian)
@@ -149,16 +147,8 @@
   (ccsf_iso8859_1 | ccsf_iso8859_2 | ccsf_iso8859_3 | ccsf_iso8859_4 \
    | ccsf_iso8859_5 | ccsf_iso8859_7 | ccsf_iso8859_9 | ccsf_iso8859_10 \
    | ccsf_iso8859_13)
-#define ccsf_utf16_undef_char \
-  (ccsf_utf16_undef_char_high | ccsf_utf16_undef_char_low)
 #define ccsf_utf16_surrogate \
   (ccsf_utf16_surrogate_high | ccsf_utf16_surrogate_low)
-
-#define ccsf_possible_cp932 \
-  (ccsf_iso8859 | ccsf_jisx0212 | ccsf_gb2312 | ccsf_ksc5601 | ccsf_big5 \
-   | ccsf_georgian | ccsf_ipa | ccsf_smlcdm | ccsf_ujp | ccsf_ulatin)
-#define ccsf_not_cp932 \
-  (ccsf_utf16_surrogate | ccsf_utf16_undef_char)
 
 #define CP_JAPANESE       932
 #define CP_KOREAN         949
@@ -380,6 +370,14 @@ extern u_char char_width_table[CHAR_WIDTH_TABLE_SIZE];
 // 画面で占める桁数。担当するフォントの実測に合わせて書き換わる
 extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
 
+// 半角のカタカナ。折り返しや文字種の判定で、全角のかなと区別する
+static inline int
+halfwidth_kana_p (Char cc)
+{
+  return (cc >= UNICODE_HALFWIDTH_KANA_MIN
+          && cc <= UNICODE_HALFWIDTH_KANA_MAX);
+}
+
 // 符号変換のように、画面の見た目に左右されてはならない処理が使う
 static inline int
 charset_width (Char cc)
@@ -428,6 +426,14 @@ utf16_surrogate_low_p (Char c)
   return c >= CCS_UTF16_SURROGATE_LOW_MIN && c <= CCS_UTF16_SURROGATE_LOW_MAX;
 }
 
+// その升目から始まる字が升目ふたつを占めるか。サロゲート対はふたつの升目で
+// ひとつの字なので、上位で対ぶんを数える
+static inline int
+wide_char_p (Char c)
+{
+  return char_width (c) == 2 || utf16_surrogate_high_p (c);
+}
+
 static inline ucs4_t
 utf16_pair_to_ucs4 (Char hi, Char lo)
 {
@@ -445,37 +451,6 @@ static inline ucs2_t
 utf16_ucs4_to_pair_low (ucs4_t c)
 {
   return ucs2_t (((c - 0x10000) & 1023) + CCS_UTF16_SURROGATE_LOW_MIN);
-}
-
-static inline int
-utf16_undef_char_high_p (Char c)
-{
-  return c < CHAR_LIMIT && (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_HIGH;
-}
-
-static inline int
-utf16_undef_char_low_p (Char c)
-{
-  return c < CHAR_LIMIT && (c & 0xff00) == CCS_UTF16_UNDEF_CHAR_LOW;
-}
-
-static inline ucs2_t
-utf16_undef_pair_to_ucs2 (Char hi, Char lo)
-{
-  return ucs2_t (hi * 256 + lo
-                 - (CCS_UTF16_UNDEF_CHAR_HIGH * 256 + CCS_UTF16_UNDEF_CHAR_LOW));
-}
-
-static inline ucs2_t
-utf16_ucs2_to_undef_pair_high (ucs2_t c)
-{
-  return ucs2_t (((c >> 8) & 255) + CCS_UTF16_UNDEF_CHAR_HIGH);
-}
-
-static inline ucs2_t
-utf16_ucs2_to_undef_pair_low (ucs2_t c)
-{
-  return ucs2_t ((c & 255) + CCS_UTF16_UNDEF_CHAR_LOW);
 }
 
 static inline int
@@ -558,7 +533,6 @@ void init_ucs2_table ();
 Char convert_ibmext (Char);
 Char convert_ibmext2necext (Char);
 Char convert_osfjvc (Char);
-Char w2i_half_width (ucs2_t);
 Char jisx0212_to_internal (int, int, int);
 
 typedef Char (*vender_code_mapper_fn)(Char);

@@ -4,8 +4,8 @@
 class xstring_node: public xlist_node <xstring_node>
 {
 public:
-  char data[1];
-  operator const char * () const {return data;}
+  WCHAR data[1];
+  operator const WCHAR * () const {return data;}
 };
 
 class xstring_list: public xlist <xstring_node>
@@ -16,13 +16,14 @@ public:
       while (!empty_p ())
         delete [] (char *)remove_head ();
     }
-  static xstring_node *alloc (const char *s)
+  static xstring_node *alloc (const WCHAR *s)
     {
-      xstring_node *p = (xstring_node *)new char [sizeof *p + strlen (s)];
-      strcpy (p->data, s);
+      xstring_node *p =
+        (xstring_node *)new char [sizeof *p + wcslen (s) * sizeof (WCHAR)];
+      wcscpy (p->data, s);
       return p;
     }
-  void add (const char *s) {add_head (alloc (s));}
+  void add (const WCHAR *s) {add_head (alloc (s));}
   lisp make_list () const
     {
       lisp r = Qnil;
@@ -35,8 +36,8 @@ public:
 class xstring_pair_node: public xlist_node <xstring_pair_node>
 {
 public:
-  char *str2;
-  char str1[2];
+  WCHAR *str2;
+  WCHAR str1[2];
 };
 
 class xstring_pair_list: public xlist <xstring_pair_node>
@@ -47,17 +48,18 @@ public:
       while (!empty_p ())
         delete [] (char *)remove_head ();
     }
-  static xstring_pair_node *alloc (const char *s1, const char *s2)
+  static xstring_pair_node *alloc (const WCHAR *s1, const WCHAR *s2)
     {
-      int l1 = strlen (s1);
+      int l1 = wcslen (s1);
       xstring_pair_node *p =
-        (xstring_pair_node *)new char [sizeof *p + l1 + strlen (s2)];
+        (xstring_pair_node *)new char [sizeof *p
+                                       + (l1 + wcslen (s2)) * sizeof (WCHAR)];
       p->str2 = p->str1 + l1 + 1;
-      strcpy (p->str1, s1);
-      strcpy (p->str2, s2);
+      wcscpy (p->str1, s1);
+      wcscpy (p->str2, s2);
       return p;
     }
-  void add (const char *s1, const char *s2) {add_head (alloc (s1, s2));}
+  void add (const WCHAR *s1, const WCHAR *s2) {add_head (alloc (s1, s2));}
   lisp make_list (int pair) const
     {
       lisp r = Qnil;

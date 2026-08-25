@@ -307,7 +307,7 @@ public:
         xfree (qbuf[i].comp);
     }
   void push (const char *, int, const char *, int);
-  void push (const ucs2_t *, int, const ucs2_t *, int, const Char *);
+  void push (const ucs2_t *, int, const ucs2_t *, int);
   const pair *fetch () const;
   const pair *pop ();
 };

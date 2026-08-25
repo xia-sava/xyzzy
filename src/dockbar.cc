@@ -3,9 +3,9 @@
 #include "dockbar.h"
 #include "mman.h"
 
-const char dock_bar::b_dock_bar_prop[] = "dock_bar::prop";
-char dock_bar::b_ttbuf[TTBUFSIZE];
-const char tab_bar::b_tab_bar_spin_prop[] = "tab_bar::spin::prop";
+const WCHAR dock_bar::b_dock_bar_prop[] = L"dock_bar::prop";
+WCHAR dock_bar::b_ttbuf[TTBUFSIZE];
+const WCHAR tab_bar::b_tab_bar_spin_prop[] = L"tab_bar::spin::prop";
 
 dock_bar::dock_bar (dock_frame &frame, lisp name, int dockable)
      : b_hwnd (0), b_wndproc (0), b_frame (frame), b_lname (name),
@@ -34,12 +34,12 @@ dock_bar::check_edge (int edge) const
 int
 dock_bar::subclass ()
 {
-  if (!SetProp (b_hwnd, b_dock_bar_prop, HANDLE (this)))
+  if (!SetPropW (b_hwnd, b_dock_bar_prop, HANDLE (this)))
     return 0;
-  b_wndproc = (WNDPROC)SetWindowLong (b_hwnd, GWL_WNDPROC, LONG (WNDPROC (wndproc)));
+  b_wndproc = (WNDPROC)SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (WNDPROC (wndproc)));
   if (b_wndproc)
     return 1;
-  RemoveProp (b_hwnd, b_dock_bar_prop);
+  RemovePropW (b_hwnd, b_dock_bar_prop);
   return 0;
 }
 
@@ -48,8 +48,8 @@ dock_bar::unsubclass ()
 {
   if (b_wndproc)
     {
-      SetWindowLong (b_hwnd, GWL_WNDPROC, LONG (b_wndproc));
-      RemoveProp (b_hwnd, b_dock_bar_prop);
+      SetWindowLongW (b_hwnd, GWL_WNDPROC, LONG (b_wndproc));
+      RemovePropW (b_hwnd, b_dock_bar_prop);
       b_wndproc = 0;
     }
 }
@@ -273,6 +273,13 @@ dock_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
         }
       break;
 
+    /* ツールチップは、道具を登録した窓、つまりこの窓へ文字を求めてくる */
+    case WM_NOTIFY:
+      if (((NMHDR *)lparam)->code == TTN_NEEDTEXTW
+          && need_text (*(TOOLTIPTEXTW *)lparam))
+        return 0;
+      break;
+
     case WM_NCDESTROY:
       sendmsg (msg, wparam, lparam);
       unsubclass ();
@@ -333,7 +340,7 @@ tool_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 int
 tool_bar::create (HWND hwnd_parent, DWORD style, UINT id)
 {
-  if (!dock_bar::create (0, TOOLBARCLASSNAME, 0,
+  if (!dock_bar::create (0, TOOLBARCLASSNAMEW, 0,
                          style, 0, 0, 0, 0, hwnd_parent,
                          (HMENU)id, app.hinst, 0))
     return 0;
@@ -496,7 +503,7 @@ tab_bar::create (HWND hwnd_parent)
 DWORD
 tab_bar::nth (int i) const
 {
-  TC_ITEM ti;
+  TC_ITEMW ti;
   ti.mask = TCIF_PARAM;
   return get_item (i, ti) ? ti.lParam : 0;
 }
@@ -521,10 +528,10 @@ tab_bar::modify_spin ()
   if (style & UDS_HORZ ? !dock_vert_p () : dock_vert_p ())
     return;
 
-  HWND hwnd = CreateWindowEx (GetWindowLong (hwnd_spin, GWL_EXSTYLE),
-                              UPDOWN_CLASS, "", (style ^ UDS_HORZ) & ~UDS_WRAP,
-                              0, 0, 0, 0, b_hwnd, HMENU (IDC_TAB_SPIN),
-                              app.hinst, 0);
+  HWND hwnd = CreateWindowExW (GetWindowLongW (hwnd_spin, GWL_EXSTYLE),
+                               UPDOWN_CLASSW, L"", (style ^ UDS_HORZ) & ~UDS_WRAP,
+                               0, 0, 0, 0, b_hwnd, HMENU (IDC_TAB_SPIN),
+                               app.hinst, 0);
   if (!hwnd)
     return;
 
@@ -592,9 +599,9 @@ tab_bar::calc_tab_height ()
   int nitem = item_count ();
   if (!nitem)
     {
-      TC_ITEM ti;
+      TC_ITEMW ti;
       ti.mask = TCIF_TEXT;
-      ti.pszText = "xyzzy";
+      ti.pszText = L"xyzzy";
       insert_item (0, ti);
     }
 
@@ -610,7 +617,7 @@ tab_bar::calc_tab_height ()
   HDC hdc = GetDC (b_hwnd);
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   SIZE sz;
-  GetTextExtentPoint32 (hdc, "...", 3, &sz);
+  GetTextExtentPoint32W (hdc, L"...", 3, &sz);
   t_dots = sz.cx;
   SelectObject (hdc, of);
   ReleaseDC (b_hwnd, hdc);
@@ -649,32 +656,32 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
 }
 
 int
-tab_bar::abbrev_text (HDC hdc, char *s0, int l, int cx) const
+tab_bar::abbrev_text (HDC hdc, WCHAR *s0, int l, int cx) const
 {
   cx -= t_dots;
   if (cx <= 0)
     return 0;
 
   SIZE sz;
-  char *se = s0 + l;
+  WCHAR *se = s0 + l;
   do
     {
-      se = CharPrev (s0, se);
+      se = CharPrevW (s0, se);
       if (se == s0)
         break;
-      GetTextExtentPoint32 (hdc, s0, se - s0, &sz);
+      GetTextExtentPoint32W (hdc, s0, se - s0, &sz);
     }
   while (sz.cx > cx);
-  strcpy (se, "...");
+  wcscpy (se, L"...");
   return se - s0 + 3;
 }
 
 void
-tab_bar::draw_item (const draw_item_struct &dis, char *s, int l,
+tab_bar::draw_item (const draw_item_struct &dis, WCHAR *s, int l,
                     COLORREF fg, COLORREF bg) const
 {
   SIZE sz;
-  GetTextExtentPoint32 (dis.hdc, s, l, &sz);
+  GetTextExtentPoint32W (dis.hdc, s, l, &sz);
 
   int x, y;
   switch (edge ())
@@ -721,7 +728,7 @@ tab_bar::draw_item (const draw_item_struct &dis, char *s, int l,
 
   COLORREF ofg = SetTextColor (dis.hdc, fg);
   COLORREF obg = SetBkColor (dis.hdc, bg);
-  ExtTextOut (dis.hdc, x, y, ETO_CLIPPED | ETO_OPAQUE, &dis.r, s, l, 0);
+  ExtTextOutW (dis.hdc, x, y, ETO_CLIPPED | ETO_OPAQUE, &dis.r, s, l, 0);
   SetTextColor (dis.hdc, ofg);
   SetBkColor (dis.hdc, obg);
   if (dis.state & ODS_SELECTED && GetFocus () == b_hwnd)
@@ -1116,7 +1123,7 @@ tab_bar::nc_calc_size (RECT &r) const
 LRESULT CALLBACK
 tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  WNDPROC oproc = WNDPROC (GetProp (hwnd, b_tab_bar_spin_prop));
+  WNDPROC oproc = WNDPROC (GetPropW (hwnd, b_tab_bar_spin_prop));
   switch (msg)
     {
     case UDM_SETRANGE:
@@ -1125,11 +1132,11 @@ tab_bar::spin_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
 
     case WM_NCDESTROY:
-      SetWindowLong (hwnd, GWL_WNDPROC, LONG (oproc));
-      RemoveProp (hwnd, b_tab_bar_spin_prop);
+      SetWindowLongW (hwnd, GWL_WNDPROC, LONG (oproc));
+      RemovePropW (hwnd, b_tab_bar_spin_prop);
       break;
     }
-  return oproc ? CallWindowProc (oproc, hwnd, msg, wparam, lparam) : 0;
+  return oproc ? CallWindowProcW (oproc, hwnd, msg, wparam, lparam) : 0;
 }
 
 void
@@ -1138,9 +1145,9 @@ tab_bar::parent_notify (UINT msg, UINT id, HWND hwnd)
   if (msg == WM_CREATE && id == IDC_TAB_SPIN
       && !(GetWindowLong (hwnd, GWL_STYLE) & UDS_HORZ))
     {
-      WNDPROC o = (WNDPROC)GetWindowLong (hwnd, GWL_WNDPROC);
-      if (o && SetProp (hwnd, b_tab_bar_spin_prop, HANDLE (o)))
-        SetWindowLong (hwnd, GWL_WNDPROC, LONG (spin_wndproc));
+      WNDPROC o = (WNDPROC)GetWindowLongW (hwnd, GWL_WNDPROC);
+      if (o && SetPropW (hwnd, b_tab_bar_spin_prop, HANDLE (o)))
+        SetWindowLongW (hwnd, GWL_WNDPROC, LONG (spin_wndproc));
     }
 }
 
@@ -1423,11 +1430,11 @@ tab_bar::move_tab (int x, int y)
                 else if (index == oindex + 1)
                   index++;
 
-                char b[1024];
-                TC_ITEM ti;
+                WCHAR b[1024];
+                TC_ITEMW ti;
                 ti.mask = TCIF_TEXT | TCIF_IMAGE | TCIF_PARAM;
                 ti.pszText = b;
-                ti.cchTextMax = sizeof b;
+                ti.cchTextMax = numberof (b);
                 set_no_redraw ();
                 if (get_item (oindex, ti) && insert_item (index, ti) >= 0)
                   {
@@ -2248,18 +2255,6 @@ dock_frame::draw_item (DRAWITEMSTRUCT *dis)
 int
 dock_frame::notify (NMHDR *nm, LRESULT &result)
 {
-  if (nm->code == TTN_NEEDTEXT)
-    {
-      TOOLINFO ti;
-      ti.cbSize = sizeof ti;
-      if (SendMessage (nm->hwndFrom, TTM_GETCURRENTTOOL, 0, LPARAM (&ti))
-          && ti.lpszText == LPSTR_TEXTCALLBACK)
-        {
-          dock_bar *bar = dock_bar::from_hwnd (ti.hwnd);
-          return bar ? bar->need_text (*(TOOLTIPTEXT *)nm) : 0;
-        }
-    }
-
   dock_bar *bar = dock_bar::from_hwnd (nm->hwndFrom);
   return bar ? bar->notify (nm, result) : 0;
 }

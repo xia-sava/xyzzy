@@ -895,8 +895,12 @@ gc (int nomsg)
     nomsg = xsymbol_value (Vgarbage_collection_messages) == Qnil;
 
   int msglen = 0;
+  WCHAR msg[256];
   if (!nomsg)
-    msglen = app.status_window.text (get_message_string (Mgarbage_collecting));
+    {
+      s2u (msg, get_message_string (Mgarbage_collecting));
+      msglen = app.status_window.text (msg);
+    }
 
   ldataP::ld_nwasted = 0;
   gc_mark_object ();
@@ -919,7 +923,10 @@ gc (int nomsg)
       if (msglen)
         app.status_window.restore ();
       else
-        app.status_window.text (get_message_string (Mgarbage_collecting_done));
+        {
+          s2u (msg, get_message_string (Mgarbage_collecting_done));
+          app.status_window.text (msg);
+        }
     }
 
   _heapmin ();
@@ -2513,10 +2520,12 @@ dump_object (FILE *fp, const ldll_module *d, int n,
 static void
 load_dyn_library (ldll_module *p)
 {
-  char *s = (char *)alloca (xstring_length (p->name) * 2 + 1);
-  w2s (s, p->name);
+  char *s = (char *)alloca (xstring_length (p->name) * 3 + 1);
+  w2u8 (s, p->name);
+  WCHAR *ws = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (p->name) + 1));
+  w2u (ws, p->name);
   p->loaded = 0;
-  HMODULE h = GetModuleHandle (s);
+  HMODULE h = GetModuleHandleW (ws);
   if (!h)
     {
       h = WINFS::LoadLibrary (s);
@@ -2753,7 +2762,7 @@ Fdump_xyzzy (lisp filename)
     }
   qsort (addr_orderp, nreps, sizeof *addr_orderp, compare_addr);
 
-  FILE *fp = fopen (path, "wb");
+  FILE *fp = WINFS::fopen (path, "wb");
   if (!fp)
     FEsimple_crtl_error (errno, filename);
 

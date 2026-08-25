@@ -7,13 +7,13 @@
 
 class EnvStrings
 {
-  char *e_env;
-  char *e_buf;
+  WCHAR *e_env;
+  WCHAR *e_buf;
 
-  void set (char **, char **&, char *) const;
-  char *set (char **, char **&, char *, lisp, lisp) const;
+  void set (WCHAR **, WCHAR **&, WCHAR *) const;
+  WCHAR *set (WCHAR **, WCHAR **&, WCHAR *, lisp, lisp) const;
   static int __cdecl compare (const void *p1, const void *p2)
-    {return stricmp (*(char **)p1, *(char **)p2);}
+    {return _wcsicmp (*(WCHAR **)p1, *(WCHAR **)p2);}
 public:
   EnvStrings () : e_env (0), e_buf (0) {}
   ~EnvStrings ()
@@ -22,39 +22,39 @@ public:
       xfree (e_env);
     }
   void setup (lisp);
-  const char *str () const {return e_env;}
+  const WCHAR *str () const {return e_env;}
 };
 
 void
-EnvStrings::set (char **nb, char **&ne, char *b) const
+EnvStrings::set (WCHAR **nb, WCHAR **&ne, WCHAR *b) const
 {
-  char *eq = b;
+  WCHAR *eq = b;
   if (*eq == '=')
     eq++;
-  eq = strchr (eq, '=');
+  eq = wcschr (eq, '=');
   if (!eq)
     return;
   int l = eq - b + 1;
   for (; nb < ne; nb++)
-    if (!memicmp (b, *nb, l))
+    if (!_wcsnicmp (b, *nb, l))
       {
-        *nb = b[l] ? b : "";
+        *nb = b[l] ? b : (WCHAR *)L"";
         return;
       }
   if (b[l])
     *ne++ = b;
 }
 
-char *
-EnvStrings::set (char **nb, char **&ne, char *b, lisp var, lisp val) const
+WCHAR *
+EnvStrings::set (WCHAR **nb, WCHAR **&ne, WCHAR *b, lisp var, lisp val) const
 {
-  char *b0 = b;
-  b = w2s (b, var);
+  WCHAR *b0 = b;
+  b = w2u (b, var);
   *b++ = '=';
   if (val == Qnil)
     *b++ = 0;
   else
-    b = w2s (b, val) + 1;
+    b = w2u (b, val) + 1;
   set (nb, ne, b0);
   return b;
 }
@@ -68,36 +68,37 @@ EnvStrings::setup (lisp lenv)
       lisp x = xcar (le);
       check_cons (x);
       check_string (xcar (x));
-      l += xstring_length (xcar (x)) * 2 + 2;
+      l += w2ul (xcar (x)) + 2;
       if (xcdr (x) != Qnil)
         {
           check_string (xcdr (x));
-          l += xstring_length (xcdr (x)) * 2;
+          l += w2ul (xcdr (x));
         }
     }
 
   for (int d = 0; d < 26; d++)
     {
       const char *dir = get_device_dir (d);
-      int x = strlen (dir);
-      if (x > 3)
+      if (strlen (dir) > 3)
         {
-          l += x + sizeof "=X:=X:";
+          l += u82wl (dir) + numberof ("=X:=X:");
           n++;
         }
     }
 
-  for (char **e = environ; *e; e++, n++)
+  WCHAR *block = GetEnvironmentStringsW ();
+  for (const WCHAR *e = block; *e; e += wcslen (e) + 1, n++)
     ;
 
-  l = (l + sizeof (char **) - 1) / sizeof (char **) * sizeof (char **);
-  e_buf = (char *)xmalloc (l + sizeof (char **) * n);
-  char **nb = (char **)(e_buf + l);
-  char **ne = nb;
-  for (char **e = environ; *e; e++, ne++)
-    *ne = *e;
+  int lb = ((l * sizeof (WCHAR) + sizeof (WCHAR *) - 1)
+            / sizeof (WCHAR *) * sizeof (WCHAR *));
+  e_buf = (WCHAR *)xmalloc (lb + sizeof (WCHAR *) * n);
+  WCHAR **nb = (WCHAR **)((char *)e_buf + lb);
+  WCHAR **ne = nb;
+  for (WCHAR *e = block; *e; e += wcslen (e) + 1, ne++)
+    *ne = e;
 
-  char *b = e_buf;
+  WCHAR *b = e_buf;
   for (lisp le = lenv; consp (le); le = xcdr (le))
     {
       lisp x = xcar (le);
@@ -107,11 +108,11 @@ EnvStrings::setup (lisp lenv)
   for (int d = 0; d < 26; d++)
     {
       const char *dir = get_device_dir (d);
-      int x = strlen (dir);
-      if (x > 3)
+      if (strlen (dir) > 3)
         {
-          char *b0 = b;
-          b += sprintf (b, "=%c:=%c:%s", 'A' + d, 'A' + d, dir) + 1;
+          WCHAR *b0 = b;
+          b += wsprintfW (b, L"=%c:=%c:", 'A' + d, 'A' + d);
+          b = u82u (b, dir) + 1;
           set (nb, ne, b0);
         }
     }
@@ -119,16 +120,20 @@ EnvStrings::setup (lisp lenv)
   qsort (nb, ne - nb, sizeof *nb, compare);
 
   l = 1;
-  for (char **np = nb; np < ne; np++)
+  for (WCHAR **np = nb; np < ne; np++)
     if (**np)
-      l += strlen (*np) + 1;
+      l += wcslen (*np) + 1;
 
-  e_env = (char *)xmalloc (l);
-  char *p = e_env;
-  for (char **np = nb; np < ne; np++)
+  e_env = (WCHAR *)xmalloc (l * sizeof (WCHAR));
+  WCHAR *p = e_env;
+  for (WCHAR **np = nb; np < ne; np++)
     if (**np)
-      p = stpcpy (p, *np) + 1;
+      {
+        wcscpy (p, *np);
+        p += wcslen (p) + 1;
+      }
   *p = 0;
+  FreeEnvironmentStringsW (block);
 }
 
 static void
@@ -200,8 +205,8 @@ Fcall_process (lisp cmd, lisp keys)
   EnvStrings env;
   env.setup (find_keyword (Kenviron, keys));
 
-  char *cmdline = (char *)alloca (xstring_length (cmd) * 2 + 1);
-  w2s (cmdline, cmd);
+  WCHAR *cmdline = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (cmd) + 1));
+  w2u (cmdline, cmd);
 
   int no_std_handles = find_keyword_bool (Kno_std_handles, keys);
 
@@ -221,6 +226,8 @@ Fcall_process (lisp cmd, lisp keys)
   char dir[PATH_MAX + 1];
   pathname2cstr (exec_dir, dir);
   map_sl_to_backsl (dir);
+  WCHAR wdir[PATH_MAX + 1];
+  u82u (wdir, dir);
 
   lisp lshow = find_keyword (Kshow, keys);
   int show = show_window_parameter (lshow, SW_SHOWNORMAL);
@@ -240,7 +247,7 @@ Fcall_process (lisp cmd, lisp keys)
   if (lstdout != lstderr)
     open_for_write (herr, errfile, lstderr, &sa);
 
-  STARTUPINFO si;
+  STARTUPINFOW si;
   bzero (&si, sizeof si);
   si.cb = sizeof si;
   si.dwFlags = STARTF_USESHOWWINDOW;
@@ -258,14 +265,15 @@ Fcall_process (lisp cmd, lisp keys)
   WINFS::SetCurrentDirectory (dir);
 
   PROCESS_INFORMATION pi;
-  int result = CreateProcess (0, cmdline, 0, 0, !no_std_handles,
-                              (CREATE_DEFAULT_ERROR_MODE
-                               /*| CREATE_NEW_PROCESS_GROUP*/
-                               | NORMAL_PRIORITY_CLASS),
-                              (void *)env.str (), dir, &si, &pi);
+  int result = CreateProcessW (0, cmdline, 0, 0, !no_std_handles,
+                               (CREATE_DEFAULT_ERROR_MODE
+                                /*| CREATE_NEW_PROCESS_GROUP*/
+                                | CREATE_UNICODE_ENVIRONMENT
+                                | NORMAL_PRIORITY_CLASS),
+                               (void *)env.str (), wdir, &si, &pi);
   int error = GetLastError ();
 
-  w2s (dir, xsymbol_value (Qdefault_dir));
+  w2u8 (dir, xsymbol_value (Qdefault_dir));
   WINFS::SetCurrentDirectory (dir);
 
   DWORD exit_code = 0;
@@ -755,7 +763,7 @@ public:
       if (!WriteFile (p_out, s, l, &nwrite, 0))
         file_error (GetLastError ());
     }
-  void create (lisp, lisp, const char *, int);
+  void create (lisp, lisp, const WCHAR *, int);
   virtual int readin (u_char *, int);
 };
 
@@ -828,9 +836,9 @@ NormalProcess::find_tty (HWND hwnd, LPARAM arg)
   GetWindowThreadProcessId (hwnd, &pid);
   if (pid != ((dos_prompt *)arg)->pid)
     return 1;
-  char name[32];
-  if (!GetClassName (hwnd, name, sizeof name)
-      || lstrcmp (name, "tty"))
+  WCHAR name[32];
+  if (!GetClassNameW (hwnd, name, numberof (name))
+      || lstrcmpW (name, L"tty"))
     return 1;
   ((dos_prompt *)arg)->hwnd = hwnd;
   return 0;
@@ -863,11 +871,13 @@ NormalProcess::signal_win95 ()
 }
 
 void
-NormalProcess::create (lisp command, lisp execdir, const char *env, int show)
+NormalProcess::create (lisp command, lisp execdir, const WCHAR *env, int show)
 {
   char dir[PATH_MAX + 1];
   pathname2cstr (execdir, dir);
   map_sl_to_backsl (dir);
+  WCHAR wdir[PATH_MAX + 1];
+  u82u (wdir, dir);
 
   SECURITY_ATTRIBUTES sa;
   sa.nLength = sizeof sa;
@@ -892,10 +902,10 @@ NormalProcess::create (lisp command, lisp execdir, const char *env, int show)
   if (!event.valid ())
     file_error (GetLastError ());
 
-  char *cmdline = (char *)alloca (128 + xstring_length (command) * 2 + 1);
-  sprintf (cmdline, "xyzzyenv -s%u %u ", show,
-           reinterpret_cast <UINT_PTR> (HANDLE (event)));
-  w2s (cmdline + strlen (cmdline), command);
+  WCHAR *cmdline = (WCHAR *)alloca (sizeof (WCHAR) * (128 + w2ul (command) + 1));
+  wsprintfW (cmdline, L"xyzzyenv -s%u %u ", show,
+             reinterpret_cast <UINT_PTR> (HANDLE (event)));
+  w2u (cmdline + wcslen (cmdline), command);
 
   u_int thread_id;
   HANDLE hread_thread = HANDLE (_beginthreadex (0, 0, Process::read_process, this,
@@ -915,7 +925,7 @@ NormalProcess::create (lisp command, lisp execdir, const char *env, int show)
   lisp lxshow = symbol_value (Vxyzzyenv_show_flag, selected_buffer ());
   int xshow = show_window_parameter (lxshow, SW_SHOWMINNOACTIVE);
 
-  STARTUPINFO si;
+  STARTUPINFOW si;
   bzero (&si, sizeof si);
   si.cb = sizeof si;
   si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
@@ -927,14 +937,15 @@ NormalProcess::create (lisp command, lisp execdir, const char *env, int show)
   WINFS::SetCurrentDirectory (dir);
 
   PROCESS_INFORMATION pi;
-  int result = CreateProcess (0, cmdline, 0, 0, 1,
-                              (CREATE_NEW_PROCESS_GROUP
-                               | CREATE_DEFAULT_ERROR_MODE
-                               | NORMAL_PRIORITY_CLASS),
-                              (void *)env, dir, &si, &pi);
+  int result = CreateProcessW (0, cmdline, 0, 0, 1,
+                               (CREATE_NEW_PROCESS_GROUP
+                                | CREATE_DEFAULT_ERROR_MODE
+                                | CREATE_UNICODE_ENVIRONMENT
+                                | NORMAL_PRIORITY_CLASS),
+                               (void *)env, wdir, &si, &pi);
   int error = GetLastError ();
 
-  w2s (dir, xsymbol_value (Qdefault_dir));
+  w2u8 (dir, xsymbol_value (Qdefault_dir));
   WINFS::SetCurrentDirectory (dir);
 
   p_in.fix (opipe_r.unfix ());
@@ -1447,40 +1458,43 @@ se_error (lisp lpath, int e)
 lisp
 Fshell_execute (lisp lpath, lisp ldir, lisp lparam, lisp keys)
 {
-  char *path, *dir, *param;
+  WCHAR *path, *dir = 0, *param;
+  char dir8[PATH_MAX + 1];
   if (ldir == Qt)
     {
       check_string (lpath);
-      path = (char *)alloca (xstring_length (lpath) * 2 + 1);
-      w2s (path, lpath);
-      dir = 0;
+      path = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lpath) + 1));
+      w2u (path, lpath);
     }
   else
     {
-      path = (char *)alloca (PATH_MAX + 1);
-      pathname2cstr (lpath, path);
-      map_sl_to_backsl (path);
+      char buf[PATH_MAX + 1];
+      pathname2cstr (lpath, buf);
+      map_sl_to_backsl (buf);
+      path = (WCHAR *)alloca (sizeof (WCHAR) * (PATH_MAX + 1));
+      u82u (path, buf);
 
-      dir = (char *)alloca (PATH_MAX + 1);
       if (ldir && ldir != Qnil)
-        pathname2cstr (ldir, dir);
+        pathname2cstr (ldir, dir8);
       else
-        pathname2cstr (Fdirectory_namestring (lpath), dir);
-      map_sl_to_backsl (dir);
+        pathname2cstr (Fdirectory_namestring (lpath), dir8);
+      map_sl_to_backsl (dir8);
+      dir = (WCHAR *)alloca (sizeof (WCHAR) * (PATH_MAX + 1));
+      u82u (dir, dir8);
     }
 
   if (lparam && lparam != Qnil)
     {
       check_string (lparam);
-      param = (char *)alloca (xstring_length (lparam) * 2 + 1);
-      w2s (param, lparam);
+      param = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lparam) + 1));
+      w2u (param, lparam);
     }
   else
     param = 0;
 
   UINT omode = SetErrorMode (0);
   if (dir)
-    WINFS::SetCurrentDirectory (dir);
+    WINFS::SetCurrentDirectory (dir8);
 
   if (xsymbol_value (Vshell_execute_disregards_shift_key) != Qnil)
     {
@@ -1491,24 +1505,24 @@ Fshell_execute (lisp lpath, lisp ldir, lisp lparam, lisp keys)
     }
 
   DWORD e;
-  typedef int (WINAPI *SHELLEXECUTEEX)(SHELLEXECUTEINFO *);
+  typedef int (WINAPI *SHELLEXECUTEEX)(SHELLEXECUTEINFOW *);
   SHELLEXECUTEEX ex = (xsymbol_value (Vuse_shell_execute_ex) != Qnil
-                       ? (SHELLEXECUTEEX)GetProcAddress (GetModuleHandle ("shell32.dll"),
-                                                         "ShellExecuteExA")
+                       ? (SHELLEXECUTEEX)GetProcAddress (GetModuleHandleW (L"shell32.dll"),
+                                                         "ShellExecuteExW")
                        : 0);
 
-  char *verb = 0;
+  WCHAR *verb = 0;
   lisp lverb = find_keyword (Kverb, keys);
   if (lverb != Qnil)
     {
       lverb = Fstring (lverb);
-      verb = (char *)alloca (xstring_length (lverb) * 2 + 1);
-      w2s (verb, lverb);
+      verb = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lverb) + 1));
+      w2u (verb, lverb);
     }
 
   if (ex)
     {
-      SHELLEXECUTEINFO sei = {sizeof sei};
+      SHELLEXECUTEINFOW sei = {sizeof sei};
       sei.fMask = SEE_MASK_FLAG_NO_UI;
       sei.hwnd = get_active_window ();
       sei.lpFile = path;
@@ -1519,8 +1533,8 @@ Fshell_execute (lisp lpath, lisp ldir, lisp lparam, lisp keys)
       e = (*ex)(&sei) ? 33 : DWORD (sei.hInstApp);
     }
   else
-    e = DWORD (ShellExecute (get_active_window (), verb ? verb : "open",
-                             path, param, dir, SW_SHOWNORMAL));
+    e = DWORD (ShellExecuteW (get_active_window (), verb ? verb : L"open",
+                              path, param, dir, SW_SHOWNORMAL));
   if (dir)
     WINFS::SetCurrentDirectory (sysdep.curdir);
   SetErrorMode (omode);

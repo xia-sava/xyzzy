@@ -29,13 +29,13 @@ protected:
   dock_frame &b_frame;
   lisp b_lname;
   enum {TTBUFSIZE = 256};
-  static char b_ttbuf[TTBUFSIZE];
+  static WCHAR b_ttbuf[TTBUFSIZE];
 private:
   u_char b_edge;
   u_char b_border;
   u_char b_dockable;
   u_char b_status;
-  static const char b_dock_bar_prop[];
+  static const WCHAR b_dock_bar_prop[];
 public:
   enum
     {
@@ -114,15 +114,15 @@ private:
 public:
   const RECT &rect () const {return b_rect;}
   static dock_bar *from_hwnd (HWND hwnd)
-    {return (dock_bar *)GetProp (hwnd, b_dock_bar_prop);}
+    {return (dock_bar *)GetPropW (hwnd, b_dock_bar_prop);}
   LRESULT sendmsg (UINT msg, WPARAM wparam, LPARAM lparam) const
-    {return CallWindowProc (b_wndproc, b_hwnd, msg, wparam, lparam);}
-  int create (DWORD exstyle, const char *class_name, const char *window_name,
+    {return CallWindowProcW (b_wndproc, b_hwnd, msg, wparam, lparam);}
+  int create (DWORD exstyle, const WCHAR *class_name, const WCHAR *window_name,
               DWORD style, int x, int y, int cx, int cy, HWND hwnd_parent,
               HMENU hmenu, HINSTANCE hinst, void *param)
     {
-      b_hwnd = CreateWindowEx (exstyle, class_name, window_name, style,
-                               x, y, cx, cy, hwnd_parent, hmenu, hinst, param);
+      b_hwnd = CreateWindowExW (exstyle, class_name, window_name, style,
+                                x, y, cx, cy, hwnd_parent, hmenu, hinst, param);
       return b_hwnd && subclass ();
     }
   long style () const {return GetWindowLong (b_hwnd, GWL_STYLE);}
@@ -144,7 +144,7 @@ public:
   virtual void calc_client_size (SIZE &, int) const = 0;
   virtual void reload_settings () {}
   virtual int notify (NMHDR *, LRESULT &) {return 0;}
-  virtual int need_text (TOOLTIPTEXT &) {return 0;}
+  virtual int need_text (TOOLTIPTEXTW &) {return 0;}
   void set_redraw ();
   void set_no_redraw ();
   virtual void draw_item (DRAWITEMSTRUCT *) {}
@@ -271,7 +271,7 @@ protected:
 private:
   int t_erasebkgnd_called;
   int t_dots;
-  static const char b_tab_bar_spin_prop[];
+  static const WCHAR b_tab_bar_spin_prop[];
 protected:
   enum {IDC_TAB_SPIN = 1};
   enum {GRIPPER_SIZE = 3};
@@ -289,11 +289,11 @@ protected:
   void erase_bkgnd (HDC);
   int inverse_p () const {return style () & TCS_BOTTOM;}
   virtual void dock_edge ();
-  void draw_item (const draw_item_struct &, char *, int,
+  void draw_item (const draw_item_struct &, WCHAR *, int,
                   COLORREF, COLORREF) const;
   virtual void draw_item (const draw_item_struct &) {}
   virtual void update_ui ();
-  int abbrev_text (HDC, char *, int, int) const;
+  int abbrev_text (HDC, WCHAR *, int, int) const;
   virtual void adjust_gripper (HDC, RECT &, const RECT &) const;
   int lbtn_down (int, int);
   int move_tab (int, int);
@@ -314,7 +314,7 @@ public:
   ~tab_bar () {}
   int create (HWND hwnd_parent, DWORD style, UINT id)
     {
-      return dock_bar::create (0, WC_TABCONTROL, "",
+      return dock_bar::create (0, WC_TABCONTROLW, L"",
                                style, 0, 0, 0, 0, hwnd_parent,
                                (HMENU)id, app.hinst, 0);
     }
@@ -323,14 +323,14 @@ public:
   void calc_tab_height ();
   void set_font (HFONT hf)
     {sendmsg (WM_SETFONT, WPARAM (hf), 0);}
-  int insert_item (int i, const TC_ITEM &ti)
-    {return sendmsg (TCM_INSERTITEM, i, LPARAM (&ti));}
+  int insert_item (int i, const TC_ITEMW &ti)
+    {return sendmsg (TCM_INSERTITEMW, i, LPARAM (&ti));}
   int delete_item (int i)
     {return sendmsg (TCM_DELETEITEM, i, 0);}
-  int set_item (int i, const TC_ITEM &ti)
-    {return sendmsg (TCM_SETITEM, i, LPARAM (&ti));}
-  int get_item (int i, TC_ITEM &ti) const
-    {return sendmsg (TCM_GETITEM, i, LPARAM (&ti));}
+  int set_item (int i, const TC_ITEMW &ti)
+    {return sendmsg (TCM_SETITEMW, i, LPARAM (&ti));}
+  int get_item (int i, TC_ITEMW &ti) const
+    {return sendmsg (TCM_GETITEMW, i, LPARAM (&ti));}
   void set_padding (int cx, int cy) const
     {sendmsg (TCM_SETPADDING, 0, MAKELONG (cx, cy));}
   void adjust_rect (int f, RECT &r) const

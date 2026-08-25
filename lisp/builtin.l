@@ -448,7 +448,7 @@
 
 (in-package "system")
 
-(si::defun-builtin *byte-code ("BYTE-STRING [PARAMETERS]"))
+(si::defun-builtin *byte-code-2 ("BYTE-STRING [PARAMETERS]"))
 (si::defun-builtin *symbol-value (symbol))
 (si::defun-builtin *specialp (object))
 (si::defun-builtin *make-constant (symbol))
@@ -719,6 +719,8 @@
 (si::defun-builtin buffer-eol-code (&optional buffer))
 (si::defun-builtin set-buffer-fileio-encoding (code &optional buffer))
 (si::defun-builtin set-buffer-eol-code (code &optional buffer))
+(si::defun-builtin buffer-char-language (&optional buffer))
+(si::defun-builtin set-buffer-char-language (lang &optional buffer))
 (si::defun-builtin buffer-list (&key :buffer-bar-order))
 (si::defun-builtin enum-buffers (fn))
 (si::defun-builtin find-name-buffer (buffer-name))
@@ -1107,9 +1109,8 @@
 (si::defun-builtin extended-alphabet-char-p (char))
 (si::defun-builtin unicode-char (code))
 (si::defun-builtin char-unicode (char))
-(si::defun-builtin iso-char-code (char &optional vender-depend-code-mapping))
+(si::defun-builtin char-external-code (char &optional char-encoding))
 (si::defun-builtin iso-code-char (code charset &optional vender-depend-code-mapping))
-(si::defun-builtin iso-char-charset (char &optional vender-depend-code-mapping))
 (si::defun-builtin word-char-p (char))
 (si::defun-builtin make-temp-file-name (&optional prefix suffix directory directory-p))
 (si::defun-builtin file-newer-than-file-p (file1 file2))

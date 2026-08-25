@@ -5,33 +5,29 @@
 #include "sysdep.h"
 
 static void
-set_desc (IShellLink *sl, lisp ldesc)
+set_desc (IShellLinkW *sl, lisp ldesc)
 {
-  char *b = (char *)alloca (xstring_length (ldesc) * 2 + 1);
-  w2s (b, ldesc);
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (ldesc) + 1));
+  w2u (b, ldesc);
   ole_error (sl->SetDescription (b));
 }
 
 static void
-set_args (IShellLink *sl, lisp largs)
+set_args (IShellLinkW *sl, lisp largs)
 {
-  char *b = (char *)alloca (xstring_length (largs) * 2 + 1);
-  w2s (b, largs);
+  WCHAR *b = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (largs) + 1));
+  w2u (b, largs);
   ole_error (sl->SetArguments (b));
 }
 
 static void
-set_appid (IShellLink *sl, lisp lappid)
+set_appid (IShellLinkW *sl, lisp lappid)
 {
   if (!sysdep.Win6_1p ())
     return;
 
-  char *b = (char *)alloca (xstring_length (lappid) * 2 + 1);
-  w2s (b, lappid);
-
-  int l = (strlen (b) + 1);
-  wchar_t *w = (wchar_t *)alloca (l * sizeof (wchar_t));
-  MultiByteToWideChar (CP_ACP, 0, b, -1, w, l);
+  WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lappid) + 1));
+  w2u (w, lappid);
 
   safe_com <IPropertyStore> store;
   ole_error (sl->QueryInterface (IID_PPV_ARGS(&store)));
@@ -74,10 +70,11 @@ Fcreate_shortcut (lisp lobject, lisp llink, lisp keys)
   if (lappid)
     check_string (lappid);
 
-  safe_com <IShellLink> sl;
+  safe_com <IShellLinkW> sl;
   ole_error (CoCreateInstance (CLSID_ShellLink, 0, CLSCTX_INPROC_SERVER,
-                               IID_IShellLink, (void **)&sl));
+                               IID_IShellLinkW, (void **)&sl));
   char path[PATH_MAX + 1];
+  WCHAR wpath[PATH_MAX + 1];
   pathname2cstr (lobject, path);
 
   if (Ffile_directory_p (lobject))
@@ -89,17 +86,18 @@ Fcreate_shortcut (lisp lobject, lisp llink, lisp keys)
       ole_error (SHGetDesktopFolder (&sf));
 
       map_sl_to_backsl (path);
-      int l = (strlen (path) + 1);
-      wchar_t *w = (wchar_t *)alloca (l * sizeof (wchar_t));
-      MultiByteToWideChar (CP_ACP, 0, path, -1, w, l);
+      u82u (wpath, path);
 
       ULONG ul;
       safe_idl idl (ialloc);
-      ole_error (sf->ParseDisplayName (get_active_window (), 0, w, &ul, &idl, 0));
+      ole_error (sf->ParseDisplayName (get_active_window (), 0, wpath, &ul, &idl, 0));
       ole_error (sl->SetIDList (idl));
     }
   else
-    ole_error (sl->SetPath (path));
+    {
+      u82u (wpath, path);
+      ole_error (sl->SetPath (wpath));
+    }
 
   if (ldesc)
     set_desc (sl, ldesc);
@@ -108,7 +106,8 @@ Fcreate_shortcut (lisp lobject, lisp llink, lisp keys)
   if (lworkdir)
     {
       pathname2cstr (lworkdir, path);
-      ole_error (sl->SetWorkingDirectory (path));
+      u82u (wpath, path);
+      ole_error (sl->SetWorkingDirectory (wpath));
     }
   if (lshow)
     ole_error (sl->SetShowCmd (show));
@@ -119,10 +118,8 @@ Fcreate_shortcut (lisp lobject, lisp llink, lisp keys)
   ole_error (sl->QueryInterface (IID_IPersistFile, (void **)&pf));
 
   pathname2cstr (llink, path);
-  int l = (strlen (path) + 1);
-  wchar_t *w = (wchar_t *)alloca (l * sizeof (wchar_t));
-  MultiByteToWideChar (CP_ACP, 0, path, -1, w, l);
-  ole_error (pf->Save (w, 1));
+  u82u (wpath, path);
+  ole_error (pf->Save (wpath, 1));
 
   return Qt;
 }
@@ -171,11 +168,9 @@ Fget_special_folder_location (lisp place)
 
     case STRRET_WSTR:
       {
-        int l = 2 + WideCharToMultiByte (CP_OEMCP, 0, name.pOleStr, -1, 0, 0, 0, 0);
-        char *b = (char *)alloca (l);
-        WideCharToMultiByte (CP_OEMCP, 0, name.pOleStr, -1, b, l, 0, 0);
+        lisp r = make_string (name.pOleStr);
         ialloc->Free (name.pOleStr);
-        return make_string (b);
+        return r;
       }
 
     case STRRET_OFFSET:
@@ -192,13 +187,12 @@ Fresolve_shortcut (lisp lshortcut)
   char shortcut[PATH_MAX + 1];
   pathname2cstr (lshortcut, shortcut);
   map_sl_to_backsl (shortcut);
-  int l = (strlen (shortcut) + 1);
-  wchar_t *w = (wchar_t *)alloca (l * sizeof (wchar_t));
-  MultiByteToWideChar (CP_ACP, 0, shortcut, -1, w, l);
+  WCHAR w[PATH_MAX + 1];
+  u82u (w, shortcut);
 
-  safe_com <IShellLink> sl;
+  safe_com <IShellLinkW> sl;
   ole_error (CoCreateInstance (CLSID_ShellLink, 0, CLSCTX_INPROC_SERVER,
-                               IID_IShellLink, (void **)&sl));
+                               IID_IShellLinkW, (void **)&sl));
 
   safe_com <IPersistFile> pf;
   ole_error (sl->QueryInterface (IID_IPersistFile, (void **)&pf));
@@ -207,12 +201,12 @@ Fresolve_shortcut (lisp lshortcut)
     FEfile_error (Enot_a_shortcut, lshortcut);
   ole_error (hr);
 
-  WIN32_FIND_DATA fd;
-  char path[PATH_MAX], desc[PATH_MAX];
-  ole_error (sl->GetPath (path, sizeof path, &fd, 0));
+  WIN32_FIND_DATAW fd;
+  WCHAR path[PATH_MAX], desc[PATH_MAX];
+  ole_error (sl->GetPath (path, numberof (path), &fd, 0));
   if (!*path)
     FEfile_error (Enot_a_shortcut, lshortcut);
-  ole_error (sl->GetDescription (desc, sizeof desc));
+  ole_error (sl->GetDescription (desc, numberof (desc)));
 
   map_backsl_to_sl (path);
   multiple_value::count () = 2;
@@ -225,7 +219,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
 {
   USES_CONVERSION;
 
-  char path[MAX_PATH + 1];
+  char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
   map_sl_to_backsl (path);
   wchar_t *wpath = A2W (path);
@@ -246,7 +240,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
   for (nfiles = 0; consp (f); f = xcdr (f), nfiles++)
     {
       check_string (xcar (f));
-      maxl = max (maxl, xstring_length (xcar (f)));
+      maxl = max (maxl, int (w2ul (xcar (f))));
     }
 
   if (!nfiles)
@@ -264,7 +258,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
 
   maxl++;
   wchar_t *wbuf = (wchar_t *)alloca (sizeof *wbuf * maxl);
-  MultiByteToWideChar (CP_ACP, 0, dir, -1, wbuf, maxl);
+  u82u (wbuf, dir);
 
   ULONG eaten;
   safe_idl dir_idl (ialloc);
@@ -280,7 +274,7 @@ Fole_drop_files (lisp lpath, lisp lclsid, lisp ldir, lisp lfiles)
   int i;
   for (i = 0; i < nfiles && consp (f); i++, f = xcdr (f))
     {
-      i2w (xcar (f), wbuf);
+      w2u (wbuf, xcar (f));
       ole_error (sf->ParseDisplayName (0, 0, wbuf, &eaten, &idls[i], 0));
     }
 

@@ -28,17 +28,17 @@ const lisp *const FontSet::fs_lang_key[] =
   &Kgeorgian,
 };
 
-const char *const FontSet::fs_regent[] =
+const WCHAR *const FontSet::fs_regent[] =
 {
-  "Ascii",
-  "Japanese",
-  "Latin",
-  "Cyrillic",
-  "Greek",
-  "GB2312",
-  "BIG5",
-  "KSC5601",
-  "Georgian",
+  L"Ascii",
+  L"Japanese",
+  L"Latin",
+  L"Cyrillic",
+  L"Greek",
+  L"GB2312",
+  L"BIG5",
+  L"KSC5601",
+  L"Georgian",
 };
 
 // 各スロットの送り幅を測るための文字。受け持つ文字体系の中から、その体系を
@@ -58,19 +58,19 @@ const ucs2_t FontSet::fs_sample_char[] =
 
 const FontSet::fontface FontSet::fs_default_face[] =
 {
-  {"BIZ UDGothic", "ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
-  {"BIZ UDGothic", "ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
-  {"Courier New", 0},
-  {"Courier New", 0},
-  {"Courier New", 0},
-  {"Microsoft YaHei", "SimSun", 0, GB2312_CHARSET},
-  {"Microsoft JhengHei", "MingLiu", 0, CHINESEBIG5_CHARSET},
-  {"Malgun Gothic", "GulimChe", 0, HANGEUL_CHARSET},
-  {"BPG Courier New U", "Sylfaen"},
+  {L"BIZ UDGothic", L"ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
+  {L"BIZ UDGothic", L"ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
+  {L"Courier New", 0},
+  {L"Courier New", 0},
+  {L"Courier New", 0},
+  {L"Microsoft YaHei", L"SimSun", 0, GB2312_CHARSET},
+  {L"Microsoft JhengHei", L"MingLiu", 0, CHINESEBIG5_CHARSET},
+  {L"Malgun Gothic", L"GulimChe", 0, HANGEUL_CHARSET},
+  {L"BPG Courier New U", L"Sylfaen"},
 };
 
 // 挙げた順に、実際に入っているものを使う
-const char *
+const WCHAR *
 FontSet::default_face (int n, int print)
 {
   const fontface &f = fs_default_face[n];
@@ -79,66 +79,81 @@ FontSet::default_face (int n, int print)
   if (!f.alt)
     return f.disp;
   HDC hdc = GetDC (0);
-  const char *face = font_exist_p (hdc, f.disp, f.charset) ? f.disp : f.alt;
+  const WCHAR *face = font_exist_p (hdc, f.disp, f.charset) ? f.disp : f.alt;
   ReleaseDC (0, hdc);
   return face;
 }
 
-// 漢字は同じ字が日本・中国・台湾の文字集合に重ねて含まれ、Unicode では同じ符号
-// 位置になる。どの字形で描くかは符号位置だけでは決められないので、内部コードが
-// どの文字集合の区画にあるかで振り分ける
-int
-font_slot_of (Char cc)
+// 漢字は同じ字が日本・中国・台湾・韓国で共通の符号位置になる。どの字形で描くかは
+// 符号位置だけでは決められないので、バッファが持つ言語で振り分ける
+static int
+han_font_slot (int lang)
 {
-  switch (code_charset (cc))
+  switch (lang)
     {
-    case ccs_usascii:
-      return FONT_ASCII;
-
-    case ccs_iso8859_1:
-    case ccs_iso8859_2:
-    case ccs_iso8859_3:
-    case ccs_iso8859_4:
-    case ccs_iso8859_9:
-    case ccs_iso8859_10:
-    case ccs_iso8859_13:
-#ifdef CCS_ULATIN_MIN
-    case ccs_ulatin:
-#endif
-      return FONT_LATIN;
-
-    case ccs_iso8859_5:
-      return FONT_CYRILLIC;
-
-    case ccs_iso8859_7:
-      return FONT_GREEK;
-
-    case ccs_georgian:
-      return FONT_GEORGIAN;
-
-    case ccs_gb2312:
-      return FONT_CN_SIMPLIFIED;
-
-    case ccs_big5:
-      return FONT_CN_TRADITIONAL;
-
-    case ccs_ksc5601:
+    case ENCODING_LANG_KR:
       return FONT_HANGUL;
 
-    case ccs_utf16_surrogate_high:
-    case ccs_utf16_surrogate_low:
-    case ccs_utf16_undef_char_high:
-    case ccs_utf16_undef_char_low:
-      // 対にならなかったサロゲートなどは字が無い。豆腐は ASCII のフォントで出す
-      return FONT_ASCII;
+    case ENCODING_LANG_CN:
+    case ENCODING_LANG_CN_GB:
+      return FONT_CN_SIMPLIFIED;
 
-    case ccs_ipa:
-      // IPA 拡張は専用の枠を持たないので日本語のフォントで描く
-      return FONT_JP;
+    case ENCODING_LANG_CN_BIG5:
+      return FONT_CN_TRADITIONAL;
 
     default:
       return FONT_JP;
     }
+}
+
+// 符号位置がどの文字体系に属するかでフォントの枠を決める。画面・印刷・入力の
+// いずれもここを通す
+int
+font_slot_of (Char cc, int lang)
+{
+  if (cc < 0x80)
+    return FONT_ASCII;
+
+  if (cc < 0x0250)              // ラテン補助・ラテン拡張 A/B
+    return FONT_LATIN;
+  if (cc < 0x0370)              // IPA 拡張・修飾文字・結合分音記号
+    return FONT_JP;
+  if (cc < 0x0400)              // ギリシャ
+    return FONT_GREEK;
+  if (cc < 0x0530)              // キリル
+    return FONT_CYRILLIC;
+  if (cc >= 0x10a0 && cc < 0x1100)
+    return FONT_GEORGIAN;
+  if (cc >= 0x1e00 && cc < 0x1f00)  // ラテン拡張追加
+    return FONT_LATIN;
+  if (cc >= 0x1f00 && cc < 0x2000)  // ギリシャ拡張
+    return FONT_GREEK;
+
+  // ハングル。字母・互換字母・音節
+  if (cc >= 0x1100 && cc < 0x1200
+      || cc >= 0x3130 && cc < 0x3190
+      || cc >= 0xac00 && cc < 0xd7b0
+      || cc >= 0xffa0 && cc < 0xffdd)
+    return FONT_HANGUL;
+
+  // 漢字。部首・康熙部首・統合漢字・互換漢字
+  if (cc >= 0x2e80 && cc < 0x2fe0
+      || cc >= 0x3005 && cc < 0x3006
+      || cc >= 0x3400 && cc < 0x4dc0
+      || cc >= 0x4e00 && cc < 0xa000
+      || cc >= 0xf900 && cc < 0xfb00)
+    return han_font_slot (lang);
+
+  // 注音符号は繁体字の文字集合にしかない
+  if (cc >= 0x3100 && cc < 0x3130 || cc >= 0x31a0 && cc < 0x31c0)
+    return FONT_CN_TRADITIONAL;
+
+  // 対にならなかったサロゲートは字が無い。豆腐は ASCII のフォントで出す
+  if (utf16_surrogate_high_p (cc) || utf16_surrogate_low_p (cc))
+    return FONT_ASCII;
+
+  // 仮名・約物・全角形など、日本語のフォントが受け持つもの
+  return FONT_JP;
 }
 
 // 幅は指定しない。指定すると、フォントリンクで選ばれた代替フォントにも平均文字幅と
@@ -146,20 +161,20 @@ font_slot_of (Char cc)
 HFONT
 create_surrogate_font (const SIZE &cell)
 {
-  LOGFONT lf;
+  LOGFONTW lf;
   bzero (&lf, sizeof lf);
   lf.lfHeight = min (long (cell.cy), cell.cx * 2);
   lf.lfCharSet = DEFAULT_CHARSET;
-  strcpy (lf.lfFaceName, "Segoe UI Emoji");
-  return CreateFontIndirect (&lf);
+  wcscpy (lf.lfFaceName, L"Segoe UI Emoji");
+  return CreateFontIndirectW (&lf);
 }
 
 int
-FontObject::create (const char *face, int h, int charset)
+FontObject::create (const WCHAR *face, int h, int charset)
 {
-  LOGFONT lf;
+  LOGFONTW lf;
   bzero (&lf, sizeof lf);
-  strcpy (lf.lfFaceName, face);
+  wcscpy (lf.lfFaceName, face);
   lf.lfHeight = h;
   lf.lfCharSet = charset;
   lf.lfPitchAndFamily = FIXED_PITCH;
@@ -167,15 +182,15 @@ FontObject::create (const char *face, int h, int charset)
 }
 
 int
-FontObject::create (const LOGFONT &lf)
+FontObject::create (const LOGFONTW &lf)
 {
-  HFONT h = CreateFontIndirect (&lf);
+  HFONT h = CreateFontIndirectW (&lf);
   if (!h)
     return 0;
   if (fo_hfont)
     DeleteObject (fo_hfont);
   fo_hfont = h;
-  GetObject (h, sizeof fo_logfont, &fo_logfont);
+  GetObjectW (h, sizeof fo_logfont, &fo_logfont);
   return 1;
 }
 
@@ -228,7 +243,7 @@ FontObject::calc_offset (const SIZE &sz)
 }
 
 const bool
-FontObject::update (LOGFONT &lf, const lisp keys, const bool recommend_size_p)
+FontObject::update (LOGFONTW &lf, const lisp keys, const bool recommend_size_p)
 {
   check_cons (keys);
   lisp lface = find_keyword (Kface, keys);
@@ -264,11 +279,11 @@ FontObject::update (LOGFONT &lf, const lisp keys, const bool recommend_size_p)
   if (lface != Qnil)
     {
       check_string (lface);
-      char *face = (char *)alloca (xstring_length (lface) * 2 + 1);
-      w2s (face, lface);
-      if (strcmp (lf.lfFaceName, face) != 0)
+      WCHAR *face = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lface) + 1));
+      w2u (face, lface);
+      if (wcscmp (lf.lfFaceName, face) != 0)
         {
-          strcpy (lf.lfFaceName, face);
+          wcscpy (lf.lfFaceName, face);
           update = true;
         }
     }
@@ -301,14 +316,14 @@ FontSet::paint_backsl_bitmap (HDC hdc)
 {
   HGDIOBJ of = SelectObject (hdc, fs_font[FONT_ASCII]);
 
-  TextOut (hdc, fs_cell.cx * backsl, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * backsl, 0, L"/", 1);
   StretchBlt (hdc, fs_cell.cx * backsl, 0, fs_cell.cx, fs_cell.cy,
               hdc, fs_cell.cx * (backsl + 1) - 1, 0, -fs_cell.cx, fs_cell.cy,
               SRCCOPY);
 
-  TextOut (hdc, fs_cell.cx * bold_backsl, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * bold_backsl, 0, L"/", 1);
   int omode = SetBkMode (hdc, TRANSPARENT);
-  TextOut (hdc, fs_cell.cx * bold_backsl + 1, 0, "/", 1);
+  TextOutW (hdc, fs_cell.cx * bold_backsl + 1, 0, L"/", 1);
   SetBkMode (hdc, omode);
   StretchBlt (hdc, fs_cell.cx * bold_backsl, 0, fs_cell.cx, fs_cell.cy,
               hdc, fs_cell.cx * (bold_backsl + 1) - 1, 0, -fs_cell.cx, fs_cell.cy,
@@ -409,9 +424,9 @@ FontSet::paint_fold_bitmap (HDC hdc)
 
   const FontObject &f = fs_font[FONT_ASCII];
   HGDIOBJ of = SelectObject (hdc, f);
-  char c = '<';
-  ExtTextOut (hdc, m0 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
-  ExtTextOut (hdc, m1 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
+  WCHAR c = '<';
+  ExtTextOutW (hdc, m0 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
+  ExtTextOutW (hdc, m1 + f.offset ().x, f.offset ().y, 0, 0, &c, 1, 0);
   SelectObject (hdc, of);
 
   for (int y = 0; y < fs_cell.cy; y += 2)
@@ -478,7 +493,7 @@ FontSet::create (const FontSetParam &param)
       for (int i = 1; i < FONT_MAX; i++)
         for (int h = fs_font[FONT_ASCII].size ().cy; h > 0; h--)
           {
-            LOGFONT lf (param.fs_logfont[i]);
+            LOGFONTW lf (param.fs_logfont[i]);
             lf.lfHeight = h;
             lf.lfWidth = 0;
             fs_font[i].create (lf);
@@ -493,7 +508,7 @@ FontSet::create (const FontSetParam &param)
   for (int i = 0; i < FONT_MAX; i++)
     if (fs_font[i].size ().cx > fs_size.cx)
       {
-        LOGFONT lf (param.fs_logfont[i]);
+        LOGFONTW lf (param.fs_logfont[i]);
         lf.lfWidth = fs_size.cx;
         fs_font[i].create (lf);
         fs_font[i].get_metrics (hdc);
@@ -558,18 +573,18 @@ FontSet::update_char_columns () const
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに
 // 別の節へ記録し、その節が無ければ従来の [Font] 節を BASE_SCREEN_DPI のものと
 // みなして換算する。DPI に依存しない設定は [Font] 節に置いたままにする。
-const char *
+const WCHAR *
 font_conf_section ()
 {
-  static char section[32];
+  static WCHAR section[32];
   if (!*section)
-    _snprintf_s (section, sizeof section, _TRUNCATE,
-                 "%s@%d", cfgFont, screen_dpi ());
+    _snwprintf_s (section, numberof (section), _TRUNCATE,
+                  L"%s@%d", cfgFont, screen_dpi ());
   return section;
 }
 
 int
-read_font_conf (const char *name, LOGFONT &lf)
+read_font_conf (const WCHAR *name, LOGFONTW &lf)
 {
   if (read_conf (font_conf_section (), name, lf))
     return 1;
@@ -580,7 +595,7 @@ read_font_conf (const char *name, LOGFONT &lf)
 }
 
 static int
-read_font_conf (const char *name, int &value)
+read_font_conf (const WCHAR *name, int &value)
 {
   if (read_conf (font_conf_section (), name, value))
     return 1;
@@ -604,7 +619,7 @@ FontSet::save_params (const FontSetParam &param)
 }
 
 static int CALLBACK
-fix_charset_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, LPARAM lparam)
+fix_charset_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type, LPARAM lparam)
 {
   HDC hdc = GetDC (0);
   FontSetParam &param = *(FontSetParam *)lparam;
@@ -613,7 +628,7 @@ fix_charset_proc (ENUMLOGFONT *elf, NEWTEXTMETRIC *, int type, LPARAM lparam)
       {
         if (font_exist_p (hdc, param.fs_logfont[i].lfFaceName, param.fs_logfont[i].lfCharSet))
           continue;
-        if (!strcmp (elf->elfLogFont.lfFaceName, param.fs_logfont[i].lfFaceName))
+        if (!wcscmp (elf->elfLogFont.lfFaceName, param.fs_logfont[i].lfFaceName))
           param.fs_logfont[i].lfCharSet = elf->elfLogFont.lfCharSet;
       }
   ReleaseDC (0, hdc);
@@ -643,11 +658,11 @@ FontSet::load_params (FontSetParam &param)
     {
       if (!*param.fs_logfont[i].lfFaceName)
         {
-          strcpy (param.fs_logfont[i].lfFaceName, default_face (i, 0));
+          wcscpy (param.fs_logfont[i].lfFaceName, default_face (i, 0));
           if (!i)
             {
-              LOGFONT lf;
-              GetObject (GetStockObject (SYSTEM_FIXED_FONT), sizeof lf, &lf);
+              LOGFONTW lf;
+              GetObjectW (GetStockObject (SYSTEM_FIXED_FONT), sizeof lf, &lf);
               param.fs_logfont[0].lfHeight = dpi_scale (lf.lfHeight);
             }
           else
@@ -658,7 +673,7 @@ FontSet::load_params (FontSetParam &param)
     }
 
   HDC hdc = GetDC (0);
-  EnumFontFamiliesEx (hdc, 0, FONTENUMPROC (fix_charset_proc), LPARAM (&param), 0);
+  EnumFontFamiliesExW (hdc, 0, FONTENUMPROCW (fix_charset_proc), LPARAM (&param), 0);
   ReleaseDC (0, hdc);
 }
 
@@ -676,7 +691,7 @@ FontSet::make_alist () const
   lisp r = Qnil;
   for (int i = 0; i < FONT_MAX; i++)
     {
-      LOGFONT lf = font (i).logfont ();
+      LOGFONTW lf = font (i).logfont ();
       int size = lf.lfHeight;
       if (!size_pixel_p ())
         size = FontObject::pixel_to_point (size);
@@ -757,7 +772,7 @@ get_font_height (HWND hwnd)
 }
 
 static int CALLBACK
-check_valid_font (const ENUMLOGFONT *, const NEWTEXTMETRIC *,
+check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
                   DWORD, LPARAM lparam)
 {
   *(bool *)lparam = true;
@@ -765,18 +780,18 @@ check_valid_font (const ENUMLOGFONT *, const NEWTEXTMETRIC *,
 }
 
 bool
-font_exist_p (const HDC hdc, const char *face, BYTE charset)
+font_exist_p (const HDC hdc, const WCHAR *face, BYTE charset)
 {
   bool exists = false;
 
-  LOGFONT font;
-  memset (&font, 0, sizeof LOGFONT);
+  LOGFONTW font;
+  memset (&font, 0, sizeof font);
   font.lfCharSet = charset;
-  strcpy (font.lfFaceName, face);
+  wcscpy (font.lfFaceName, face);
 
-  EnumFontFamiliesEx (hdc, &font,
-                      FONTENUMPROC (check_valid_font),
-                      LPARAM (&exists), 0);
+  EnumFontFamiliesExW (hdc, &font,
+                       FONTENUMPROCW (check_valid_font),
+                       LPARAM (&exists), 0);
 
   return exists;
 }

@@ -87,6 +87,45 @@ lisp parse_integer (lisp, int, int &, int, int);
 int update_column (int, Char);
 int update_column (int, const Char *, int);
 int update_column (int, Char, int);
+
+/* Windows とやりとりするバイト列は CP932。文字ひとつと符号ひとつを対応させる。
+   写せないものは '?' にする */
+inline Char
+s2w_char (Char cc)
+{
+  if (cc < 0x80)
+    return cc;
+  Char c = i2w (cc);
+  return c != CHAR_INVALID ? c : DEFCHAR;
+}
+
+/* 桁数を数える処理と書き込む処理で判定がずれるとバッファを溢れるので、
+   どちらもこれを通す */
+inline Char
+w2s_char (Char cc)
+{
+  if (cc < 0x80)
+    return cc;
+  Char c = cc < CHAR_LIMIT ? wc2cp932 (ucs2_t (cc)) : CHAR_INVALID;
+  return c != CHAR_INVALID ? c : DEFCHAR;
+}
+
+/* 符号変換や base64 のように、文字列がバイト列を表すことがある。その並びは
+   一文字が一バイト。それ以外の文字は CP932 の符号にしてから渡す */
+inline Char
+w2b_char (Char cc)
+{
+  return cc < 0x100 ? cc : w2s_char (cc);
+}
+
+/* CP932 で書き出して読み直しても変わらない文字か。変わるものは、印字するとき
+   そのままでは渡せないので逃がす */
+inline int
+cp932_roundtrip_p (Char cc)
+{
+  return cc < 0x80 || s2w_char (w2s_char (cc)) == cc;
+}
+
 size_t s2wl (const char *);
 Char *s2w (Char *, size_t, const char **);
 Char *s2w (Char *, const char *);
@@ -100,18 +139,56 @@ char *w2s (char *, const Char *, size_t);
 char *w2s (const Char *, size_t);
 char *w2s (char *, char *, const Char *, size_t);
 char *w2s_quote (char *, char *, const Char *, size_t, int, int);
+size_t w2bl (const Char *, size_t);
+char *w2b (char *, const Char *, size_t);
 
 size_t s2wl (const char *string, const char *se, int zero_term);
 Char *s2w (Char *b, const char *string, const char *se, int zero_term);
 void w2s_chunk (char *, char *, const Char *, size_t);
 
-ucs2_t *i2w (const Char *, int, ucs2_t *);
-int i2wl (const Char *, int);
+/* Windows とやりとりする文字列は UTF-16。内部表現との間で幅を移し替える */
+size_t w2ul (const Char *, size_t);
+WCHAR *w2u (WCHAR *, const Char *, size_t);
+WCHAR *w2u (WCHAR *, WCHAR *, const Char *, size_t);
+size_t u2wl (const WCHAR *);
+size_t u2wl (const WCHAR *, size_t);
+Char *u2w (Char *, const WCHAR *);
+Char *u2w (Char *, const WCHAR *, size_t);
+
+/* 資源や書式から組み立てたバイト列は CP932。UTF-16 に移す */
+WCHAR *s2u (WCHAR *, const char *);
+
+/* パス名のように、文字列のまま持ち回るバイト列は UTF-8 */
+size_t w2u8l (const Char *, size_t);
+char *w2u8 (char *, const Char *, size_t);
+char *w2u8 (char *, char *, const Char *, size_t);
+size_t u82wl (const char *);
+size_t u82wl (const char *, size_t);
+Char *u82w (Char *, const char *);
+Char *u82w (Char *, const char *, size_t);
+WCHAR *u82u (WCHAR *, const char *);
+size_t u2u8l (const WCHAR *);
+char *u2u8 (char *, const WCHAR *);
+Char u8getc (const u_char *&);
+
+/* 外部の ANSI の窓口へ渡すバイト列は CP932。写せない文字は失われる */
+char *u82s (char *, char *, const char *);
+
+/* 文字の途中で切らないよう、並びの先頭まで戻した位置を返す */
+inline int
+u8back (const char *s, int i)
+{
+  while (i > 0 && (u_char (s[i]) & 0xc0) == 0x80)
+    i--;
+  return i;
+}
 
 lisp coerce_to_string (lisp, int);
 
 lisp make_string (const char *);
 lisp make_string (const u_char *);
+lisp make_string (const WCHAR *);
+lisp make_string (const WCHAR *, size_t);
 lisp make_string (const char *, size_t);
 lisp make_string_simple (const char *, size_t);
 lisp make_string (const Char *, size_t);
@@ -160,6 +237,18 @@ w2sl (lisp l)
   return w2sl (xstring_contents (l), xstring_length (l));
 }
 
+inline size_t
+w2bl (lisp l)
+{
+  return w2bl (xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2b (char *b, lisp l)
+{
+  return w2b (b, xstring_contents (l), xstring_length (l));
+}
+
 inline char *
 w2s (char *b, lisp l)
 {
@@ -184,16 +273,40 @@ w2s_quote (char *b, char *be, lisp l, int qc, int qe)
   return w2s_quote (b, be, xstring_contents (l), xstring_length (l), qc, qe);
 }
 
-inline ucs2_t *
-i2w (lisp x, ucs2_t *b)
+inline size_t
+w2ul (lisp l)
 {
-  return i2w (xstring_contents (x), xstring_length (x), b);
+  return w2ul (xstring_contents (l), xstring_length (l));
 }
 
-inline int
-i2wl (lisp x)
+inline WCHAR *
+w2u (WCHAR *b, lisp l)
 {
-  return i2wl (xstring_contents (x), xstring_length (x));
+  return w2u (b, xstring_contents (l), xstring_length (l));
+}
+
+inline WCHAR *
+w2u (WCHAR *b, WCHAR *be, lisp l)
+{
+  return w2u (b, be, xstring_contents (l), xstring_length (l));
+}
+
+inline size_t
+w2u8l (lisp l)
+{
+  return w2u8l (xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2u8 (char *b, lisp l)
+{
+  return w2u8 (b, xstring_contents (l), xstring_length (l));
+}
+
+inline char *
+w2u8 (char *b, char *be, lisp l)
+{
+  return w2u8 (b, be, xstring_contents (l), xstring_length (l));
 }
 
 #endif

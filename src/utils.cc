@@ -68,6 +68,26 @@ stpncpy (char *d, const char *s, int n)
   return d;
 }
 
+WCHAR *
+stpcpy (WCHAR *d, const WCHAR *s)
+{
+  while ((*d++ = *s++))
+    ;
+  return d - 1;
+}
+
+WCHAR *
+stpncpy (WCHAR *d, const WCHAR *s, int n)
+{
+  for (; n > 0; n--)
+  {
+    if (!(*d++ = *s++))
+      return d - 1;
+  }
+  *d = 0;
+  return d;
+}
+
 char *
 jindex (const char *p, int c)
 {
@@ -106,36 +126,39 @@ jrindex (const char *p, int c)
 char *
 find_slash (const char *p)
 {
-  for (u_char *s = (u_char *)p; *s;)
-    {
-      if (SJISP (*s) && s[1])
-        s += 2;
-      else
-        {
-          if (*s == '/' || *s == '\\')
-            return (char *)s;
-          s++;
-        }
-    }
+  for (const char *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      return (char *)s;
   return 0;
 }
 
 char *
 find_last_slash (const char *p)
 {
-  u_char *save, *s;
-  for (save = 0, s = (u_char *)p; *s;)
-    {
-      if (SJISP (*s) && s[1])
-        s += 2;
-      else
-        {
-          if (*s == '/' || *s == '\\')
-            save = s;
-          s++;
-        }
-    }
+  const char *save = 0;
+  for (const char *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      save = s;
   return (char *)save;
+}
+
+WCHAR *
+find_slash (const WCHAR *p)
+{
+  for (const WCHAR *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      return (WCHAR *)s;
+  return 0;
+}
+
+WCHAR *
+find_last_slash (const WCHAR *p)
+{
+  const WCHAR *save = 0;
+  for (const WCHAR *s = p; *s; s++)
+    if (*s == '/' || *s == '\\')
+      save = s;
+  return (WCHAR *)save;
 }
 
 long
@@ -256,10 +279,11 @@ parse_number_format (const Char *p, const Char *pe, int base)
 }
 
 int
-check_integer_format (const char *s, int *n)
+check_integer_format (const WCHAR *s, int *n)
 {
-  Char *b = (Char *)alloca (strlen (s) * 2);
-  Char *be = s2w (b, s);
+  size_t l = wcslen (s);
+  Char *b = (Char *)alloca (l * sizeof (Char));
+  Char *be = u2w (b, s, l);
   for (; b < be && (*b == ' ' || *b == '\t'); b++)
     ;
   for (; be > b && (b[-1] == ' ' || b[-1] == '\t'); b--)
@@ -269,7 +293,7 @@ check_integer_format (const char *s, int *n)
     {
     case NF_INTEGER:
     case NF_INTEGER_DOT:
-      *n = atoi (s);
+      *n = _wtoi (s);
       return 1;
 
     default:
@@ -286,25 +310,25 @@ streq (const Char *p, int l, const char *s)
   return 1;
 }
 
+// CP932 のバイト列から文字ひとつを取り出して、その先へ進める
+static inline Char
+getc_sjis (const char *&cp)
+{
+  if (SJISP (u_char (*cp)) && cp[1])
+    {
+      Char c = s2w_char ((u_char (*cp) << 8) | u_char (cp[1]));
+      cp += 2;
+      return c;
+    }
+  return s2w_char (u_char (*cp++));
+}
+
 int
 strequal (const char *cp, const Char *Cp)
 {
   while (*cp)
-    {
-      Char c = *Cp++;
-      if (DBCP (c))
-        {
-          if (!cp[1] || c != Char ((u_char (*cp) << 8) | u_char (cp[1])))
-            return 0;
-          cp += 2;
-        }
-      else
-        {
-          if (char_downcase (c) != char_downcase (u_char (*cp)))
-            return 0;
-          cp++;
-        }
-    }
+    if (char_downcase (getc_sjis (cp)) != char_downcase (*Cp++))
+      return 0;
   return 1;
 }
 
@@ -312,21 +336,8 @@ int
 strequal (const char *cp, const Char *Cp, int l)
 {
   for (const Char *Ce = Cp + l; Cp < Ce; Cp++)
-    {
-      Char c = *Cp;
-      if (DBCP (c))
-        {
-          if (c != Char ((u_char (*cp) << 8) | u_char (cp[1])))
-            return 0;
-          cp += 2;
-        }
-      else
-        {
-          if (char_downcase (c) != char_downcase (u_char (*cp)))
-            return 0;
-          cp++;
-        }
-    }
+    if (char_downcase (getc_sjis (cp)) != char_downcase (*Cp))
+      return 0;
   return 1;
 }
 
@@ -517,42 +528,3 @@ frameDC::frame_rect (const RECT &r, int w) const
   paint (r);
   SelectClipRgn (f_hdc, 0);
 }
-
-ucs2_t *
-i2w (const Char *p, int l, ucs2_t *b)
-{
-  for (const Char *const pe = p + l; p < pe; p++)
-    {
-      ucs2_t c = i2w (*p);
-      if (c == ucs2_t (-1))
-        {
-          if (utf16_undef_char_high_p (*p) && p < pe - 1
-              && utf16_undef_char_low_p (p[1]))
-            {
-              c = utf16_undef_pair_to_ucs2 (*p, p[1]);
-              p++;
-            }
-          else
-            c = DEFCHAR;
-        }
-      *b++ = c;
-    }
-  *b = 0;
-  return b;
-}
-
-int
-i2wl (const Char *p, int l)
-{
-  int r = 0;
-  for (const Char *const pe = p + l; p < pe; p++, r++)
-    {
-      ucs2_t c = i2w (*p);
-      if (c == ucs2_t (-1)
-          && utf16_undef_char_high_p (*p) && p < pe - 1
-          && utf16_undef_char_low_p (p[1]))
-        p++;
-    }
-  return r + 1;
-}
-

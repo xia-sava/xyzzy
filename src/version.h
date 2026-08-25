@@ -14,10 +14,10 @@
 # define PROGRAM_PATCH_LEVEL 0
 
 # define TITLE_BAR_STRING_SIZE 256
-extern char TitleBarString[];
-extern const char VersionString[];
-extern const char DisplayVersionString[];
-extern const char ProgramName[];
+extern WCHAR TitleBarString[];
+extern const WCHAR VersionString[];
+extern const WCHAR DisplayVersionString[];
+extern const WCHAR ProgramName[];
 extern const char ProgramNameWithVersion[];
 extern const char ProgramAppUserModelId[];
 

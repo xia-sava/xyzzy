@@ -367,7 +367,10 @@
 			      (insert #\SPC nchars)
 			      (forward-char (- nchars)))
 			    (setq column (- nchars))))
-			 ((= (char-columns c) 2)
+			 ((or (= (char-columns c) 2)
+			      ;; サロゲート対は升目ふたつでひとつの字なので、
+			      ;; 符号ひとつぶんの幅では足りない
+			      (<= #xd800 (char-code c) #xdbff))
 			  (delete-char 1)
 			  (when (= column 1)
 			    (insert #\SPC 1)
@@ -861,11 +864,13 @@
 	 (char (if (= point end)
 		   ""
 		 (let ((c (following-char)))
-		   (multiple-value-bind (code charset)
-		       (iso-char-code c)
-		   (format nil "Char: ~:c (0x~x~@[ / U+~4,'0X~]~@[ / 0x~2,'0X[~A]~])  "
-			   c (char-code c) (char-unicode c) code charset
-		   ))))))
+		   (multiple-value-bind (code encoding)
+		       (char-external-code c)
+		     (format nil "Char: ~:c (U+~4,'0X~@[ / 0x~A[~A]~])  "
+			     c (char-code c)
+			     (and code (format nil "~{~2,'0X~}"
+					       (map 'list #'char-code code)))
+			     (and code (char-encoding-name encoding))))))))
     (if (or (/= begin 0) (/= end size))
 	(message "~Apoint=~D of ~D(~D%) <~D - ~D>  column ~D"
 		 char point size ratio begin end column)

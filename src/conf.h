@@ -2,7 +2,7 @@
 #define _conf_h_
 
 #ifndef DECLARE_CONF
-#define DECLARE_CONF(NAME, VALUE) extern char NAME[];
+#define DECLARE_CONF(NAME, VALUE) extern WCHAR NAME[];
 #endif
 
 DECLARE_CONF (cfgAscii, "ascii");
@@ -91,37 +91,37 @@ DECLARE_CONF (cfgUnselectedModeLineFg, "unselectedModeLineFg");
 
 struct PRLOGFONT;
 
-void write_conf (const char *, const char *, const char *);
-void write_conf (const char *, const char *, long, int = 0);
-void write_conf (const char *, const char *, const int *, int, int = 0);
-void write_conf (const char *, const char *, const RECT &);
-void write_conf (const char *, const char *, const LOGFONT &);
-void write_conf (const char *, const char *, const PRLOGFONT &);
-void write_conf (const char *, const char *, const WINDOWPLACEMENT &);
-int read_conf (const char *, const char *, char *, int);
-int read_conf (const char *, const char *, int &);
+void write_conf (const WCHAR *, const WCHAR *, const WCHAR *);
+void write_conf (const WCHAR *, const WCHAR *, long, int = 0);
+void write_conf (const WCHAR *, const WCHAR *, const int *, int, int = 0);
+void write_conf (const WCHAR *, const WCHAR *, const RECT &);
+void write_conf (const WCHAR *, const WCHAR *, const LOGFONTW &);
+void write_conf (const WCHAR *, const WCHAR *, const PRLOGFONT &);
+void write_conf (const WCHAR *, const WCHAR *, const WINDOWPLACEMENT &);
+int read_conf (const WCHAR *, const WCHAR *, WCHAR *, int);
+int read_conf (const WCHAR *, const WCHAR *, int &);
 #if INT_MAX != LONG_MAX
-int read_conf (const char *, const char *, u_long &);
+int read_conf (const WCHAR *, const WCHAR *, u_long &);
 #else
 static inline int
-read_conf (const char *section, const char *name, u_long &value)
+read_conf (const WCHAR *section, const WCHAR *name, u_long &value)
 {
   return read_conf (section, name, *(int *)&value);
 }
 #endif
-int read_conf (const char *, const char *, int *, int);
-int read_conf (const char *, const char *, RECT &);
-int read_conf (const char *, const char *, LOGFONT &);
-int read_conf (const char *, const char *, PRLOGFONT &);
-int read_conf (const char *, const char *, WINDOWPLACEMENT &);
+int read_conf (const WCHAR *, const WCHAR *, int *, int);
+int read_conf (const WCHAR *, const WCHAR *, RECT &);
+int read_conf (const WCHAR *, const WCHAR *, LOGFONTW &);
+int read_conf (const WCHAR *, const WCHAR *, PRLOGFONT &);
+int read_conf (const WCHAR *, const WCHAR *, WINDOWPLACEMENT &);
 void flush_conf ();
-int conf_load_geometry (HWND, const char *, const char * = 0, int = 1, int = 1);
-void conf_save_geometry (HWND, const char *, const char * = 0, int = 1, int = 1);
+int conf_load_geometry (HWND, const WCHAR *, const WCHAR * = 0, int = 1, int = 1);
+void conf_save_geometry (HWND, const WCHAR *, const WCHAR * = 0, int = 1, int = 1);
 void adjust_snap_window_size (HWND, WINDOWPLACEMENT &);
-void make_geometry_key (char* buf, size_t bufsize, const char *prefix);
+void make_geometry_key (WCHAR *buf, size_t bufsize, const WCHAR *prefix);
 
-void conf_write_string (const char *, const char *, const char *);
-void delete_conf (const char *);
+void conf_write_string (const WCHAR *, const WCHAR *, const WCHAR *);
+void delete_conf (const WCHAR *);
 
 int reg2ini ();
 void reg_delete_tree ();

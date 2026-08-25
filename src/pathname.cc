@@ -10,13 +10,13 @@
 #include "vwin32.h"
 #include "version.h"
 
-typedef int (WINAPI *SHFILEOPERATION)(SHFILEOPSTRUCT *);
+typedef int (WINAPI *SHFILEOPERATION)(SHFILEOPSTRUCTW *);
 
 static SHFILEOPERATION
 get_shfileoperation_proc ()
 {
-  SHFILEOPERATION f = (SHFILEOPERATION)GetProcAddress (GetModuleHandle ("shell32"),
-                                                       "SHFileOperation");
+  SHFILEOPERATION f = (SHFILEOPERATION)GetProcAddress (GetModuleHandleW (L"shell32"),
+                                                       "SHFileOperationW");
   if (!f)
     FEsimple_error (ESHFileOperation_not_supported);
 
@@ -138,7 +138,7 @@ set_device_dir (const char *path, int f)
   if (f || xsymbol_value (Vauto_update_per_device_directory) != Qnil)
     {
       char curdir[PATH_MAX];
-      if (GetCurrentDirectory (sizeof curdir, curdir)
+      if (WINFS::GetCurrentDirectory (sizeof curdir, curdir)
           && alpha_char_p (*curdir & 255) && curdir[1] == ':')
         strcpy (devdirs[_char_downcase (*curdir) - 'a'], curdir + 2);
     }
@@ -156,13 +156,13 @@ get_device_dir (Char *b, const Char *p, int l)
 {
   if (l == 2 && alpha_char_p (*p) && p[1] == ':'
       && *devdirs[_char_downcase (*p) - 'a'])
-    return s2w (b, devdirs[_char_downcase (*p) - 'a']);
+    return u82w (b, devdirs[_char_downcase (*p) - 'a']);
 
   char buf[PATH_MAX + 1], path[PATH_MAX + 1], *tem;
-  w2s (buf, p, l);
+  w2u8 (buf, buf + PATH_MAX, p, l);
   if (WINFS::GetFullPathName (buf, sizeof path, path, &tem))
     {
-      Char *be = s2w (b, path);
+      Char *be = u82w (b, path);
       return copy_Chars (b, skip_device_or_host (b, be), be);
     }
   return b;
@@ -343,7 +343,7 @@ lisp
 make_path (const char *s, int append_slash)
 {
   Char *b = (Char *)alloca ((strlen (s) + 1) * sizeof (Char));
-  Char *be = s2w (b, s);
+  Char *be = u82w (b, s);
   map_backsl_to_sl (b, be - b);
   if (append_slash && be != b && be[-1] != '/')
     *be++ = '/';
@@ -620,7 +620,7 @@ pathname2cstr (lisp pathname, char *buf)
   pathbuf_t tem;
   const Char *p, *pe;
   pathname = coerce_to_pathname (pathname, tem, p, pe);
-  return w2s (buf, p, pe - p);
+  return w2u8 (buf, p, pe - p);
 }
 
 static int
@@ -722,12 +722,12 @@ Ftruename (lisp pathname)
     sl = path + 2;
   else if (*path == '\\' && path[1] == '\\')
     {
-      sl = jindex (path + 2, '\\');
+      sl = strchr (path + 2, '\\');
       if (sl)
-        sl = jindex (sl + 1, '\\');
+        sl = strchr (sl + 1, '\\');
     }
   if (!sl)
-    sl = jindex (path, '\\');
+    sl = strchr (path, '\\');
   if (!sl)
     strcpy (truename, path);
   else
@@ -735,18 +735,19 @@ Ftruename (lisp pathname)
       sl++;
       memcpy (truename, path, sl - path);
       char *t = truename + (sl - path);
+      char *const te = truename + PATH_MAX;
       while (1)
         {
-          char *p = jindex (sl, '\\');
+          char *p = strchr (sl, '\\');
           if (p)
             *p = 0;
-          WIN32_FIND_DATA fd;
-          if (WINFS::get_file_data (path, fd))
-            t = stpcpy (t, fd.cFileName);
-          else if (p)
-            t = stpncpy (t, sl, p - sl);
-          else
-            t = stpcpy (t, sl);
+          /* 短い名前を長い名前へ開くので、元より長くなることがある */
+          find_data fd;
+          const char *name = (WINFS::get_file_data (path, fd)
+                              ? fd.cFileName : sl);
+          if (te - t <= int (strlen (name)))
+            file_error (ERROR_FILENAME_EXCED_RANGE, pathname);
+          t = stpcpy (t, name);
           if (!p)
             break;
           *p = '\\';
@@ -758,7 +759,7 @@ Ftruename (lisp pathname)
   map_backsl_to_sl (truename);
 
   Char w[PATH_MAX + 1];
-  int l = s2w (w, truename) - w;
+  int l = u82w (w, truename) - w;
   if (stringp (pathname) && l == xstring_length (pathname)
       && !bcmp (w, xstring_contents (pathname), l))
     return pathname;
@@ -801,7 +802,7 @@ Ffile_system_supports_long_file_name_p (lisp path)
   t = buf + (t - p);
   *t++ = SEPCHAR;
   char cbuf[PATH_MAX + 1];
-  w2s (cbuf, buf, t - buf);
+  w2u8 (cbuf, cbuf + PATH_MAX, buf, t - buf);
 
   DWORD maxl, flags;
   return boole (WINFS::GetVolumeInformation (cbuf, 0, 0, 0, &maxl, &flags, 0, 0) && maxl > 12);
@@ -940,7 +941,7 @@ Ffind_load_path (lisp filename)
     FEsimple_error (Epath_name_too_long, filename);
 
   char file[PATH_MAX + 1];
-  w2s (file, filename);
+  w2u8 (file, filename);
 
   for (const char *const *e = ext; *e; e++)
     for (lisp p = xsymbol_value (Vload_path); consp (p); p = xcdr (p))
@@ -967,7 +968,7 @@ FileTime::file_modtime (lisp filename, int dir_ok)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (filename, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!WINFS::get_file_data (path, fd)
       || (!dir_ok && fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
     clear ();
@@ -997,7 +998,7 @@ Fchdir (lisp dirname)
   pathname2cstr (dir, path);
   if (!WINFS::SetCurrentDirectory (path))
     file_error (GetLastError (), dir);
-  if (!GetCurrentDirectory (sizeof path, path))
+  if (!WINFS::GetCurrentDirectory (sizeof path, path))
     file_error (GetLastError (), dir);
 
   if (strcmp (sysdep.curdir, path) == 0)
@@ -1020,7 +1021,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
       check_string (lprefix);
       if (xstring_length (lprefix) > 10)
         FEsimple_error (Eprefix_too_long, lprefix);
-      w2s (prefix, lprefix);
+      w2u8 (prefix, lprefix);
     }
 
   if (lsuffix == Qnil)
@@ -1030,7 +1031,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
       check_string (lsuffix);
       if (xstring_length (lsuffix) > 10)
         FEsimple_error (Esuffix_too_long, lsuffix);
-      w2s (suffix, lsuffix);
+      w2u8 (suffix, lsuffix);
     }
 
   if (dir && dir != Qnil)
@@ -1039,7 +1040,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
         file_error (Enot_a_directory, dir);
       pathname2cstr (dir, temp);
     }
-  else if (!GetTempPath (sizeof temp, temp))
+  else if (!WINFS::GetTempPath (sizeof temp, temp))
     file_error (Ecannot_make_temp_file_name);
   char *sl = find_last_slash (temp);
   if (!sl)
@@ -1049,8 +1050,7 @@ Fmake_temp_file_name (lisp lprefix, lisp lsuffix, lisp dir, lisp dirp)
   if (!make_temp_file_name (temp, lprefix ? prefix : 0, lsuffix ? suffix : 0,
                             0, dirp && dirp != Qnil))
     file_error (Ecannot_make_temp_file_name);
-  map_backsl_to_sl (temp);
-  return make_string (temp);
+  return make_path (temp, 0);
 }
 
 lisp
@@ -1168,11 +1168,14 @@ Fdelete_file (lisp name, lisp keys)
     {
       SHFILEOPERATION f = get_shfileoperation_proc ();
       map_sl_to_backsl (buf);
-      buf[strlen (buf) + 1] = 0;
 
-      SHFILEOPSTRUCT fs = {0};
+      /* 渡す並びは NUL 二つで終える */
+      WCHAR w[PATH_MAX + 10];
+      u82u (w, buf)[1] = 0;
+
+      SHFILEOPSTRUCTW fs = {0};
       fs.wFunc = FO_DELETE;
-      fs.pFrom = buf;
+      fs.pFrom = w;
 #ifndef FOF_NOERRORUI
 #define FOF_NOERRORUI 0x0400
 #endif
@@ -1208,7 +1211,7 @@ static int
 copyn (char *d, const char *s, int n, int l)
 {
   if (n < l)
-    l = check_kanji2 (s, n) ? n - 1 : n;
+    l = u8back (s, n);
   memcpy (d, s, l);
   d[l] = 0;
   return l;
@@ -1225,7 +1228,7 @@ rename_short_name (const char *fpath, const char *tname, const char *longname)
   memcpy (realpath, fpath, l);
   strcpy (realpath + l, longname);
 
-  if (!GetTempFileName (temppath, "xyz", 0, tempname))
+  if (!WINFS::GetTempFileName (temppath, "xyz", 0, tempname))
     return;
   if (!WINFS::DeleteFile (tempname)
       || !WINFS::MoveFile (realpath, tempname))
@@ -1253,7 +1256,9 @@ rename_short_name (const char *fpath, const char *tname, const char *longname)
   char buf[PATH_MAX * 3];
   map_backsl_to_sl (tempname);
   sprintf (buf, get_message_string (Erename_failed), tempname, realpath);
-  MsgBox (get_active_window (), buf, TitleBarString,
+  WCHAR wbuf[numberof (buf)];
+  s2u (wbuf, buf);
+  MsgBox (get_active_window (), wbuf, TitleBarString,
           MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
 }
@@ -1264,7 +1269,7 @@ check_short_names (const char *from_path, const char *to_path)
   if (xsymbol_value (Vrename_alternate_file_name) == Qnil)
     return;
 
-  WIN32_FIND_DATA from_fd, to_fd;
+  find_data from_fd, to_fd;
   if (!WINFS::get_file_data (to_path, to_fd))
     return;
 
@@ -1608,7 +1613,7 @@ mkdirhier (char *path, int exists_ok)
         return 0;
     }
   map_sl_to_backsl (path);
-  for (char *p = path; (p = jindex (p, '\\')); *p++ = '\\')
+  for (char *p = path; (p = strchr (p, '\\')); *p++ = '\\')
     {
       *p = 0;
       WINFS::CreateDirectory (path, 0);
@@ -1699,9 +1704,9 @@ wnet_error ()
   if (e != ERROR_EXTENDED_ERROR)
     FEsimple_win32_error (e);
 
-  char n[1024], d[1024];
+  WCHAR n[1024], d[1024];
   *n = 0, *d = 0;
-  WNetGetLastError (&e, d, sizeof d, n, sizeof n);
+  WNetGetLastErrorW (&e, d, numberof (d), n, numberof (n));
   FEnetwork_error (make_string (n), make_string (d));
 }
 
@@ -1769,22 +1774,14 @@ Fmodify_file_attributes (lisp lpath, lisp lon, lisp loff)
 }
 
 int
-strict_get_file_data (const char *path, WIN32_FIND_DATA &fd)
+strict_get_file_data (const char *path, find_data &fd)
 {
-  for (const u_char *p = (const u_char *)path; *p;)
-    {
-      if (SJISP (*p) && p[1])
-        p += 2;
-      else
-        {
-          if (*p == '?' || *p == '*')
-            {
-              SetLastError (ERROR_INVALID_NAME);
-              return 0;
-            }
-          p++;
-        }
-    }
+  for (const char *p = path; *p; p++)
+    if (*p == '?' || *p == '*')
+      {
+        SetLastError (ERROR_INVALID_NAME);
+        return 0;
+      }
   return WINFS::get_file_data (path, fd);
 }
 
@@ -1793,7 +1790,7 @@ Ffile_length (lisp lpath)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!strict_get_file_data (path, fd))
     return Qnil;
   int64_t i = (int64_t (fd.nFileSizeHigh) << 32 |
@@ -1822,7 +1819,7 @@ get_disk_usage (char *path, gdu *du)
   *pe = '*';
   pe[1] = 0;
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
   HANDLE h = WINFS::FindFirstFile (path, &fd);
   if (h != INVALID_HANDLE_VALUE)
     {
@@ -1860,7 +1857,7 @@ Fget_disk_usage (lisp dirname, lisp recursive)
 {
   char path[PATH_MAX * 2];
   pathname2cstr (dirname, path);
-  char *p = jrindex (path, '/');
+  char *p = strrchr (path, '/');
   if (p && p[1])
     strcat (p, "/");
   gdu du;
@@ -1925,7 +1922,7 @@ Fformat_drive (lisp ldrive, lisp lquick)
         FErange_error (ldrive);
     }
 
-  HMODULE shell = GetModuleHandle ("shell32.dll");
+  HMODULE shell = GetModuleHandleW (L"shell32.dll");
   if (!shell)
     FEsimple_win32_error (GetLastError ());
 
@@ -1978,20 +1975,23 @@ Ffile_property (lisp lpath)
   pathname2cstr (lpath, path);
   map_sl_to_backsl (path);
 
-  HMODULE shell = GetModuleHandle ("shell32.dll");
+  HMODULE shell = GetModuleHandleW (L"shell32.dll");
   if (!shell)
     FEsimple_win32_error (GetLastError ());
 
-  int (__stdcall *ex)(SHELLEXECUTEINFO *) =
-    (int (__stdcall *)(SHELLEXECUTEINFO *))GetProcAddress (shell, "ShellExecuteExA");
+  int (__stdcall *ex)(SHELLEXECUTEINFOW *) =
+    (int (__stdcall *)(SHELLEXECUTEINFOW *))GetProcAddress (shell, "ShellExecuteExW");
   if (!ex)
     FEsimple_win32_error (GetLastError ());
 
-  SHELLEXECUTEINFO sei;
+  WCHAR wpath[PATH_MAX + 1];
+  u82u (wpath, path);
+
+  SHELLEXECUTEINFOW sei;
   bzero (&sei, sizeof sei);
   sei.cbSize = sizeof sei;
-  sei.lpFile = path;
-  sei.lpVerb = "properties";
+  sei.lpFile = wpath;
+  sei.lpVerb = L"properties";
   sei.fMask = SEE_MASK_INVOKEIDLIST;
   if (!(*ex)(&sei))
     FEsimple_win32_error (GetLastError ());
@@ -2034,11 +2034,11 @@ eject_media_winnt (int drive, int type)
       break;
     }
 
-  char dev[] = "\\\\.\\x:";
-  dev[4] = char (drive);
+  WCHAR dev[] = L"\\\\.\\x:";
+  dev[4] = WCHAR (drive);
 
-  dyn_handle h (CreateFile (dev, flags, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            0, OPEN_EXISTING, 0, 0));
+  dyn_handle h (CreateFileW (dev, flags, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             0, OPEN_EXISTING, 0, 0));
   if (!h.valid ())
     file_error (GetLastError ());
 
@@ -2166,8 +2166,8 @@ win9x_eject_media (HANDLE hvwin32, int drive)
 static lisp
 eject_media_win9x (int drive)
 {
-  dyn_handle hvwin32 (CreateFile ("\\\\.\\vwin32", 0, 0, 0, 0,
-                                  FILE_FLAG_DELETE_ON_CLOSE, 0));
+  dyn_handle hvwin32 (CreateFileW (L"\\\\.\\vwin32", 0, 0, 0, 0,
+                                   FILE_FLAG_DELETE_ON_CLOSE, 0));
   if (!hvwin32.valid ())
     file_error (GetLastError ());
 
@@ -2196,9 +2196,9 @@ Feject_media (lisp ldrive)
   if (!alpha_char_p (xchar_code (ldrive)))
     file_error (ERROR_INVALID_DRIVE);
 
-  char root[] = "x:\\";
-  root[0] = char (xchar_code (ldrive));
-  int type = GetDriveType (root);
+  WCHAR root[] = L"x:\\";
+  root[0] = WCHAR (xchar_code (ldrive));
+  int type = GetDriveTypeW (root);
   switch (type)
     {
     default:
@@ -2268,13 +2268,13 @@ class list_servers: public list_net_resources
 {
 protected:
   virtual void doit () {list (0);}
-  int list (NETRESOURCE *);
+  int list (NETRESOURCEW *);
 public:
   list_servers (int pair) : list_net_resources (pair) {}
 };
 
 int
-list_servers::list (NETRESOURCE *r0)
+list_servers::list (NETRESOURCEW *r0)
 {
   HANDLE h;
   m_error = WINFS::WNetOpenEnum (RESOURCE_GLOBALNET, RESOURCETYPE_ANY, 0, r0, &h);
@@ -2283,9 +2283,9 @@ list_servers::list (NETRESOURCE *r0)
   wnet_enum_handle weh (h);
   while (!interrupted ())
     {
-      NETRESOURCE rb[8192];
+      NETRESOURCEW rb[8192];
       DWORD nent = DWORD (-1), size = sizeof rb;
-      m_error = WNetEnumResource (h, &nent, rb, &size);
+      m_error = WNetEnumResourceW (h, &nent, rb, &size);
       if (m_error == ERROR_NO_MORE_ITEMS)
         {
           m_error = NO_ERROR;
@@ -2294,7 +2294,7 @@ list_servers::list (NETRESOURCE *r0)
       if (m_error != NO_ERROR)
         return 0;
 
-      NETRESOURCE *r = rb;
+      NETRESOURCEW *r = rb;
       for (DWORD i = 0; i < nent && !interrupted (); i++, r++)
         switch (r->dwDisplayType)
           {
@@ -2308,7 +2308,7 @@ list_servers::list (NETRESOURCE *r0)
           case RESOURCEDISPLAYTYPE_SERVER:
             if (r->lpRemoteName)
               m_list.add (r->lpRemoteName + 2,
-                          m_pair && r->lpComment ? r->lpComment : "");
+                          m_pair && r->lpComment ? r->lpComment : L"");
             break;
           }
     }
@@ -2331,32 +2331,33 @@ public:
   list_server_resources (lisp lserver, int pair);
   ~list_server_resources () {delete m_server;}
 private:
-  char *m_server;
+  WCHAR *m_server;
 };
 
 list_server_resources::list_server_resources (lisp lserver, int pair)
      : list_net_resources (pair)
 {
   check_string (lserver);
-  m_server = new char [xstring_length (lserver) * 2 + 3];
+  m_server = new WCHAR [w2ul (xstring_contents (lserver),
+                              xstring_length (lserver)) + 3];
   m_server[0] = '\\';
   m_server[1] = '\\';
-  w2s (m_server + 2, lserver);
+  *w2u (m_server + 2, xstring_contents (lserver), xstring_length (lserver)) = 0;
 }
 
 void
 list_server_resources::doit ()
 {
-  int l = strlen (m_server) + 1;
+  int l = wcslen (m_server) + 1;
 
-  NETRESOURCE r;
+  NETRESOURCEW r;
   r.dwScope = RESOURCE_GLOBALNET;
   r.dwType = RESOURCETYPE_ANY;
   r.dwDisplayType = RESOURCEDISPLAYTYPE_SERVER;
   r.dwUsage = RESOURCEUSAGE_CONTAINER;
   r.lpLocalName = 0;
   r.lpRemoteName = m_server;
-  r.lpComment = "";
+  r.lpComment = L"";
   r.lpProvider = 0;
 
   HANDLE h;
@@ -2367,9 +2368,9 @@ list_server_resources::doit ()
   wnet_enum_handle weh (h);
   while (!interrupted ())
     {
-      NETRESOURCE rb[8192];
+      NETRESOURCEW rb[8192];
       DWORD nent = DWORD (-1), size = sizeof rb;
-      m_error = WNetEnumResource (h, &nent, rb, &size);
+      m_error = WNetEnumResourceW (h, &nent, rb, &size);
       if (m_error == ERROR_NO_MORE_ITEMS)
         {
           m_error = NO_ERROR;
@@ -2378,14 +2379,14 @@ list_server_resources::doit ()
       if (m_error != NO_ERROR)
         return;
 
-      NETRESOURCE *r = rb;
+      NETRESOURCEW *r = rb;
       for (DWORD i = 0; i < nent && !interrupted (); i++, r++)
         switch (r->dwDisplayType)
           {
           case RESOURCEDISPLAYTYPE_SHARE:
             if (r->lpRemoteName)
               m_list.add (r->lpRemoteName + l,
-                          m_pair && r->lpComment ? r->lpComment : "");
+                          m_pair && r->lpComment ? r->lpComment : L"");
             break;
           }
     }
@@ -2416,8 +2417,11 @@ Fget_short_path_name (lisp lpath)
   char path[PATH_MAX + 1], spath[PATH_MAX + 1];
   pathname2cstr (lpath, path);
   map_sl_to_backsl (path);
-  if (!GetShortPathName (path, spath, PATH_MAX))
+  WCHAR w[PATH_MAX + 1], sw[PATH_MAX + 1];
+  u82u (w, path);
+  if (!GetShortPathNameW (w, sw, numberof (sw)))
     file_error (GetLastError (), lpath);
+  u2u8 (spath, sw);
   map_backsl_to_sl (spath);
   if (stringp (lpath) && xstring_length (lpath)
       && dir_separator_p (xstring_contents (lpath)[xstring_length (lpath) - 1]))
@@ -2430,7 +2434,7 @@ Fget_short_path_name (lisp lpath)
 }
 
 lisp
-make_file_info (const WIN32_FIND_DATA &fd)
+make_file_info (const find_data &fd)
 {
   int64_t sz = (int64_t (fd.nFileSizeHigh) << 32 |
                 int64_t (fd.nFileSizeLow));
@@ -2450,7 +2454,7 @@ Fget_file_info (lisp lpath)
 {
   char path[PATH_MAX + 1];
   pathname2cstr (lpath, path);
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (!strict_get_file_data (path, fd))
     file_error (GetLastError (), lpath);
   return make_file_info (fd);
@@ -2474,10 +2478,10 @@ root_path_name (char *buf, const char *path)
         {
           if (buf[1] == '\\')
             {
-              char *p = jindex (buf + 2, '\\');
+              char *p = strchr (buf + 2, '\\');
               if (p)
                 {
-                  char *p2 = jindex (p + 1, '\\');
+                  char *p2 = strchr (p + 1, '\\');
                   if (p2)
                     p2[1] = 0;
                   else
@@ -2551,21 +2555,22 @@ count_file_operation_files (lisp files)
     return 1;
 }
 
-static char *
-file_operation_file (char *buf, lisp file)
+static WCHAR *
+file_operation_file (WCHAR *buf, lisp file)
 {
-  pathname2cstr (file, buf);
-  map_sl_to_backsl (buf);
+  char path[PATH_MAX + 1];
+  pathname2cstr (file, path);
+  map_sl_to_backsl (path);
 
   // Add double NULL
-  buf += strlen (buf) + 1;
+  buf = u82u (buf, path) + 1;
   *buf = '\0';
 
   return buf;
 }
 
 static void
-file_operation_files (char *buf, lisp files)
+file_operation_files (WCHAR *buf, lisp files)
 {
   if (consp (files))
     {
@@ -2587,20 +2592,20 @@ Fsi_file_operation (lisp operation, lisp from_names, lisp to_names, lisp keys)
   FILEOP_FLAGS flags = file_operation_flags (keys);
 
   int from_len = count_file_operation_files (from_names);
-  char *fromf = (char *)alloca ((PATH_MAX + 10) * from_len);
+  WCHAR *fromf = (WCHAR *)alloca (sizeof (WCHAR) * (PATH_MAX + 10) * from_len);
   file_operation_files (fromf, from_names);
 
-  char *tof = nullptr;
+  WCHAR *tof = nullptr;
   if (operation != Kdelete)
     {
       int to_len = count_file_operation_files (to_names);
-      tof = (char *)alloca ((PATH_MAX + 10) * to_len);
+      tof = (WCHAR *)alloca (sizeof (WCHAR) * (PATH_MAX + 10) * to_len);
       file_operation_files (tof, to_names);
       if (to_len > 1)
         flags |= FOF_MULTIDESTFILES;
     }
 
-  SHFILEOPSTRUCT fs = {0};
+  SHFILEOPSTRUCTW fs = {0};
   fs.wFunc = func;
   fs.fFlags = flags;
   fs.pFrom = fromf;

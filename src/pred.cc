@@ -12,7 +12,7 @@ compiled_function_p (lisp object)
   for (body = xcdr (body); consp (xcdr (body)); body = xcdr (body))
     QUIT;
   body = xcar (body);
-  return consp (body) && xcar (body) == Ssi_byte_code;
+  return consp (body) && xcar (body) == Ssi_byte_code_2;
 }
 
 /*GENERIC_FUNCTION*/

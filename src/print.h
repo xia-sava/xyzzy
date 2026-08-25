@@ -9,7 +9,7 @@ struct PRLOGFONT
   u_char charset;
   u_char bold;
   u_char italic;
-  char face[LF_FACESIZE];
+  WCHAR face[LF_FACESIZE];
 };
 
 class print_settings;
@@ -115,7 +115,7 @@ public:
   LONG ps_line_spacing_pxl;
 
 private:
-  static int CALLBACK check_valid_font (const ENUMLOGFONT *, const NEWTEXTMETRIC *,
+  static int CALLBACK check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
                                         DWORD, LPARAM);
 
 public:
@@ -134,6 +134,8 @@ struct glyph_width
   HDC hdc;
   const HFONT *hfonts;
   int height;
+  // 漢字をどの言語の字形で描くか
+  int lang;
   short pixel[CHAR_LIMIT];
 };
 

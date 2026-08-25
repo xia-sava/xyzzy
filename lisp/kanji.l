@@ -12,7 +12,8 @@
 	  map-utf-8-region map-utf-7-region map-ucs-2-region
 	  change-fileio-encoding change-default-fileio-encoding
 	  change-eol-code change-default-eol-code
-	  change-clipboard-encoding
+	  change-clipboard-encoding change-char-language
+	  *char-language-list*
 	  *kanji-map* kanji-prefix
 	  delete-last-ime-composition rewind-ime-composition
 	  ime-push-composition-string ime-register-word-dialog
@@ -91,6 +92,26 @@
   (interactive "ZClipboard encoding: ")
   (setq *clipboard-char-encoding* encoding))
 
+;; 漢字を統合した符号位置は、どの言語の字形で描くかが符号だけでは決まらない。
+;; auto は符号が表す言語に従う
+(defconstant *char-language-list*
+  '(("auto" . nil)
+    ("jp" . :jp) ("jp2" . :jp2) ("kr" . :kr)
+    ("cn" . :cn) ("cn-gb" . :cn-gb) ("cn-big5" . :cn-big5)))
+
+(defun change-char-language (language)
+  (interactive
+      (list (cdr (assoc (completing-read
+			 "Char language: " (mapcar #'car *char-language-list*)
+			 :case-fold t
+			 :default (or (car (rassoc (buffer-char-language)
+						   *char-language-list*))
+				      "auto")
+			 :must-match t)
+			*char-language-list*
+			:test #'string-equal))))
+  (set-buffer-char-language language))
+
 (defvar *kanji-map* nil)
 (unless *kanji-map*
   (setq *kanji-map* (make-sparse-keymap))
@@ -100,7 +121,8 @@
   (define-key *kanji-map* #\F 'change-default-fileio-encoding)
   (define-key *kanji-map* #\n 'change-eol-code)
   (define-key *kanji-map* #\N 'change-default-eol-code)
-  (define-key *kanji-map* #\c 'change-clipboard-encoding))
+  (define-key *kanji-map* #\c 'change-clipboard-encoding)
+  (define-key *kanji-map* #\l 'change-char-language))
 
 (defun rewind-ime-composition (&optional nodelete pop)
   (interactive "p")

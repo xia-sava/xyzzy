@@ -295,14 +295,14 @@ do_dnd (HDROP hdrop)
                   ForceSetForegroundWindow (app.toplev);
                 }
               lisp list = Qnil;
-              int nfiles = DragQueryFile (hdrop, UINT (-1), 0, 0);
+              int nfiles = DragQueryFileW (hdrop, UINT (-1), 0, 0);
               save_cursor_depth cursor_depth;
               try
                 {
                   for (int i = 0; i < nfiles; i++)
                     {
-                      char path[PATH_MAX];
-                      DragQueryFile (hdrop, i, path, sizeof path);
+                      WCHAR path[PATH_MAX];
+                      DragQueryFileW (hdrop, i, path, numberof (path));
                       list = xcons (make_string (path), list);
                     }
                   DragFinish (hdrop);
@@ -345,7 +345,7 @@ set_ime_caret ()
       cf.ptCurrentPos = pt;
       app.kbdq.gime.ImmSetCompositionWindow (hIMC, &cf);
 
-      app.kbdq.gime.ImmSetCompositionFont (hIMC, (LOGFONT *)&font.logfont ());
+      app.kbdq.gime.ImmSetCompositionFontW (hIMC, (LOGFONTW *)&font.logfont ());
       app.kbdq.gime.ImmReleaseContext (app.toplev, hIMC);
     }
 }
@@ -381,22 +381,22 @@ ime_composition (HWND hwnd, LPARAM lparam)
           ? !(app.kbdq.ime_property () & IME_PROP_UNICODE)
           : xsymbol_value (Vunicode_ime) != Qt)
         {
-          int l = app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTSTR, 0, 0);
+          int l = app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTSTR, 0, 0);
           if (l > 0)
             {
               char *s = (char *)alloca (l + 1);
-              if (app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTSTR, s, l) == l)
+              if (app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTSTR, s, l) == l)
                 {
                   app.kbdq.puts (s, l);
 
                   lparam &= ~GCS_RESULTSTR;
 
-                  int rl = app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTREADSTR, 0, 0);
+                  int rl = app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTREADSTR, 0, 0);
                   if (rl > 0)
                     {
                       char *rs = (char *)alloca (rl + 1);
-                      if (app.kbdq.gime.ImmGetCompositionString (hIMC, GCS_RESULTREADSTR,
-                                                                 rs, rl) == rl)
+                      if (app.kbdq.gime.ImmGetCompositionStringA (hIMC, GCS_RESULTREADSTR,
+                                                                  rs, rl) == rl)
                         {
                           s[l] = rs[rl] = 0;
                           app.ime_compq.push (s, l, rs, rl);
@@ -413,48 +413,9 @@ ime_composition (HWND hwnd, LPARAM lparam)
               ucs2_t *s = (ucs2_t *)alloca (l + sizeof (ucs2_t));
               if (app.kbdq.gime.ImmGetCompositionStringW (hIMC, GCS_RESULTSTR, s, l) == l)
                 {
-                  const Char *tab = 0;
-                  switch (PRIMARYLANGID (app.kbdq.kbd_langid ()))
-                    {
-                    case LANG_JAPANESE:
-                      tab = wc2cp932_table;
-                      break;
-
-                    case LANG_KOREAN:
-                      init_wc2ksc5601_table ();
-                      tab = wc2ksc5601_table;
-                      break;
-
-                    case LANG_CHINESE:
-                      switch (SUBLANGID (app.kbdq.kbd_langid ()))
-                        {
-                        case SUBLANG_CHINESE_TRADITIONAL:
-                        case SUBLANG_CHINESE_HONGKONG:
-                          init_wc2big5_table ();
-                          tab = wc2big5_table;
-                          break;
-
-                        case SUBLANG_CHINESE_SIMPLIFIED:
-                        case SUBLANG_CHINESE_SINGAPORE:
-                          init_wc2gb2312_table ();
-                          tab = wc2gb2312_table;
-                          break;
-                        }
-                      break;
-                    }
-
                   l /= sizeof (ucs2_t);
                   for (ucs2_t *sp = s, *se = s + l; sp < se; sp++)
-                    {
-                      Char cc;
-                      if ((!tab || (cc = tab[*sp]) == CHAR_INVALID)
-                          && (cc = w2i (*sp)) == CHAR_INVALID)
-                        {
-                          app.kbdq.putc (utf16_ucs2_to_undef_pair_high (*sp));
-                          cc = utf16_ucs2_to_undef_pair_low (*sp);
-                        }
-                      app.kbdq.putc (cc);
-                    }
+                    app.kbdq.putc (*sp);
                   lparam &= ~GCS_RESULTSTR;
 
                   int rl = app.kbdq.gime.ImmGetCompositionStringW (hIMC, GCS_RESULTREADSTR, 0, 0);
@@ -466,7 +427,7 @@ ime_composition (HWND hwnd, LPARAM lparam)
                         {
                           rl /= sizeof (ucs2_t);
                           s[l] = rs[rl] = 0;
-                          app.ime_compq.push (s, l, rs, rl, tab);
+                          app.ime_compq.push (s, l, rs, rl);
                         }
                     }
                 }
@@ -577,19 +538,19 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
           report_out_of_memory ();
           return -1;
         }
-      if (!CreateWindow (FunctionKeyClassName, "",
-                         (((Window::w_default_flags & Window::WF_FUNCTION_BAR)
-                           ? WS_VISIBLE : 0)
-                          | WS_CHILD | WS_CLIPSIBLINGS),
-                         0, 0, 0, 0,
-                         hwnd, 0, app.hinst, app.active_frame.fnkey))
+      if (!CreateWindowW (FunctionKeyClassName, L"",
+                          (((Window::w_default_flags & Window::WF_FUNCTION_BAR)
+                            ? WS_VISIBLE : 0)
+                           | WS_CHILD | WS_CLIPSIBLINGS),
+                          0, 0, 0, 0,
+                          hwnd, 0, app.hinst, app.active_frame.fnkey))
         return -1;
 
-      app.active_frame.hwnd = CreateWindow (Application::FrameClassName, "",
-                                            (WS_VISIBLE | WS_CHILD
-                                             | WS_CLIPCHILDREN | WS_CLIPSIBLINGS),
-                                            0, 0, 0, 0,
-                                            hwnd, 0, app.hinst, 0);
+      app.active_frame.hwnd = CreateWindowW (Application::FrameClassName, L"",
+                                             (WS_VISIBLE | WS_CHILD
+                                              | WS_CLIPCHILDREN | WS_CLIPSIBLINGS),
+                                             0, 0, 0, 0,
+                                             hwnd, 0, app.hinst, 0);
       if (!app.active_frame.hwnd)
         return -1;
 
@@ -706,7 +667,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
             wp.cx = nr.right - nr.left;
             wp.cy = nr.bottom - nr.top;
             wp.flags = SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER;
-            DefWindowProc (hwnd, WM_WINDOWPOSCHANGED, 0, LPARAM (&wp));
+            DefWindowProcW (hwnd, WM_WINDOWPOSCHANGED, 0, LPARAM (&wp));
 #else
             SetWindowPos (hwnd, 0, 0, 0, nr.right - nr.left, nr.bottom - nr.top,
                           SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -819,15 +780,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_PRIVATE_WCHAR:
       {
-        ucs2_t wc = ucs2_t (wparam);
-        Char cc = w2i_half_width (wc);
-        if (cc != CHAR_INVALID)
-          app.kbdq.putc (decode_chars (cc));
-        else
-          {
-            app.kbdq.putc (utf16_ucs2_to_undef_pair_high (wc));
-            app.kbdq.putc (utf16_ucs2_to_undef_pair_low (wc));
-          }
+        app.kbdq.putc (decode_chars (Char (ucs2_t (wparam))));
         return 0;
       }
 
@@ -1014,7 +967,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
 
     case WM_PRIVATE_CALL_MENU:
-      return DefWindowProc (hwnd, WM_SYSCHAR, wparam, lparam);
+      return DefWindowProcW (hwnd, WM_SYSCHAR, wparam, lparam);
 
     case WM_DROPFILES:
       do_dnd (HDROP (wparam));
@@ -1047,11 +1000,12 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_NULL:
       break;
 
+    /* やりとりする文字の幅は窓に従うので、Unicode の窓には UTF-16 で返す */
     case WM_IME_REQUEST:
       if (wparam == IMR_RECONVERTSTRING)
-        return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 0);
+        return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 1);
       if (wparam == IMR_DOCUMENTFEED)
-        return app.kbdq.documentfeed ((RECONVERTSTRING *)lparam, 0);
+        return app.kbdq.documentfeed ((RECONVERTSTRING *)lparam, 1);
       break;
 
     case WM_DRAWITEM:
@@ -1066,8 +1020,8 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
       if (!sysdep.Win98p () && !sysdep.Win5p ())
         {
-          static const UINT msime = RegisterWindowMessage (WM_MSIME_RECONVERT);
-          static const UINT atok = RegisterWindowMessage (WM_ATOK_RECONVERT);
+          static const UINT msime = RegisterWindowMessageW (WM_MSIME_RECONVERT);
+          static const UINT atok = RegisterWindowMessageW (WM_ATOK_RECONVERT);
           if ((msg == msime || msg == atok)
               && wparam == IMR_RECONVERTSTRING)
             return app.kbdq.reconvert ((RECONVERTSTRING *)lparam, 1);
@@ -1087,7 +1041,7 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
     }
 
-  return app.kbdq.gime.DefWindowProc (hwnd, msg, wparam, lparam);
+  return app.kbdq.gime.DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 LRESULT CALLBACK
@@ -1141,7 +1095,7 @@ frame_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       return process_mouse_activate (lparam);
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 static inline void
@@ -1326,7 +1280,7 @@ client_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       return 0;
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 LRESULT CALLBACK
@@ -1366,7 +1320,7 @@ modeline_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
       break;
     }
 
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcW (hwnd, msg, wparam, lparam);
 }
 
 class keyvec
@@ -1755,12 +1709,12 @@ Fcall_menu (lisp ln)
   int n = GetMenuItemCount (hmenu);
   if (req < 0 || req >= n)
     return Qnil;
-  char buf[1024], *b = buf;
-  if (!GetMenuString (hmenu, req, buf, sizeof buf, MF_BYPOSITION))
+  WCHAR buf[1024], *b = buf;
+  if (!GetMenuStringW (hmenu, req, buf, numberof (buf), MF_BYPOSITION))
     return Qnil;
   while (1)
     {
-      b = jindex (b, '&');
+      b = wcschr (b, '&');
       if (!b || !b[1])
         return Qnil;
       if (b[1] == '&')

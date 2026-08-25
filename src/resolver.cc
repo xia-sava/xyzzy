@@ -5,7 +5,7 @@
 #include "resolver.h"
 #include "sockimpl.h"
 
-static const char resolver_wndclass[] = "resolverClass";
+static const WCHAR resolver_wndclass[] = L"resolverClass";
 int resolver::r_initialized;
 
 resolver::resolver (int timeout)
@@ -27,13 +27,13 @@ resolver::initialize (HINSTANCE hinst)
   if (r_initialized)
     return 1;
 
-  WNDCLASS wc;
+  WNDCLASSW wc;
   memset (&wc, 0, sizeof wc);
   wc.lpfnWndProc = wndproc;
   wc.cbWndExtra = sizeof (resolver *);
   wc.hInstance = hinst;
   wc.lpszClassName = resolver_wndclass;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
   r_initialized = 1;
   return 1;
@@ -43,11 +43,11 @@ int
 resolver::create (HINSTANCE hinst)
 {
 #ifndef __XYZZY__
-  return r_hwnd || CreateWindow (resolver_wndclass, "", WS_OVERLAPPED,
-                                 0, 0, 0, 0, HWND_DESKTOP, 0, hinst, this);
+  return r_hwnd || CreateWindowW (resolver_wndclass, L"", WS_OVERLAPPED,
+                                  0, 0, 0, 0, HWND_DESKTOP, 0, hinst, this);
 #else
-  return r_hwnd || CreateWindow (resolver_wndclass, "", WS_CHILD,
-                                 0, 0, 0, 0, app.toplev, 0, hinst, this);
+  return r_hwnd || CreateWindowW (resolver_wndclass, L"", WS_CHILD,
+                                  0, 0, 0, 0, app.toplev, 0, hinst, this);
 #endif
 }
 

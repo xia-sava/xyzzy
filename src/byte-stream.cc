@@ -8,7 +8,7 @@ byte_input_string_stream::refill ()
   u_char *b = s_buf, *const be = s_buf + sizeof s_buf - 1;
   while (b < be && s_wp < s_we)
     {
-      Char cc = *s_wp++;
+      Char cc = w2b_char (*s_wp++);
       if (DBCP (cc))
         *b++ = u_char (cc >> 8);
       *b++ = u_char (cc);
@@ -25,38 +25,24 @@ byte_input_streams_stream::refill ()
       lChar lcc = readc_stream (s_stream);
       if (lcc == lChar_EOF)
         break;
-      if (DBCP (Char (lcc)))
-        *b++ = u_char (lcc >> 8);
-      *b++ = u_char (lcc);
+      Char cc = w2b_char (Char (lcc));
+      if (DBCP (cc))
+        *b++ = u_char (cc >> 8);
+      *b++ = u_char (cc);
     }
   return setbuf (s_buf, b);
 }
 
+// バイト列は一文字が一バイト
 u_char *
-byte_output_wstream::sflush (u_char *b0, u_char *be, int eofp)
+byte_output_wstream::sflush (u_char *b0, u_char *be, int)
 {
-  u_char *b = b0;
-  Char *w, wbuf[sizeof s_buf];
-  for (w = wbuf; b < be;)
+  if (b0 != be)
     {
-      if (SJISP (*b))
-        {
-          if (b + 1 == be)
-            {
-              if (eofp)
-                *w++ = *b;
-              else
-                *b0++ = *b;
-              break;
-            }
-          *w++ = (*b << 8) | b[1];
-          b += 2;
-        }
-      else
-        *w++ = *b++;
+      Char wbuf[sizeof s_buf];
+      a2w (wbuf, (const char *)b0, be - b0);
+      swrite (wbuf, be - b0);
     }
-  if (w - wbuf)
-    swrite (wbuf, w - wbuf);
   return b0;
 }
 

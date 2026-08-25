@@ -76,14 +76,14 @@ s2w (Char *b, size_t size, const char **string)
         {
           if (!s[1])
             {
-              *b++ = *s++;
+              *b++ = s2w_char (*s++);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   *string = (const char *)s;
   return b;
@@ -99,14 +99,14 @@ s2w (Char *b, const char *string)
         {
           if (!s[1])
             {
-              *b = *s;
+              *b = s2w_char (*s);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   return b;
 }
@@ -160,7 +160,7 @@ w2sl (const Char *s, size_t size)
 {
   size_t l = 0;
   for (const Char *se = s + size; s < se; s++)
-    if (DBCP (*s))
+    if (DBCP (w2s_char (*s)))
       l++;
   return size + l;
 }
@@ -170,9 +170,10 @@ w2s (char *b, const Char *s, size_t size)
 {
   for (const Char *se = s + size; s < se; s++)
     {
-      if (DBCP (*s))
-        *b++ = char (*s >> 8);
-      *b++ = char (*s);
+      Char c = w2s_char (*s);
+      if (DBCP (c))
+        *b++ = char (c >> 8);
+      *b++ = char (c);
     }
   *b = 0;
   return b;
@@ -192,13 +193,14 @@ w2s (char *b, char *be, const Char *s, size_t size)
   be--;
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      *b++ = char (*s);
+      *b++ = char (c);
     }
   *b = 0;
   return b;
@@ -210,19 +212,431 @@ w2s_quote (char *b, char *be, const Char *s, size_t size, int qc, int qe)
   be--;
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      else if (*s == qc)
+      else if (c == qc)
         {
           if (b == be - 1)
             break;
           *b++ = qe;
         }
-      *b++ = char (*s);
+      *b++ = char (c);
+    }
+  *b = 0;
+  return b;
+}
+
+size_t
+w2bl (const Char *s, size_t size)
+{
+  size_t l = 0;
+  for (const Char *se = s + size; s < se; s++)
+    if (DBCP (w2b_char (*s)))
+      l++;
+  return size + l;
+}
+
+char *
+w2b (char *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    {
+      Char c = w2b_char (*s);
+      if (DBCP (c))
+        *b++ = char (c >> 8);
+      *b++ = char (c);
+    }
+  *b = 0;
+  return b;
+}
+
+size_t
+w2ul (const Char *, size_t size)
+{
+  return size;
+}
+
+WCHAR *
+w2u (WCHAR *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    *b++ = WCHAR (*s);
+  *b = 0;
+  return b;
+}
+
+WCHAR *
+w2u (WCHAR *b, WCHAR *be, const Char *s, size_t size)
+{
+  be--;
+  for (const Char *se = s + size; s < se && b < be; s++)
+    *b++ = WCHAR (*s);
+  *b = 0;
+  return b;
+}
+
+size_t
+u2wl (const WCHAR *s)
+{
+  return u2wl (s, wcslen (s));
+}
+
+size_t
+u2wl (const WCHAR *, size_t size)
+{
+  return size;
+}
+
+Char *
+u2w (Char *b, const WCHAR *s)
+{
+  return u2w (b, s, wcslen (s));
+}
+
+Char *
+u2w (Char *b, const WCHAR *s, size_t size)
+{
+  for (const WCHAR *se = s + size; s < se; s++)
+    *b++ = Char (*s);
+  return b;
+}
+
+/* 一文字ぶんの UTF-8 が何バイトか。サロゲート対はふたつで一文字 */
+static inline int
+u8len (const Char *s, const Char *se)
+{
+  Char c = *s;
+  if (c < 0x80)
+    return 1;
+  if (c < 0x800)
+    return 2;
+  if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+    return 4;
+  return 3;
+}
+
+static inline char *
+put_u8 (char *b, const Char *&s, const Char *se)
+{
+  Char c = *s;
+  switch (u8len (s, se))
+    {
+    case 1:
+      *b++ = char (c);
+      break;
+
+    case 2:
+      *b++ = char (0xc0 | (c >> 6));
+      *b++ = char (0x80 | (c & 0x3f));
+      break;
+
+    case 4:
+      {
+        ucs4_t u = utf16_pair_to_ucs4 (c, s[1]);
+        s++;
+        *b++ = char (0xf0 | (u >> 18));
+        *b++ = char (0x80 | ((u >> 12) & 0x3f));
+        *b++ = char (0x80 | ((u >> 6) & 0x3f));
+        *b++ = char (0x80 | (u & 0x3f));
+        break;
+      }
+
+    default:
+      *b++ = char (0xe0 | (c >> 12));
+      *b++ = char (0x80 | ((c >> 6) & 0x3f));
+      *b++ = char (0x80 | (c & 0x3f));
+      break;
+    }
+  return b;
+}
+
+size_t
+w2u8l (const Char *s, size_t size)
+{
+  size_t l = 0;
+  for (const Char *se = s + size; s < se; s++)
+    {
+      int n = u8len (s, se);
+      l += n;
+      if (n == 4)
+        s++;
+    }
+  return l;
+}
+
+char *
+w2u8 (char *b, const Char *s, size_t size)
+{
+  for (const Char *se = s + size; s < se; s++)
+    b = put_u8 (b, s, se);
+  *b = 0;
+  return b;
+}
+
+char *
+w2u8 (char *b, char *be, const Char *s, size_t size)
+{
+  be--;
+  for (const Char *se = s + size; s < se; s++)
+    {
+      if (b + u8len (s, se) > be)
+        break;
+      b = put_u8 (b, s, se);
+    }
+  *b = 0;
+  return b;
+}
+
+/* 続きのバイトを数える。壊れた並びは一バイトを一文字として拾う */
+static inline int
+u8seqlen (const u_char *s, const u_char *se)
+{
+  int n = (*s < 0xc0 ? 1
+           : *s < 0xe0 ? 2
+           : *s < 0xf0 ? 3
+           : *s < 0xf8 ? 4
+           : 1);
+  for (int i = 1; i < n; i++)
+    if (s + i >= se || (s[i] & 0xc0) != 0x80)
+      return 1;
+  return n;
+}
+
+/* 終端まで数えずに、その場の並びの長さを見る */
+static inline int
+u8seqlen_z (const u_char *s)
+{
+  int n = (*s < 0xc0 ? 1
+           : *s < 0xe0 ? 2
+           : *s < 0xf0 ? 3
+           : *s < 0xf8 ? 4
+           : 1);
+  for (int i = 1; i < n; i++)
+    if ((s[i] & 0xc0) != 0x80)
+      return 1;
+  return n;
+}
+
+/* 一文字を取り出し、その分だけ進める。BMP の外は符号位置のまま返す */
+Char
+u8getc (const u_char *&s)
+{
+  int n = u8seqlen_z (s);
+  Char c;
+  switch (n)
+    {
+    case 2:
+      c = ((s[0] & 0x1f) << 6) | (s[1] & 0x3f);
+      break;
+
+    case 3:
+      c = ((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f);
+      break;
+
+    case 4:
+      c = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+           | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+      break;
+
+    default:
+      c = *s;
+      break;
+    }
+  s += n;
+  return c;
+}
+
+char *
+u82s (char *b, char *be, const char *s)
+{
+  size_t n = u82wl (s);
+  WCHAR *w = (WCHAR *)alloca (sizeof (WCHAR) * (n + 1));
+  u82u (w, s);
+  int l = WideCharToMultiByte (CP_ACP, 0, w, -1, b, be - b, 0, 0);
+  if (l <= 0)
+    {
+      *b = 0;
+      return b;
+    }
+  return b + l - 1;
+}
+
+size_t
+u82wl (const char *string)
+{
+  return u82wl (string, strlen (string));
+}
+
+size_t
+u82wl (const char *string, size_t size)
+{
+  size_t l = 0;
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + size; s < se; l++)
+    {
+      int n = u8seqlen (s, se);
+      if (n == 4)
+        l++;
+      s += n;
+    }
+  return l;
+}
+
+Char *
+u82w (Char *b, const char *string)
+{
+  return u82w (b, string, strlen (string));
+}
+
+Char *
+u82w (Char *b, const char *string, size_t size)
+{
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + size; s < se;)
+    {
+      int n = u8seqlen (s, se);
+      switch (n)
+        {
+        case 1:
+          *b++ = *s;
+          break;
+
+        case 2:
+          *b++ = ((s[0] & 0x1f) << 6) | (s[1] & 0x3f);
+          break;
+
+        case 3:
+          *b++ = ((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f);
+          break;
+
+        default:
+          {
+            ucs4_t u = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+                        | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+            *b++ = utf16_ucs4_to_pair_high (u);
+            *b++ = utf16_ucs4_to_pair_low (u);
+            break;
+          }
+        }
+      s += n;
+    }
+  return b;
+}
+
+WCHAR *
+u82u (WCHAR *b, const char *string)
+{
+  const u_char *s = (const u_char *)string;
+  for (const u_char *se = s + strlen (string); s < se;)
+    {
+      int n = u8seqlen (s, se);
+      switch (n)
+        {
+        case 1:
+          *b++ = *s;
+          break;
+
+        case 2:
+          *b++ = WCHAR (((s[0] & 0x1f) << 6) | (s[1] & 0x3f));
+          break;
+
+        case 3:
+          *b++ = WCHAR (((s[0] & 0x0f) << 12) | ((s[1] & 0x3f) << 6) | (s[2] & 0x3f));
+          break;
+
+        default:
+          {
+            ucs4_t u = (((s[0] & 0x07) << 18) | ((s[1] & 0x3f) << 12)
+                        | ((s[2] & 0x3f) << 6) | (s[3] & 0x3f));
+            *b++ = utf16_ucs4_to_pair_high (u);
+            *b++ = utf16_ucs4_to_pair_low (u);
+            break;
+          }
+        }
+      s += n;
+    }
+  *b = 0;
+  return b;
+}
+
+size_t
+u2u8l (const WCHAR *s)
+{
+  size_t l = 0;
+  for (const WCHAR *se = s + wcslen (s); s < se; s++)
+    {
+      WCHAR c = *s;
+      if (c < 0x80)
+        l += 1;
+      else if (c < 0x800)
+        l += 2;
+      else if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+        {
+          l += 4;
+          s++;
+        }
+      else
+        l += 3;
+    }
+  return l;
+}
+
+char *
+u2u8 (char *b, const WCHAR *s)
+{
+  for (const WCHAR *se = s + wcslen (s); s < se; s++)
+    {
+      WCHAR c = *s;
+      if (c < 0x80)
+        *b++ = char (c);
+      else if (c < 0x800)
+        {
+          *b++ = char (0xc0 | (c >> 6));
+          *b++ = char (0x80 | (c & 0x3f));
+        }
+      else if (utf16_surrogate_high_p (c) && s + 1 < se && utf16_surrogate_low_p (s[1]))
+        {
+          ucs4_t u = utf16_pair_to_ucs4 (c, s[1]);
+          s++;
+          *b++ = char (0xf0 | (u >> 18));
+          *b++ = char (0x80 | ((u >> 12) & 0x3f));
+          *b++ = char (0x80 | ((u >> 6) & 0x3f));
+          *b++ = char (0x80 | (u & 0x3f));
+        }
+      else
+        {
+          *b++ = char (0xe0 | (c >> 12));
+          *b++ = char (0x80 | ((c >> 6) & 0x3f));
+          *b++ = char (0x80 | (c & 0x3f));
+        }
+    }
+  *b = 0;
+  return b;
+}
+
+WCHAR *
+s2u (WCHAR *b, const char *string)
+{
+  const u_char *s = (const u_char *)string;
+  while (*s)
+    {
+      if (SJISP (*s))
+        {
+          if (!s[1])
+            {
+              *b++ = WCHAR (s2w_char (*s));
+              break;
+            }
+          *b++ = WCHAR (s2w_char ((*s << 8) | s[1]));
+          s += 2;
+        }
+      else
+        *b++ = WCHAR (s2w_char (*s++));
     }
   *b = 0;
   return b;
@@ -261,14 +675,14 @@ s2w (Char *b, const char *string, const char *se, int zero_term)
         {
           if (s + 1 >= (const u_char *)se || (zero_term && !s[1]))
             {
-              *b = *s;
+              *b = s2w_char (*s);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   return b;
 }
@@ -278,13 +692,14 @@ w2s_chunk (char *b, char *be, const Char *s, size_t size)
 {
   for (const Char *se = s + size; s < se && b < be; s++)
     {
-      if (DBCP (*s))
+      Char c = w2s_char (*s);
+      if (DBCP (c))
         {
           if (b == be - 1)
             break;
-          *b++ = char (*s >> 8);
+          *b++ = char (c >> 8);
         }
-      *b++ = char (*s);
+      *b++ = char (c);
     }
   if (b < be)
     *b = 0;
@@ -303,6 +718,24 @@ make_string (const char *string)
   size_t size = s2wl (string);
   xstring_contents (p) = s2w (string, size);
   xstring_length (p) = size;
+  return p;
+}
+
+lisp
+make_string (const WCHAR *string)
+{
+  return make_string (string, wcslen (string));
+}
+
+lisp
+make_string (const WCHAR *string, size_t size)
+{
+  lisp p = make_simple_string ();
+  size_t l = u2wl (string, size);
+  Char *b = (Char *)xmalloc (l * sizeof (Char));
+  xstring_contents (p) = b;
+  xstring_length (p) = l;
+  u2w (b, string, size);
   return p;
 }
 
@@ -1025,20 +1458,38 @@ Fparse_integer (lisp string, lisp keys)
   return result;
 }
 
+/* サロゲート対を割らないよう、一文字ぶん戻る／進む */
+static inline WCHAR *
+char_prev (const WCHAR *b, const WCHAR *p)
+{
+  p--;
+  if (p > b && utf16_surrogate_low_p (*p) && utf16_surrogate_high_p (p[-1]))
+    p--;
+  return (WCHAR *)p;
+}
+
+static inline WCHAR *
+char_next (const WCHAR *p)
+{
+  if (utf16_surrogate_high_p (*p) && utf16_surrogate_low_p (p[1]))
+    p++;
+  return (WCHAR *)(p + 1);
+}
+
 int WINAPI
-abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
+abbreviate_string (HDC hdc, WCHAR *buf, int maxpxl, int is_pathname)
 {
   SIZE sz;
-  int l = strlen (buf);
-  GetTextExtentPoint32 (hdc, buf, l, &sz);
+  int l = wcslen (buf);
+  GetTextExtentPoint32W (hdc, buf, l, &sz);
   if (sz.cx <= maxpxl)
     return 0;
 
-  GetTextExtentPoint32 (hdc, "...", 3, &sz);
+  GetTextExtentPoint32W (hdc, L"...", 3, &sz);
   maxpxl = (maxpxl - sz.cx);
 
-  char *lb, *le;
-  char *rb, *re;
+  WCHAR *lb, *le;
+  WCHAR *rb, *re;
 
   if (is_pathname)
     {
@@ -1047,7 +1498,7 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
       rb = find_last_slash (buf);
       if (rb)
         {
-          GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+          GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
           if (sz.cx > maxpxl)
             {
               rb++;
@@ -1056,11 +1507,11 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
 
           int pxl = sz.cx;
           int dev = 0;
-          if (alpha_char_p (*lb & 255) && lb[1] == ':')
+          if (alpha_char_p (*lb) && lb[1] == ':')
             dev = dir_separator_p (lb[2]) ? 3 : 2;
           else if (dir_separator_p (*lb) && dir_separator_p (lb[1]))
             {
-              char *sl = find_slash (lb + 2);
+              WCHAR *sl = find_slash (lb + 2);
               if (sl)
                 sl = find_slash (sl + 1);
               if (sl && sl < rb)
@@ -1068,7 +1519,7 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
             }
           if (dev)
             {
-              GetTextExtentPoint32 (hdc, lb, dev, &sz);
+              GetTextExtentPoint32W (hdc, lb, dev, &sz);
               if (pxl + sz.cx > maxpxl)
                 goto done;
               pxl += sz.cx;
@@ -1077,13 +1528,13 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
 
           while (rb > le)
             {
-              char c = *rb;
+              WCHAR c = *rb;
               *rb = 0;
-              char *slash = find_last_slash (buf);
+              WCHAR *slash = find_last_slash (buf);
               *rb = c;
               if (!slash)
                 break;
-              GetTextExtentPoint32 (hdc, slash, rb - slash, &sz);
+              GetTextExtentPoint32W (hdc, slash, rb - slash, &sz);
               if (sz.cx + pxl > maxpxl)
                 break;
               rb = slash;
@@ -1094,15 +1545,16 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
         {
           rb = buf;
         trim_tail:
-          for (; re > rb; re = CharPrev (rb, re))
+          for (; re > rb; re = char_prev (rb, re))
             {
-              GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+              GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
               if (sz.cx <= maxpxl)
                 {
                   if (re - rb + 3 > l)
                     return 0;
                   *re = 0;
-                  strcpy (stpcpy (buf, rb), "...");
+                  wcscpy (buf, rb);
+                  wcscat (buf, L"...");
                   return 1;
                 }
             }
@@ -1111,15 +1563,15 @@ abbreviate_string (HDC hdc, char *buf, int maxpxl, int is_pathname)
   else
     {
       maxpxl /= 2;
-      for (lb = buf, le = buf + l / 2; le > lb; le = CharPrev (lb, le))
+      for (lb = buf, le = buf + l / 2; le > lb; le = char_prev (lb, le))
         {
-          GetTextExtentPoint32 (hdc, lb, le - lb, &sz);
+          GetTextExtentPoint32W (hdc, lb, le - lb, &sz);
           if (sz.cx <= maxpxl)
             break;
         }
-      for (rb = buf + l / 2, re = buf + l; rb < re; rb = CharNext (rb))
+      for (rb = buf + l / 2, re = buf + l; rb < re; rb = char_next (rb))
         {
-          GetTextExtentPoint32 (hdc, rb, re - rb, &sz);
+          GetTextExtentPoint32W (hdc, rb, re - rb, &sz);
           if (sz.cx <= maxpxl)
             break;
         }
@@ -1130,12 +1582,12 @@ done:
 
   for (int i = 0; i < 3; i++)
     le[i] = '.';
-  strcpy (le + 3, rb);
+  wcscpy (le + 3, rb);
   return 1;
 }
 
 static int
-abbrev_string (char *buf, int maxl, int pathname_p)
+abbrev_string (WCHAR *buf, int maxl, int pathname_p)
 {
   HDC hdc (GetDC (0));
   HGDIOBJ of (SelectObject (hdc, sysdep.ui_font ()));
@@ -1155,8 +1607,8 @@ Fabbreviate_display_string (lisp string, lisp maxlen, lisp pathname_p)
   int l = fixnum_value (maxlen);
   if (l <= 0)
     return make_string ("");
-  char *buf = (char *)alloca (xstring_length (string) * 2 + 1);
-  w2s (buf, string);
+  WCHAR *buf = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (string) + 4));
+  w2u (buf, string);
   if (!abbrev_string (buf, l, pathname_p && pathname_p != Qnil))
     return string;
   return make_string (buf);
@@ -1286,7 +1738,7 @@ Fsi_octet_length (lisp string, lisp keys)
                     find_keyword (Kend, keys, Qnil));
   lisp encoding = find_keyword (Kencoding, keys);
   if (encoding == Qnil)
-    return make_fixnum (w2sl (xstring_contents (string) + start, end - start));
+    return make_fixnum (w2bl (xstring_contents (string) + start, end - start));
 
   check_char_encoding (encoding);
   if (xchar_encoding_type (encoding) == encoding_auto_detect)

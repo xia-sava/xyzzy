@@ -112,7 +112,7 @@ protected:
   int send_ltext (int, int, WPARAM, lisp, dlg_txtwidth * = 0) const;
   void enable_windows (dlgctrl *, int);
   void invalidate_ctrls (dlgctrl *);
-  static lisp check_result_type (dlgctrl *, const char *);
+  static lisp check_result_type (dlgctrl *, const WCHAR *);
   static lisp warn (lisp);
   lisp make_lb_string (int, int, int, int);
   int get_result (dlgctrl *);
@@ -156,7 +156,7 @@ public:
   PropPage ();
   ~PropPage ();
   void create_template (lisp, lisp);
-  void init_page (PropSheet *, int, PROPSHEETPAGE *, lisp);
+  void init_page (PropSheet *, int, PROPSHEETPAGEW *, lisp);
   void kill_active ();
   void set_active () const;
   void reset () const;
@@ -183,7 +183,7 @@ struct PropSheetFont
   static int load ();
   static void find_font (const DLGTEMPLATE *);
   static HGLOBAL change_font (const DLGTEMPLATE *, DWORD);
-  static HGLOBAL change_font (const char *);
+  static HGLOBAL change_font (const WCHAR *);
 };
 
 #endif

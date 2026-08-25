@@ -21,10 +21,10 @@ buffer_bar::current () const
   return i >= 0 ? nth (i) : 0;
 }
 
-char *
-buffer_bar::set_buffer_name (const Buffer *bp, char *buf, int size)
+WCHAR *
+buffer_bar::set_buffer_name (const Buffer *bp, WCHAR *buf, int size)
 {
-  char *b = buf;
+  WCHAR *b = buf;
   if (bp->b_modified)
     {
       *b++ = '*';
@@ -37,10 +37,10 @@ buffer_bar::set_buffer_name (const Buffer *bp, char *buf, int size)
 int
 buffer_bar::insert (const Buffer *bp, int i)
 {
-  TC_ITEM ti;
+  TC_ITEMW ti;
   ti.mask = TCIF_TEXT | TCIF_PARAM;
-  char buf[BUFFER_NAME_MAX * 2 + 32];
-  ti.pszText = set_buffer_name (bp, buf, sizeof buf);
+  WCHAR buf[BUFFER_NAME_MAX + 32];
+  ti.pszText = set_buffer_name (bp, buf, numberof (buf));
   ti.lParam = LPARAM (bp);
   return insert_item (i, ti);
 }
@@ -48,10 +48,10 @@ buffer_bar::insert (const Buffer *bp, int i)
 int
 buffer_bar::modify (const Buffer *bp, int i)
 {
-  TC_ITEM ti;
+  TC_ITEMW ti;
   ti.mask = TCIF_TEXT | TCIF_PARAM;
-  char buf[BUFFER_NAME_MAX * 2 + 32];
-  ti.pszText = set_buffer_name (bp, buf, sizeof buf);
+  WCHAR buf[BUFFER_NAME_MAX + 32];
+  ti.pszText = set_buffer_name (bp, buf, numberof (buf));
   ti.lParam = LPARAM (bp);
   return set_item (i, ti);
 }
@@ -95,7 +95,7 @@ buffer_bar::notify (NMHDR *nm, LRESULT &result)
 }
 
 int
-buffer_bar::need_text (TOOLTIPTEXT &ttt)
+buffer_bar::need_text (TOOLTIPTEXTW &ttt)
 {
   if (ttt.uFlags & TTF_IDISHWND)
     return 0;
@@ -112,7 +112,7 @@ buffer_bar::need_text (TOOLTIPTEXT &ttt)
   else
     x = bp->lbuffer_name;
 
-  w2s (b_ttbuf, b_ttbuf + TTBUFSIZE, x);
+  w2u (b_ttbuf, b_ttbuf + TTBUFSIZE, x);
   ttt.lpszText = b_ttbuf;
   ttt.hinst = 0;
   return 1;
@@ -148,8 +148,8 @@ void
 buffer_bar::draw_item (const draw_item_struct &dis)
 {
   Buffer *bp = (Buffer *)dis.data;
-  char buf[BUFFER_NAME_MAX * 2 + 32];
-  set_buffer_name (bp, buf, sizeof buf);
+  WCHAR buf[BUFFER_NAME_MAX + 32];
+  set_buffer_name (bp, buf, numberof (buf));
 
   if (bp->b_modified)
     bp->b_buffer_bar_modified |= Buffer::BUFFER_BAR_LAST_MODIFIED_FLAG;
@@ -161,7 +161,7 @@ buffer_bar::draw_item (const draw_item_struct &dis)
   bp->b_buffer_bar_fg = fg;
   bp->b_buffer_bar_bg = bg;
 
-  tab_bar::draw_item (dis, buf, strlen (buf), fg, bg);
+  tab_bar::draw_item (dis, buf, wcslen (buf), fg, bg);
 }
 
 void

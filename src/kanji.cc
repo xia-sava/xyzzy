@@ -668,31 +668,32 @@ Fconvert_encoding_from_internal (lisp encoding, lisp input, lisp output)
 struct to_half
 {
   Char min, max;
-  const u_char *b;
+  const Char *b;
 };
 
 static const to_half toh[] =
 {
-  {TO_HALF_WIDTH81_MIN, TO_HALF_WIDTH81_MAX, to_half_width_81},
-  {TO_HALF_WIDTH82_MIN, TO_HALF_WIDTH82_MAX, to_half_width_82},
-  {TO_HALF_WIDTH83_MIN, TO_HALF_WIDTH83_MAX, to_half_width_83},
+  {TO_HALF_WIDTH20_MIN, TO_HALF_WIDTH20_MAX, to_half_width_20},
+  {TO_HALF_WIDTH30_MIN, TO_HALF_WIDTH30_MAX, to_half_width_30},
+  {TO_HALF_WIDTHff_MIN, TO_HALF_WIDTHff_MAX, to_half_width_ff},
 };
 
-static const to_half ssh[] =
+struct to_voiced
 {
-  {VOICED_SOUND82_MIN, VOICED_SOUND82_MAX, voiced_sound_82},
-  {VOICED_SOUND83_MIN, VOICED_SOUND83_MAX, voiced_sound_83},
+  Char min, max;
+  const voiced_sound *b;
 };
 
-#define CP932_GREEK_P(C) ((C) >= 0x839f && (C) <= 0x83d6)
-#define CP932_CYRILLIC_P(C) ((C) >= 0x8440 && (C) <= 0x8491)
-
-#define INTERNAL_GREEK_P(C) ((C) >= 0x3c1 && (C) <= 0x3f9)
-#define INTERNAL_CYRILLIC_P(C) ((C) >= 0x321 && (C) <= 0x371 && (C) != 0x370)
+static const to_voiced ssh[] =
+{
+  {VOICED_SOUND30_MIN, VOICED_SOUND30_MAX, voiced_sound_30},
+};
 
 #define ASC 1
 #define HIRA 2
 #define KATA 4
+/* ギリシャ文字とキリル文字には全角と半角の区別が無いので、指定は受け取るが
+   何も変わらない */
 #define GREEK 8
 #define CYRILLIC 16
 
@@ -753,12 +754,12 @@ to_half_param::to_half_param (lisp keys)
   if (flags & ASC)
     {
       hmin = 1;
-      hmax = (flags & (HIRA | KATA)) ? 0xff : 0x7f;
+      hmax = (flags & (HIRA | KATA)) ? TO_FULL_KANA_MAX : TO_FULL_ASCII_MAX;
     }
   else if (flags & (HIRA | KATA))
     {
-      hmin = 0x80;
-      hmax = 0xff;
+      hmin = TO_FULL_KANA_MIN;
+      hmax = TO_FULL_KANA_MAX;
     }
   else
     {
@@ -793,16 +794,8 @@ Fmap_to_half_width_region (lisp from, lisp to, lisp keys)
               c = toh[i].b[c - toh[i].min];
               if (c >= thp.hmin && c <= thp.hmax)
                 point.ch () = c;
-              goto next;
+              break;
             }
-      if ((thp.flags & GREEK && CP932_GREEK_P (c))
-          || (thp.flags & CYRILLIC && CP932_CYRILLIC_P (c)))
-        {
-          c = w2i (i2w (c));
-          if (c != CHAR_INVALID)
-            point.ch () = c;
-        }
-    next:
       if (!bp->forward_char (point, 1))
         break;
     }
@@ -817,13 +810,12 @@ Fmap_to_half_width_region (lisp from, lisp to, lisp keys)
             for (int i = 0; i < numberof (ssh); i++)
               if (c >= ssh[i].min && c <= ssh[i].max)
                 {
-                  c = ssh[i].b[c - ssh[i].min];
-                  if (c)
+                  const voiced_sound &v = ssh[i].b[c - ssh[i].min];
+                  if (v.base)
                     {
-                      //                                 ゛             ゜
-                      point.ch () = c & 0x80 ? u_char (0xde) : u_char (0xdf);
-                      c |= 0x80;
-                      if (!bp->insert_chars_internal (point, &c, 1, 1))
+                      point.ch () = v.mark;
+                      Char base = v.base;
+                      if (!bp->insert_chars_internal (point, &base, 1, 1))
                         {
                           bp->post_buffer_modified (Kmodify, point, p1, p2 + nconv);
                           FEstorage_error ();
@@ -857,7 +849,7 @@ Fmap_to_full_width_region (lisp from, lisp to, lisp keys)
   if (!flags)
     return Qnil;
 
-  const Char *tof = flags & HIRA ? to_fullhira_a1_df : to_fullkata_a1_df;
+  const Char *tof = flags & HIRA ? to_fullhira : to_fullkata;
 
   Window *wp = selected_window ();
   Buffer *bp = wp->w_bufp;
@@ -871,17 +863,12 @@ Fmap_to_full_width_region (lisp from, lisp to, lisp keys)
   while (point.p_point < p2)
     {
       Char c = point.ch ();
-      if (flags & (HIRA | KATA) && c >= 0xa1 && c <= 0xdf)
-        point.ch () = tof[c - 0xa1];
-      else if (flags & ASC && c >= 0x20 && c <= 0x7e)
-        point.ch () = to_full_20_7e[c - 0x20];
-      else if ((flags & GREEK && INTERNAL_GREEK_P (c))
-               || (flags & CYRILLIC && INTERNAL_CYRILLIC_P (c)))
-        {
-          c = wc2cp932 (i2w (c));
-          if (c != CHAR_INVALID)
-            point.ch () = c;
-        }
+      if (flags & (HIRA | KATA)
+          && c >= TO_FULL_KANA_MIN && c <= TO_FULL_KANA_MAX)
+        point.ch () = tof[c - TO_FULL_KANA_MIN];
+      else if (flags & ASC
+               && c >= TO_FULL_ASCII_MIN && c <= TO_FULL_ASCII_MAX)
+        point.ch () = to_full_ascii[c - TO_FULL_ASCII_MIN];
       if (!bp->forward_char (point, 1))
         break;
     }
@@ -903,48 +890,45 @@ Fmap_to_full_width_region (lisp from, lisp to, lisp keys)
                 break;
               c = c2;
             }
+          if (c2 < TO_HALF_WIDTH30_MIN || c2 > TO_HALF_WIDTH30_MAX)
+            continue;
+          c2 = to_half_width_30[c2 - TO_HALF_WIDTH30_MIN];
+          if (!c2)
+            continue;
           if (flags & HIRA)
             {
-              if (c2 < TO_HALF_WIDTH82_MIN || c2 > TO_HALF_WIDTH82_MAX)
-                continue;
-              c2 = to_half_width_82[c2 - TO_HALF_WIDTH82_MIN];
-              if (!c2)
-                continue;
               if (c == VOICED_SOUND_MARK)
                 {
-                  if (c2 < 0xb6 || c2 > 0xce)
+                  if (c2 < TO_FULLHIRA_VOICED_MIN || c2 > TO_FULL_VOICED_MAX)
                     continue;
-                  c2 = to_fullhira_voiced_b6_ce[c2 - 0xb6];
+                  c2 = to_fullhira_voiced[c2 - TO_FULLHIRA_VOICED_MIN];
                   if (!c2)
                     continue;
                 }
               else
                 {
-                  if (c2 < 0xca || c2 > 0xce)
+                  if (c2 < TO_FULL_SEMI_VOICED_MIN
+                      || c2 > TO_FULL_SEMI_VOICED_MAX)
                     continue;
-                  c2 = to_fullhira_semi_voiced_ca_ce[c2 - 0xca];
+                  c2 = to_fullhira_semi_voiced[c2 - TO_FULL_SEMI_VOICED_MIN];
                 }
             }
           else
             {
-              if (c2 < TO_HALF_WIDTH83_MIN || c2 > TO_HALF_WIDTH83_MAX)
-                continue;
-              c2 = to_half_width_83[c2 - TO_HALF_WIDTH83_MIN];
-              if (!c2)
-                continue;
               if (c == VOICED_SOUND_MARK)
                 {
-                  if (c2 < 0xb3 || c2 > 0xce)
+                  if (c2 < TO_FULLKATA_VOICED_MIN || c2 > TO_FULL_VOICED_MAX)
                     continue;
-                  c2 = to_fullkata_voiced_b3_ce[c2 - 0xb3];
+                  c2 = to_fullkata_voiced[c2 - TO_FULLKATA_VOICED_MIN];
                   if (!c2)
                     continue;
                 }
               else
                 {
-                  if (c2 < 0xca || c2 > 0xce)
+                  if (c2 < TO_FULL_SEMI_VOICED_MIN
+                      || c2 > TO_FULL_SEMI_VOICED_MAX)
                     continue;
-                  c2 = to_fullkata_semi_voiced_ca_ce[c2 - 0xca];
+                  c2 = to_fullkata_semi_voiced[c2 - TO_FULL_SEMI_VOICED_MIN];
                 }
             }
           if (!bp->delete_region_internal (point, point.p_point,
@@ -987,17 +971,9 @@ Fmap_to_half_width_string (lisp string, lisp keys)
                 c = toh[i].b[c - toh[i].min];
                 if (c >= thp.hmin && c <= thp.hmax)
                   *s = c;
-                goto next;
+                break;
               }
           }
-      if ((thp.flags & GREEK && CP932_GREEK_P (c))
-          || (thp.flags & CYRILLIC && CP932_CYRILLIC_P (c)))
-        {
-          c = w2i (i2w (c));
-          if (c != CHAR_INVALID)
-            *s = c;
-        }
-    next:;
     }
 
   if (!(thp.flags & (HIRA | KATA)))
@@ -1013,11 +989,11 @@ Fmap_to_half_width_string (lisp string, lisp keys)
         for (int i = 0; i < numberof (ssh); i++)
           if (c >= ssh[i].min && c <= ssh[i].max)
             {
-              c = ssh[i].b[c - ssh[i].min];
-              if (c)
+              const voiced_sound &v = ssh[i].b[c - ssh[i].min];
+              if (v.base)
                 {
-                  *d = c & 0x80 ? u_char (0xde) : u_char (0xdf);
-                  *--d = c | 0x80;
+                  *d = v.mark;
+                  *--d = v.base;
                 }
               break;
             }
@@ -1033,7 +1009,7 @@ Fmap_to_full_width_string (lisp string, lisp keys)
   if (!flags)
     return string;
 
-  const Char *tof = flags & HIRA ? to_fullhira_a1_df : to_fullkata_a1_df;
+  const Char *tof = flags & HIRA ? to_fullhira : to_fullkata;
 
   safe_ptr <Char> s0 (new Char [xstring_length (string)]);
   bcopy (xstring_contents (string), s0, xstring_length (string));
@@ -1042,23 +1018,19 @@ Fmap_to_full_width_string (lisp string, lisp keys)
   for (s = s0, se = s + xstring_length (string); s < se; s++)
     {
       Char c = *s;
-      if (flags & (HIRA | KATA) && c >= 0xa1 && c <= 0xdf)
-        *s = tof[c - 0xa1];
-      else if (flags & ASC && c >= 0x20 && c <= 0x7e)
-        *s = to_full_20_7e[c - 0x20];
-      else if ((flags & GREEK && INTERNAL_GREEK_P (c))
-               || (flags & CYRILLIC && INTERNAL_CYRILLIC_P (c)))
-        {
-          c = wc2cp932 (i2w (c));
-          if (c != CHAR_INVALID)
-            *s = c;
-        }
+      if (flags & (HIRA | KATA)
+          && c >= TO_FULL_KANA_MIN && c <= TO_FULL_KANA_MAX)
+        *s = tof[c - TO_FULL_KANA_MIN];
+      else if (flags & ASC
+               && c >= TO_FULL_ASCII_MIN && c <= TO_FULL_ASCII_MAX)
+        *s = to_full_ascii[c - TO_FULL_ASCII_MIN];
     }
 
   if (!(flags & (HIRA | KATA)))
     return make_string (s0, xstring_length (string));
 
-#define PAD 0xa1
+/* 濁点を合わせた分の空きを埋める。文字として現れない符号位置を使う */
+#define PAD CHAR_INVALID
   int npad = 0;
   for (s = s0; se > s;)
     {
@@ -1074,48 +1046,43 @@ Fmap_to_full_width_string (lisp string, lisp keys)
             break;
           c = c2;
         }
+      if (c2 < TO_HALF_WIDTH30_MIN || c2 > TO_HALF_WIDTH30_MAX)
+        continue;
+      c2 = to_half_width_30[c2 - TO_HALF_WIDTH30_MIN];
+      if (!c2)
+        continue;
       if (flags & HIRA)
         {
-          if (c2 < TO_HALF_WIDTH82_MIN || c2 > TO_HALF_WIDTH82_MAX)
-            continue;
-          c2 = to_half_width_82[c2 - TO_HALF_WIDTH82_MIN];
-          if (!c2)
-            continue;
           if (c == VOICED_SOUND_MARK)
             {
-              if (c2 < 0xb6 || c2 > 0xce)
+              if (c2 < TO_FULLHIRA_VOICED_MIN || c2 > TO_FULL_VOICED_MAX)
                 continue;
-              c2 = to_fullhira_voiced_b6_ce[c2 - 0xb6];
+              c2 = to_fullhira_voiced[c2 - TO_FULLHIRA_VOICED_MIN];
               if (!c2)
                 continue;
             }
           else
             {
-              if (c2 < 0xca || c2 > 0xce)
+              if (c2 < TO_FULL_SEMI_VOICED_MIN || c2 > TO_FULL_SEMI_VOICED_MAX)
                 continue;
-              c2 = to_fullhira_semi_voiced_ca_ce[c2 - 0xca];
+              c2 = to_fullhira_semi_voiced[c2 - TO_FULL_SEMI_VOICED_MIN];
             }
         }
       else
         {
-          if (c2 < TO_HALF_WIDTH83_MIN || c2 > TO_HALF_WIDTH83_MAX)
-            continue;
-          c2 = to_half_width_83[c2 - TO_HALF_WIDTH83_MIN];
-          if (!c2)
-            continue;
           if (c == VOICED_SOUND_MARK)
             {
-              if (c2 < 0xb3 || c2 > 0xce)
+              if (c2 < TO_FULLKATA_VOICED_MIN || c2 > TO_FULL_VOICED_MAX)
                 continue;
-              c2 = to_fullkata_voiced_b3_ce[c2 - 0xb3];
+              c2 = to_fullkata_voiced[c2 - TO_FULLKATA_VOICED_MIN];
               if (!c2)
                 continue;
             }
           else
             {
-              if (c2 < 0xca || c2 > 0xce)
+              if (c2 < TO_FULL_SEMI_VOICED_MIN || c2 > TO_FULL_SEMI_VOICED_MAX)
                 continue;
-              c2 = to_fullkata_semi_voiced_ca_ce[c2 - 0xca];
+              c2 = to_fullkata_semi_voiced[c2 - TO_FULL_SEMI_VOICED_MIN];
             }
         }
       se[1] = PAD;

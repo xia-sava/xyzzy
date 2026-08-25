@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "ed.h"
 
-const char status_area::s_nil[] = " ";
-const char status_area::s_eof[] = " EOF ";
+const WCHAR status_area::s_nil[] = L" ";
+const WCHAR status_area::s_eof[] = L" EOF ";
 
 int
-status_area::char_max_ext (HDC hdc, char c1, char c2)
+status_area::char_max_ext (HDC hdc, WCHAR c1, WCHAR c2)
 {
   int cx = 0;
   for (; c1 <= c2; c1++)
@@ -91,23 +91,23 @@ status_area::update_all ()
 }
 
 int
-status_area::get_extent (const char *s) const
+status_area::get_extent (const WCHAR *s) const
 {
   HDC hdc = GetDC (s_hwnd);
   HGDIOBJ of = SelectObject (hdc, s_hfont);
   SIZE sz;
-  GetTextExtentPoint32 (hdc, s, strlen (s), &sz);
+  GetTextExtentPoint32W (hdc, s, wcslen (s), &sz);
   SelectObject (hdc, of);
   ReleaseDC (s_hwnd, hdc);
   return sz.cx;
 }
 
 int
-status_area::calc_extent (int n, const char *b)
+status_area::calc_extent (int n, const WCHAR *b)
 {
-  if (!strcmp (b, s_lbuf[n]))
+  if (!wcscmp (b, s_lbuf[n]))
     return 0;
-  strcpy (s_lbuf[n], b);
+  wcscpy (s_lbuf[n], b);
   int w = get_extent (b);
   w = max (w, s_min_ext[n]);
   if (w == s_extent[n])
@@ -122,8 +122,8 @@ status_area::position ()
   Window *wp = selected_window ();
   if (!wp)
     return calc_extent (ST_POS, s_nil);
-  char b[32];
-  sprintf (b, " %5d:%d ", wp->w_plinenum, wp->w_column + 1);
+  WCHAR b[32];
+  wsprintfW (b, L" %5d:%d ", wp->w_plinenum, wp->w_column + 1);
   return calc_extent (ST_POS, b);
 }
 
@@ -135,9 +135,9 @@ status_area::char_code ()
     return calc_extent (ST_CODE, s_nil);
   if (wp->w_bufp->eobp (wp->w_point))
     return calc_extent (ST_CODE, s_eof);
-  char b[8];
+  WCHAR b[8];
   Char c = wp->w_point.ch ();
-  sprintf (b, c < 0x100 ? " %02X " : " %04X ", c);
+  wsprintfW (b, c < 0x100 ? L" %02X " : L" %04X ", c);
   return calc_extent (ST_CODE, b);
 }
 
@@ -149,11 +149,8 @@ status_area::char_unicode ()
     return calc_extent (ST_UNICODE, s_nil);
   if (wp->w_bufp->eobp (wp->w_point))
     return calc_extent (ST_UNICODE, s_eof);
-  ucs2_t wc = i2w (wp->w_point.ch ());
-  if (wc == ucs2_t (-1))
-    return calc_extent (ST_UNICODE, s_nil);
-  char b[16];
-  sprintf (b, " U+%04X ", wc);
+  WCHAR b[16];
+  wsprintfW (b, L" U+%04X ", wp->w_point.ch ());
   return calc_extent (ST_UNICODE, b);
 }
 
@@ -162,17 +159,17 @@ status_area::time ()
 {
   SYSTEMTIME st;
   GetLocalTime (&st);
-  char b[32];
+  WCHAR b[32];
 
   if (!s_dow)
-    sprintf (b, " %02d/%02d %02d:%02d ",
-             st.wMonth, st.wDay,
-             st.wHour, st.wMinute);
+    wsprintfW (b, L" %02d/%02d %02d:%02d ",
+               st.wMonth, st.wDay,
+               st.wHour, st.wMinute);
   else
-    sprintf (b, " %02d/%02d(%2.2s) %02d:%02d ",
-             st.wMonth, st.wDay,
-             "日月火水木金土" + st.wDayOfWeek % 7 * 2,
-             st.wHour, st.wMinute);
+    wsprintfW (b, L" %02d/%02d(%1.1s) %02d:%02d ",
+               st.wMonth, st.wDay,
+               L"日月火水木金土" + st.wDayOfWeek % 7,
+               st.wHour, st.wMinute);
   return calc_extent (ST_TIME, b);
 }
 
@@ -206,7 +203,7 @@ status_area::update (int f) const
     {
       int n = s_order[i];
       if (f & (1 << n))
-        SendMessage (s_hwnd, SB_SETTEXT, i + 1, LPARAM (s_lbuf[n]));
+        SendMessageW (s_hwnd, SB_SETTEXT, i + 1, LPARAM (s_lbuf[n]));
     }
 }
 

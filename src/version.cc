@@ -33,9 +33,9 @@
 
 #define TITLEBAR_STRING PROGRAM_NAME " " DISPLAY_VERSION_STRING
 
-char TitleBarString[TITLE_BAR_STRING_SIZE] = TITLEBAR_STRING;
-const char VersionString[] = PROGRAM_VERSION;
-const char DisplayVersionString[] = DISPLAY_VERSION_STRING;
-const char ProgramName[] = PROGRAM_NAME;
+WCHAR TitleBarString[TITLE_BAR_STRING_SIZE] = L"" TITLEBAR_STRING;
+const WCHAR VersionString[] = L"" PROGRAM_VERSION;
+const WCHAR DisplayVersionString[] = L"" DISPLAY_VERSION_STRING;
+const WCHAR ProgramName[] = L"" PROGRAM_NAME;
 const char ProgramNameWithVersion[] = PROGRAM_NAME " version " PROGRAM_VERSION;
 const char ProgramAppUserModelId[] = PROGRAM_APP_USER_MODEL_ID;

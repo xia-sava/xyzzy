@@ -90,12 +90,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\inifile.cc" />
     <ClCompile Include="..\src\xyzzycli.cc" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\xyzzycli.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="..\src\longpath.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\inifile.h" />
     <ClInclude Include="..\src\listen.h" />
     <ClInclude Include="..\src\targetver.h" />
     <ClInclude Include="..\src\xyzzycli.h" />

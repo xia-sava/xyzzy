@@ -18,7 +18,7 @@ extern "C" {
 
 # define URLN_CLICKED 0
 
-# define WC_LISTVIEWEX "SysListViewEx32"
+# define WC_LISTVIEWEX L"SysListViewEx32"
 
 # define LVN_PROCESSKEY (LVN_LAST + 1)
 typedef struct _LV_PROCESSKEY

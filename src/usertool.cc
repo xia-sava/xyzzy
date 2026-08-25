@@ -23,7 +23,7 @@ class user_tool_bar: public tool_bar
   static void check_item (lisp);
   static int set_item (tool_item &, lisp);
 
-  virtual int need_text (TOOLTIPTEXT &);
+  virtual int need_text (TOOLTIPTEXTW &);
   int index_from_id (int) const;
 
 public:
@@ -95,7 +95,7 @@ get_tooltip_text (lisp tt)
 }
 
 int
-user_tool_bar::need_text (TOOLTIPTEXT &ttt)
+user_tool_bar::need_text (TOOLTIPTEXTW &ttt)
 {
   if (ttt.uFlags & TTF_IDISHWND)
     return 0;
@@ -106,7 +106,7 @@ user_tool_bar::need_text (TOOLTIPTEXT &ttt)
   lisp tt = get_tooltip_text (u_item[i].ti_tooltip);
   if (!stringp (tt))
     return 0;
-  w2s (b_ttbuf, b_ttbuf + TTBUFSIZE, tt);
+  w2u (b_ttbuf, b_ttbuf + TTBUFSIZE, tt);
   ttt.lpszText = b_ttbuf;
   ttt.hinst = 0;
   return 1;
@@ -243,7 +243,7 @@ void
 user_tool_bar::create (lisp bitmap, lisp items)
 {
   check_string (bitmap);
-  char bm_path[MAX_PATH + 1];
+  char bm_path[PATH_MAX + 1];
   pathname2cstr (bitmap, bm_path);
 
   u_nitems = 0;

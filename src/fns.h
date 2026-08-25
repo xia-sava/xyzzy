@@ -32,8 +32,9 @@ void map_backsl_to_sl (Char *, int);
 int match_suffixes (const char *, lisp);
 int set_device_dir (const char *, int);
 const char *get_device_dir (int);
-int strict_get_file_data (const char *, WIN32_FIND_DATA &);
-lisp make_file_info (const WIN32_FIND_DATA &);
+struct find_data;
+int strict_get_file_data (const char *, find_data &);
+lisp make_file_info (const find_data &);
 char *root_path_name (char *, const char *);
 
 /* lprint.cc */
@@ -126,8 +127,8 @@ lisp track_popup_menu (lisp, lisp, const POINT *);
 /* dialogs.cc */
 void center_window (HWND);
 void set_window_icon (HWND);
-void init_list_column (HWND, int, const int *, const int *, int, const char *, const char *);
-void save_list_column_width (HWND, int, const char *, const char *);
+void init_list_column (HWND, int, const int *, const int *, int, const WCHAR *, const WCHAR *);
+void save_list_column_width (HWND, int, const WCHAR *, const WCHAR *);
 int lv_find_selected_item (HWND);
 int lv_find_focused_item (HWND);
 
@@ -151,7 +152,7 @@ struct CLIPBOARDTEXT
 };
 
 int make_clipboard_text (CLIPBOARDTEXT &, lisp, int);
-int make_string_from_clipboard_text (lisp, const void *, UINT, int);
+int make_string_from_clipboard_text (lisp, const void *, UINT);
 
 /* popup.cc */
 void erase_popup (int, int);

@@ -22,11 +22,11 @@
 # define M_PI 3.141592653589793
 #endif
 
-const char Application::ToplevelClassName[] = "　";
-const char Application::FrameClassName[] = "  ";
-const char Application::ClientClassName[] = "   ";
-const char Application::ModelineClassName[] = "    ";
-const char FunctionKeyClassName[] = "     ";
+const WCHAR Application::ToplevelClassName[] = L"　";
+const WCHAR Application::FrameClassName[] = L"  ";
+const WCHAR Application::ClientClassName[] = L"   ";
+const WCHAR Application::ModelineClassName[] = L"    ";
+const WCHAR FunctionKeyClassName[] = L"     ";
 
 Application app;
 
@@ -74,8 +74,8 @@ static void
 init_module_dir ()
 {
   char path[PATH_MAX];
-  GetModuleFileName (0, path, sizeof path);
-  char *p = jrindex (path, '\\');
+  WINFS::GetModuleFileName (0, path, sizeof path);
+  char *p = strrchr (path, '\\');
   if (p)
     p[1] = 0;
   xsymbol_value (Qmodule_dir) = make_path (path);
@@ -91,10 +91,10 @@ static void
 init_windows_dir ()
 {
   char path[PATH_MAX];
-  GetWindowsDirectory (path, sizeof path);
+  WINFS::GetWindowsDirectory (path, sizeof path);
   xsymbol_value (Qwindows_dir) = make_path (path);
 
-  GetSystemDirectory (path, sizeof path);
+  WINFS::GetSystemDirectory (path, sizeof path);
   xsymbol_value (Qsystem_dir) = make_path (path);
 }
 
@@ -112,34 +112,45 @@ init_home_dir (const char *path)
   return 1;
 }
 
+/* 設定に入っているパスを、パス名として持ち回る文字列にする */
+static int
+read_conf_path (const WCHAR *section, const WCHAR *name, char *buf, int size)
+{
+  WCHAR b[PATH_MAX];
+  if (!read_conf (section, name, b, numberof (b)))
+    return 0;
+  return WideCharToMultiByte (CP_ACP, 0, b, -1, buf, size, 0, 0) > 0;
+}
+
 static void
 init_home_dir ()
 {
   char path[PATH_MAX];
   static const char xyzzyhome[] = "XYZZYHOME";
-  static const char cfgInit[] = "init";
+  static const WCHAR cfgInit[] = L"init";
 
-  if (read_conf (cfgInit, "homeDir", path, sizeof path)
+  if (read_conf_path (cfgInit, L"homeDir", path, numberof (path))
       && init_home_dir (path))
     return;
 
   for (int i = 0; i <= 5; i += 5)
     {
-      char *e = getenv (xyzzyhome + i);
-      if (e && init_home_dir (e))
+      char e[PATH_MAX];
+      if (WINFS::getenv (xyzzyhome + i, e, sizeof e) && init_home_dir (e))
         return;
     }
 
-  char *drive = getenv ("HOMEDRIVE");
-  char *dir = getenv ("HOMEPATH");
-  if (drive && dir && strlen (drive) + strlen (dir) < sizeof path - 1)
+  char drive[PATH_MAX], dir[PATH_MAX];
+  if (WINFS::getenv ("HOMEDRIVE", drive, sizeof drive)
+      && WINFS::getenv ("HOMEPATH", dir, sizeof dir)
+      && strlen (drive) + strlen (dir) < sizeof path - 1)
     {
       strcpy (stpcpy (path, drive), dir);
       if (init_home_dir (path))
         return;
     }
 
-  if (read_conf (cfgInit, "logDir", path, sizeof path)
+  if (read_conf_path (cfgInit, L"logDir", path, numberof (path))
       && init_home_dir (path))
     return;
 
@@ -170,8 +181,9 @@ init_load_path ()
 static void
 init_user_config_path (const char *config_path)
 {
-  if (!config_path)
-    config_path = getenv ("XYZZYCONFIGPATH");
+  char env[PATH_MAX];
+  if (!config_path && WINFS::getenv ("XYZZYCONFIGPATH", env, sizeof env))
+    config_path = env;
   if (config_path)
     {
       char path[PATH_MAX], *tem;
@@ -187,13 +199,13 @@ init_user_config_path (const char *config_path)
         }
     }
 
-  char *path = (char *)alloca (w2sl (xsymbol_value (Qmodule_dir))
-                               + w2sl (xsymbol_value (Vuser_name))
+  char *path = (char *)alloca (w2u8l (xsymbol_value (Qmodule_dir))
+                               + w2u8l (xsymbol_value (Vuser_name))
                                + 32);
-  char *p = stpcpy (w2s (path, xsymbol_value (Qmodule_dir)), "usr");
+  char *p = stpcpy (w2u8 (path, xsymbol_value (Qmodule_dir)), "usr");
   WINFS::CreateDirectory (path, 0);
   *p++ = '/';
-  p = w2s (p, xsymbol_value (Vuser_name));
+  p = w2u8 (p, xsymbol_value (Vuser_name));
   WINFS::CreateDirectory (path, 0);
   *p++ = '/';
   strcpy (p, sysdep.windows_short_name);
@@ -208,15 +220,16 @@ init_user_config_path (const char *config_path)
 static void
 init_user_inifile_path (const char *ini_file)
 {
-  if (!ini_file)
-    ini_file = getenv ("XYZZYINIFILE");
+  char env[PATH_MAX];
+  if (!ini_file && WINFS::getenv ("XYZZYINIFILE", env, sizeof env))
+    ini_file = env;
   if (ini_file && find_slash (ini_file))
     {
       char path[PATH_MAX], *tem;
       int l = WINFS::GetFullPathName (ini_file, sizeof path, path, &tem);
       if (l && l < sizeof path)
         {
-          HANDLE h = CreateFile (path, GENERIC_READ, 0, 0, OPEN_ALWAYS,
+          HANDLE h = WINFS::CreateFile (path, GENERIC_READ, 0, 0, OPEN_ALWAYS,
                                  FILE_ATTRIBUTE_ARCHIVE, 0);
           if (h != INVALID_HANDLE_VALUE)
             {
@@ -230,9 +243,9 @@ init_user_inifile_path (const char *ini_file)
   if (!ini_file)
     ini_file = "xyzzy.ini";
 
-  char *path = (char *)alloca (w2sl (xsymbol_value (Quser_config_path))
+  char *path = (char *)alloca (w2u8l (xsymbol_value (Quser_config_path))
                                + strlen (ini_file) + 32);
-  strcpy (w2s (path, xsymbol_value (Quser_config_path)), ini_file);
+  strcpy (w2u8 (path, xsymbol_value (Quser_config_path)), ini_file);
   app.ini_file_path = xstrdup (path);
 }
 
@@ -241,7 +254,7 @@ init_dump_path ()
 {
   if (!*app.dump_image)
     {
-      int l = GetModuleFileName (0, app.dump_image, PATH_MAX);
+      int l = WINFS::GetModuleFileName (0, app.dump_image, PATH_MAX);
       char *e = app.dump_image + l;
       if (l > 4 && !_stricmp (e - 4, ".exe"))
         e -= 3;
@@ -508,7 +521,6 @@ init_symbol_value_once ()
   xsymbol_value (Vuse_shell_execute_ex) = Qt;
   xsymbol_value (Vshell_execute_disregards_shift_key) = Qt;
   xsymbol_value (Vregexp_keyword_list) = Qnil;
-  xsymbol_value (Vunicode_to_half_width) = Qt;
   xsymbol_value (Vcolor_page_enable_dir_p) = Qnil;
   xsymbol_value (Vcolor_page_enable_subdir_p) = Qnil;
   xsymbol_value (Vchange_clipboard_hook) = Qnil;
@@ -546,19 +558,41 @@ init_symbol_value ()
   xsymbol_value (Vlast_match_string) = Qnil;
 }
 
+static int wargc;
+static WCHAR **wargv;
+
+/* コマンドラインは UTF-16 で受け取る。CRT の __argv は CP932 へ写した後のもので、
+   写せない文字が失われている */
+static void
+init_command_line_args ()
+{
+  wargv = CommandLineToArgvW (GetCommandLineW (), &wargc);
+  if (!wargv)
+    wargc = 0;
+}
+
+/* 引数を、パスとして持ち回る形の UTF-8 にする */
+static char *
+u8arg (const WCHAR *w)
+{
+  char *b = (char *)xmalloc (u2u8l (w) + 1);
+  u2u8 (b, w);
+  return b;
+}
+
 static void
 init_command_line (int ac)
 {
   lisp p = Qnil;
-  for (int i = __argc - 1; i >= ac; i--)
-    p = xcons (make_string (__argv[i]), p);
+  for (int i = wargc - 1; i >= ac; i--)
+    p = xcons (make_string (wargv[i]), p);
   xsymbol_value (Vsi_command_line_args) = p;
 }
 
 void
 report_out_of_memory ()
 {
-  MessageBox (0, "メモリが不足しています", TitleBarString, MB_OK | MB_ICONHAND);
+  MessageBoxW (0, L"メモリが不足しています", TitleBarString, MB_OK | MB_ICONHAND);
 }
 
 static inline int
@@ -574,27 +608,30 @@ init_lisp_objects ()
   const char *config_path = 0, *ini_file = 0;
   *app.dump_image = 0;
 
+  init_command_line_args ();
+
   int ac;
-  for (ac = 1; ac < __argc - 1; ac += 2)
-    if (!strcmp (__argv[ac], "-image"))
+  for (ac = 1; ac < wargc - 1; ac += 2)
+    if (!wcscmp (wargv[ac], L"-image"))
       {
         char *tem;
-        int l = WINFS::GetFullPathName (__argv[ac + 1], sizeof app.dump_image,
+        int l = WINFS::GetFullPathName (u8arg (wargv[ac + 1]),
+                                        sizeof app.dump_image,
                                         app.dump_image, &tem);
         if (!l || l >= sizeof app.dump_image)
           *app.dump_image = 0;
       }
-    else if (!strcmp (__argv[ac], "-config"))
-      config_path = __argv[ac + 1];
-    else if (!strcmp (__argv[ac], "-ini"))
-      ini_file = __argv[ac + 1];
+    else if (!wcscmp (wargv[ac], L"-config"))
+      config_path = u8arg (wargv[ac + 1]);
+    else if (!wcscmp (wargv[ac], L"-ini"))
+      ini_file = u8arg (wargv[ac + 1]);
     else
       break;
 
   try
     {
       init_dump_path ();
-      if ((ac < __argc || !check_dump_key ())
+      if ((ac < wargc || !check_dump_key ())
           && rdump_xyzzy ())
         {
           combine_syms ();
@@ -650,7 +687,7 @@ Fsi_startup ()
 static int
 register_wndclasses (HINSTANCE hinst)
 {
-  WNDCLASS wc;
+  WNDCLASSW wc;
 
   wc.style = 0;
   wc.lpfnWndProc = toplevel_wndproc;
@@ -662,7 +699,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ToplevelClassName;
-  app.atom_toplev = RegisterClass (&wc);
+  app.atom_toplev = RegisterClassW (&wc);
   if (!app.atom_toplev)
     return 0;
 
@@ -676,7 +713,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::FrameClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = 0;
@@ -689,7 +726,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ClientClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = 0;
@@ -702,7 +739,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = HBRUSH (COLOR_BTNFACE + 1);
   wc.lpszMenuName = 0;
   wc.lpszClassName = Application::ModelineClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -715,7 +752,7 @@ register_wndclasses (HINSTANCE hinst)
   wc.hbrBackground = HBRUSH (COLOR_BTNFACE + 1);
   wc.lpszMenuName = 0;
   wc.lpszClassName = FunctionKeyClassName;
-  if (!RegisterClass (&wc))
+  if (!RegisterClassW (&wc))
     return 0;
 
   stdctl_hook_init (hinst);
@@ -790,7 +827,7 @@ static int
 init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 {
   SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
-  SetDllDirectory("");
+  SetDllDirectoryW (L"");
   app.toplev = 0;
 
   init_ucs2_table ();
@@ -811,7 +848,7 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
     }
 
   if (*sysdep.host_name)
-    strcpy (stpcpy (TitleBarString + strlen (TitleBarString), "@"),
+    wcscpy (stpcpy (TitleBarString + wcslen (TitleBarString), L"@"),
             sysdep.host_name);
 
   if (!init_lisp_objects ())
@@ -845,10 +882,10 @@ init_app (HINSTANCE hinst, int passed_cmdshow, int &ole_initialized)
 
   ole_initialized = SUCCEEDED (OleInitialize (0));
 
-  app.toplev = CreateWindow (Application::ToplevelClassName, TitleBarString,
-                             WS_OVERLAPPEDWINDOW,
-                             point.x, point.y, size.cx, size.cy,
-                             HWND_DESKTOP, 0, hinst, 0);
+  app.toplev = CreateWindowW (Application::ToplevelClassName, TitleBarString,
+                              WS_OVERLAPPEDWINDOW,
+                              point.x, point.y, size.cx, size.cy,
+                              HWND_DESKTOP, 0, hinst, 0);
   if (!app.toplev)
     return 0;
 

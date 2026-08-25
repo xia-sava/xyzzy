@@ -12,7 +12,7 @@ class user_tab_bar: public tab_bar
 
   enum {ITEM_NAME_MAX = 128};
 
-  virtual int need_text (TOOLTIPTEXT &);
+  virtual int need_text (TOOLTIPTEXTW &);
   virtual void draw_item (const draw_item_struct &);
   virtual int notify (NMHDR *, LRESULT &);
   lisp nth (int i) const {return lisp (tab_bar::nth (i));}
@@ -134,7 +134,7 @@ user_tab_bar::notify (NMHDR *nm, LRESULT &result)
 }
 
 int
-user_tab_bar::need_text (TOOLTIPTEXT &ttt)
+user_tab_bar::need_text (TOOLTIPTEXTW &ttt)
 {
   if (ttt.uFlags & TTF_IDISHWND)
     return 0;
@@ -146,7 +146,7 @@ user_tab_bar::need_text (TOOLTIPTEXT &ttt)
   lisp tt = get_tooltip_text (item_tooltip (item));
   if (!stringp (tt))
     return 0;
-  w2s (b_ttbuf, b_ttbuf + TTBUFSIZE, tt);
+  w2u (b_ttbuf, b_ttbuf + TTBUFSIZE, tt);
   ttt.lpszText = b_ttbuf;
   ttt.hinst = 0;
   return 1;
@@ -156,8 +156,8 @@ void
 user_tab_bar::draw_item (const draw_item_struct &dis)
 {
   lisp name = item_name ((lisp)dis.data);
-  char buf[ITEM_NAME_MAX];
-  int l = w2s (buf, buf + sizeof buf, name) - buf;
+  WCHAR buf[ITEM_NAME_MAX];
+  int l = w2u (buf, buf + numberof (buf), name) - buf;
   if (dis.state & ODS_SELECTED)
     tab_bar::draw_item (dis, buf, l,
                         get_misc_color (MC_TAB_SEL_FG),
@@ -213,10 +213,10 @@ user_tab_bar::add_item (lisp item, lisp name, lisp tooltip, lisp menu,
       break;
     }
 
-  char buf[ITEM_NAME_MAX];
-  w2s (buf, buf + sizeof buf, name);
+  WCHAR buf[ITEM_NAME_MAX];
+  w2u (buf, buf + numberof (buf), name);
 
-  TC_ITEM ti;
+  TC_ITEMW ti;
   ti.mask = TCIF_TEXT | TCIF_PARAM;
   ti.pszText = buf;
   ti.lParam = LPARAM (p);
@@ -238,10 +238,10 @@ user_tab_bar::modify_item (lisp item, lisp name, lisp tooltip, lisp menu)
     {
       check_string (name);
 
-      char buf[ITEM_NAME_MAX];
-      w2s (buf, buf + sizeof buf, name);
+      WCHAR buf[ITEM_NAME_MAX];
+      w2u (buf, buf + numberof (buf), name);
 
-      TC_ITEM ti;
+      TC_ITEMW ti;
       ti.mask = TCIF_TEXT;
       ti.pszText = buf;
       if (!set_item (i, ti))

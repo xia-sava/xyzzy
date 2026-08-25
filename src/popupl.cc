@@ -2,7 +2,7 @@
 #include "ed.h"
 #include "monitor.h"
 
-static const char csPopupList[] = "PopupList";
+static const WCHAR csPopupList[] = L"PopupList";
 static WNDPROC org_wndproc;
 static ATOM popup_list_atom;
 static HWND hwnd_popup;
@@ -29,16 +29,16 @@ substitute_key (HWND hwnd, WPARAM &wparam, LPARAM lparam)
 static int
 call_callback (HWND hwnd)
 {
-  int n = CallWindowProc (org_wndproc, hwnd, LB_GETCURSEL, 0, 0);
+  int n = CallWindowProcW (org_wndproc, hwnd, LB_GETCURSEL, 0, 0);
   if (n < 0)
     return 0;
 
-  int l = CallWindowProc (org_wndproc, hwnd, LB_GETTEXTLEN, n, 0);
+  int l = CallWindowProcW (org_wndproc, hwnd, LB_GETTEXTLEN, n, 0);
   if (l < 0)
     return 0;
 
-  char *buf = (char *)alloca (l * 2 + 1);
-  if (CallWindowProc (org_wndproc, hwnd, LB_GETTEXT, n, LPARAM (buf)) < 0)
+  WCHAR *buf = (WCHAR *)alloca (sizeof (WCHAR) * (l + 1));
+  if (CallWindowProcW (org_wndproc, hwnd, LB_GETTEXT, n, LPARAM (buf)) < 0)
     return 0;
 
   DestroyWindow (hwnd);
@@ -112,22 +112,22 @@ wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     default:
       break;
     }
-  return CallWindowProc (org_wndproc, hwnd, msg, wparam, lparam);
+  return CallWindowProcW (org_wndproc, hwnd, msg, wparam, lparam);
 }
 
 static ATOM
 define_wndclass ()
 {
-  WNDCLASS wc;
+  WNDCLASSW wc;
 
-  if (!GetClassInfo (0, "ListBox", &wc))
+  if (!GetClassInfoW (0, L"ListBox", &wc))
     return 0;
 
   org_wndproc = wc.lpfnWndProc;
   wc.lpfnWndProc = wndproc;
   wc.hInstance = app.hinst;
   wc.lpszClassName = csPopupList;
-  return RegisterClass (&wc);
+  return RegisterClassW (&wc);
 }
 
 lisp
@@ -155,7 +155,7 @@ Fpopup_list (lisp list, lisp callback, lisp lpoint)
   if (!popup_list_atom)
     popup_list_atom = define_wndclass ();
 
-  hwnd_popup = CreateWindowEx (WS_EX_DLGMODALFRAME, csPopupList, "",
+  hwnd_popup = CreateWindowExW (WS_EX_DLGMODALFRAME, csPopupList, L"",
                                WS_POPUP | WS_VSCROLL, 0, 0, 0, 0,
                                app.toplev, 0, app.hinst, 0);
 
@@ -171,11 +171,11 @@ Fpopup_list (lisp list, lisp callback, lisp lpoint)
   for (lisp p = list; consp (p); p = xcdr (p))
     {
       lisp s = xcar (p);
-      char b[1024];
-      int l = w2s (b, b + sizeof b, xstring_contents (s), xstring_length (s)) - b;
-      SendMessage (hwnd_popup, LB_ADDSTRING, 0, LPARAM (b));
+      WCHAR b[1024];
+      int l = w2u (b, b + numberof (b), xstring_contents (s), xstring_length (s)) - b;
+      SendMessageW (hwnd_popup, LB_ADDSTRING, 0, LPARAM (b));
       SIZE ext;
-      GetTextExtentPoint32 (hdc, b, l, &ext);
+      GetTextExtentPoint32W (hdc, b, l, &ext);
       sz.cx = max (sz.cx, ext.cx);
       sz.cy += ext.cy;
     }

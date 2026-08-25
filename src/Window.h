@@ -261,11 +261,11 @@ public:
   virtual void update_paint(HDC hdc) = 0;
   virtual bool need_repaint_all() = 0;
 
-  char* get_posp() { return posp; }
-  void set_posp(char* p) { posp = p; }
+  WCHAR* get_posp() { return posp; }
+  void set_posp(WCHAR* p) { posp = p; }
 
 private:
-  char* posp;
+  WCHAR* posp;
 };
 
 class mode_line_percent_painter: public mode_line_painter
@@ -669,6 +669,7 @@ struct Window
                                  const XCOLORREF *, const XCOLORREF *,
                                  bool change_color_p = true);
   void invalidate_glyphs ();
+  static void invalidate_glyphs (const Buffer *);
 
   void discard_invalid_region (const PAINTSTRUCT &, RECT &);
 

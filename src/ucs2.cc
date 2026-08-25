@@ -256,8 +256,6 @@ make_wc2cp932_table ()
   for (int i = 0xe000; i <= 0xfcff; i++)
     wc2cp932_table[i2w (i)] = i;
   wc2cp932_table[0xffff] = CHAR_INVALID;
-  for (int i = CCS_UTF16_SURROGATE_HIGH_MIN; i <= CCS_UTF16_SURROGATE_LOW_MAX; i++)
-    wc2cp932_table[i] = i;
 
   COPY_DIFF_TABLE (wc2cp932_table,
                    "wc2cp932", wc2cp932_diff, numberof (wc2cp932_diff),
@@ -496,11 +494,6 @@ init_charset_category ()
   SET_CCS_RANGE (CCS_GB2312_MIN, CCS_GB2312_MAX, ccs_gb2312);
   SET_CCS_RANGE (CCS_BIG5_MIN, CCS_BIG5_MAX, ccs_big5);
 
-  code_charset_table[CCS_UTF16_UNDEF_CHAR_HIGH >> 7] = ccs_utf16_undef_char_high;
-  code_charset_table[(CCS_UTF16_UNDEF_CHAR_HIGH >> 7) + 1] = ccs_utf16_undef_char_high;
-  code_charset_table[CCS_UTF16_UNDEF_CHAR_LOW >> 7] = ccs_utf16_undef_char_low;
-  code_charset_table[(CCS_UTF16_UNDEF_CHAR_LOW >> 7) + 1] = ccs_utf16_undef_char_low;
-
   SET_CCS_RANGE (CCS_UTF16_SURROGATE_HIGH_MIN, CCS_UTF16_SURROGATE_HIGH_MAX,
                  ccs_utf16_surrogate_high);
   SET_CCS_RANGE (CCS_UTF16_SURROGATE_LOW_MIN, CCS_UTF16_SURROGATE_LOW_MAX,
@@ -519,9 +512,36 @@ init_charset_category ()
 #endif
 }
 
+// 桁数の表は文字集合ごとの内部コードで並んでいる。バッファが Unicode を持つように
+// なったので、写し先の符号位置で引けるように組み替える
+// 同じ字が一桁の文字集合と二桁の文字集合の両方にあるとき（ラテン文字は
+// ISO 8859 にも JIS X 0212 にもある）は、一桁として扱う
+static void
+init_char_width ()
+{
+  u_char legacy[CHAR_WIDTH_TABLE_SIZE];
+  memcpy (legacy, char_width_table, sizeof legacy);
+  memset (char_width_table, 0, sizeof char_width_table);
+  for (int cc = 0; cc < CHAR_LIMIT; cc++)
+    if (legacy[cc >> 3] & (1 << (cc & 7)))
+      {
+        ucs2_t wc = i2w (Char (cc));
+        if (wc != CHAR_INVALID)
+          char_width_table[wc >> 3] |= 1 << (wc & 7);
+      }
+  for (int cc = 0; cc < CHAR_LIMIT; cc++)
+    if (!(legacy[cc >> 3] & (1 << (cc & 7))))
+      {
+        ucs2_t wc = i2w (Char (cc));
+        if (wc != CHAR_INVALID)
+          char_width_table[wc >> 3] &= ~(1 << (wc & 7));
+      }
+}
+
 void
 init_ucs2_table ()
 {
+  init_char_width ();
   memcpy (char_columns_table, char_width_table, sizeof char_width_table);
 
   make_wc2cp932_table ();
@@ -579,37 +599,3 @@ init_ucs2_table ()
 #endif
 }
 
-static wc2int_hash *to_half_width_hashtabs[] =
-{
-  &wc2int_iso8859_1_hash,
-  &wc2int_iso8859_2_hash,
-  &wc2int_iso8859_3_hash,
-  &wc2int_iso8859_4_hash,
-  &wc2int_iso8859_5_hash,
-  &wc2int_iso8859_7_hash,
-  &wc2int_iso8859_9_hash,
-  &wc2int_iso8859_10_hash,
-  &wc2int_iso8859_13_hash,
-  &wc2int_windows_latin1_hash,
-  &wc2int_windows_latin2_hash,
-  &wc2int_windows_cyrillic_hash,
-  &wc2int_windows_greek_hash,
-  &wc2int_windows_turkish_hash,
-  &wc2int_windows_baltic_hash,
-  &wc2int_koi8r_hash,
-  &wc2int_koi8u_hash,
-};
-
-Char
-w2i_half_width (ucs2_t wc)
-{
-  Char cc = w2i (wc);
-  if (cc != CHAR_INVALID && charset_width (cc) != 1)
-    for (int i = 0; i < numberof (to_half_width_hashtabs); i++)
-      {
-        Char t = lookup_wc2int_hash (*to_half_width_hashtabs[i], wc);
-        if (t != CHAR_INVALID)
-          return t;
-      }
-  return cc;
-}

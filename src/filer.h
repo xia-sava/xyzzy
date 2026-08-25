@@ -25,14 +25,14 @@ struct filer_data
       ICON_DOTDOT = 3
     };
   volatile int icon_index;
-  char name[MAX_PATH];
+  char name[NAME_MAX];
 
   void *operator new (size_t, FilerView *);
 #if _MSC_VER >= 1100
   void operator delete (void *, FilerView *) {}
 #endif
 
-  filer_data (const WIN32_FIND_DATA &);
+  filer_data (const find_data &);
   filer_data (const FILETIME &);
   filer_data () {}
 };
@@ -136,7 +136,8 @@ protected:
   int fv_marks_changed;
 
   int fv_retrieve_icon;
-  char fv_buf[64];
+  WCHAR fv_buf[64];
+  WCHAR fv_namebuf[MAX_PATH];
 
 #ifdef DnD_TEST
   filer_drop_target dropt;
@@ -170,7 +171,7 @@ public:
 
   void display_disk_info (HWND, int) const;
 
-  void dispinfo (LV_ITEM *);
+  void dispinfo (LV_ITEMW *);
 
 protected:
   int find_focused (LV_ITEM *);
@@ -247,7 +248,7 @@ public:
 class ViewerWindow: public Window
 {
   static int vw_initialized;
-  static const char vw_classname[];
+  static const WCHAR vw_classname[];
 public:
   ViewerWindow ();
   ~ViewerWindow ();
@@ -388,7 +389,7 @@ filer_data::operator new (size_t, FilerView *fv)
 }
 
 inline
-filer_data::filer_data (const WIN32_FIND_DATA &fd)
+filer_data::filer_data (const find_data &fd)
 {
   attr = fd.dwFileAttributes;
   time = fd.ftLastWriteTime;

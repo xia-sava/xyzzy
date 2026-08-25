@@ -151,9 +151,9 @@ get_section_name (void *base, void *p, char *buf, int size)
 int
 get_module_base_name (HMODULE h, LPSTR buf, DWORD size)
 {
-  if (!GetModuleFileName (h, buf, size))
+  if (!WINFS::GetModuleFileName (h, buf, size))
     return 0;
-  char *p = jrindex (buf, '\\');
+  char *p = strrchr (buf, '\\');
   if (p)
     strcpy (buf, p + 1);
   int l = strlen (buf);
@@ -228,7 +228,7 @@ print_modules (FILE *fp, DWORD addr, MEMORY_BASIC_INFORMATION *bi)
   char path[MAX_PATH + IMAGE_SIZEOF_SHORT_NAME + 2];
   if (!get_module_base_name (HMODULE (bi->AllocationBase), path, MAX_PATH))
     return;
-  char *p = path + lstrlen (path);
+  char *p = path + lstrlenA (path);
   if (get_section_name (bi->AllocationBase, bi->BaseAddress, p + 1, path + sizeof path - p - 1))
     *p = '!';
   fprintf (fp, "%08x - %08x: %s\n", addr, addr + bi->RegionSize, path);
@@ -352,14 +352,15 @@ print_object (FILE *fp, lisp object, int f)
                 {
                   const Char *p = xstring_contents (object);
                   const Char *const pe = p + xstring_length (object);
-                  if (IsBadStringPtr ((char *)p, sizeof *p * xstring_length (object)))
+                  if (IsBadStringPtrA ((char *)p, sizeof *p * xstring_length (object)))
                     fprintf (fp, "(Invalid String)");
                   else
                     for (; p < pe; p++)
                       {
-                        if (DBCP (*p))
-                          putc (*p >> 8, fp);
-                        putc (*p, fp);
+                        Char c = w2s_char (*p);
+                        if (DBCP (c))
+                          putc (c >> 8, fp);
+                        putc (c, fp);
                       }
                 }
               else
@@ -401,7 +402,7 @@ cleanup_exception ()
 {
   const char* desc = get_exception_description (Win32Exception::code);
   char path[PATH_MAX];
-  GetModuleFileName (0, path, PATH_MAX);
+  WINFS::GetModuleFileName (0, path, PATH_MAX);
   int l = strlen (path);
   if (l >= 4 && !_stricmp (path + l - 4, ".exe"))
     strcpy (path + l - 4, ".BUG");
@@ -412,20 +413,20 @@ cleanup_exception ()
   if (!find_module_name (Win32Exception::r.ExceptionAddress, module))
     *module = 0;
 
-  FILE *fp = fopen (path, "w");
-  if (!fp && GetTempPath (sizeof path, path))
+  FILE *fp = WINFS::fopen (path, "w");
+  if (!fp && WINFS::GetTempPath (sizeof path, path))
     {
       char *p = find_last_slash (path);
       if (!p || p[1])
         strcat (path, "\\");
       strcat (path, "xyzzy.BUG");
-      fp = fopen (path, "w");
+      fp = WINFS::fopen (path, "w");
     }
   if (fp)
     {
-      fprintf (fp, "%s %s Crash log:\n\n", ProgramName, VersionString);
+      fprintf (fp, "%ls %ls Crash log:\n\n", ProgramName, VersionString);
 
-      fprintf (fp, "Windows %s %d.%02d.%d %s\n\n",
+      fprintf (fp, "Windows %s %d.%02d.%d %ls\n\n",
                sysdep.windows_name,
                sysdep.os_ver.dwMajorVersion,
                sysdep.os_ver.dwMinorVersion,
@@ -479,7 +480,9 @@ cleanup_exception ()
           "運がよければ、書きかけのファイルが救えるかもしれません。\n"
           "試しに自動セーブしてみますか?");
 
-  if (MsgBox (get_active_window (), msg, TitleBarString,
+  WCHAR wmsg[numberof (msg)];
+  s2u (wmsg, msg);
+  if (MsgBox (get_active_window (), wmsg, TitleBarString,
               MB_ICONHAND | MB_YESNO, 1) != IDYES)
     return;
 

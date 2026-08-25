@@ -97,6 +97,9 @@
     <ResourceCompile Include="..\src\xyzzyenv.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="..\src\longpath.manifest" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\src\targetver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -7,7 +7,7 @@ static void
 print (const ABC *abc, int n)
 {
   printf ("#define LUCIDA_BASE_HEIGHT %d\n", HEIGHT);
-  printf ("#define LUCIDA_FACE_NAME \"%s\"\n\n", FACE);
+  printf ("#define LUCIDA_FACE_NAME L\"%s\"\n\n", FACE);
   printf ("#define LUCIDA_SPACING 6\n");
   printf ("struct lucida_spacing {char a; u_char b;};\n");
   printf ("#define LUCIDA_OFFSET(C) \\\n"

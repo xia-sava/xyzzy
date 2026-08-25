@@ -103,7 +103,7 @@ Flookup_dictionary (lisp ldir, lisp ldic, lisp lidx, lisp lword)
   if (pe != path && pe[-1] != '/')
     *pe++ = '/';
 
-  w2s (pe, ldic);
+  w2u8 (pe, ldic);
   mapf dic;
   if (!dic.open (path, FILE_FLAG_RANDOM_ACCESS))
     file_error (GetLastError (), ldic);
@@ -113,7 +113,7 @@ Flookup_dictionary (lisp ldir, lisp ldic, lisp lidx, lisp lword)
       || dich->dh_size != long (dic.size ()))
     FEprogram_error (Einvalid_dictionary, ldic);
 
-  w2s (pe, lidx);
+  w2u8 (pe, lidx);
   mapf idx;
   if (!idx.open (path, FILE_FLAG_RANDOM_ACCESS))
     file_error (GetLastError (), lidx);

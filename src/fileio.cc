@@ -164,7 +164,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, xread_stream &sin)
   int nchunks = 1;
   long total_bytes = sin.input_stream ().rest_chars ();
   DWORD last_tick = GetTickCount () + 1000;
-  char msg[64];
+  WCHAR msg[64];
 
   *msg = 0;
   Fbegin_wait_cursor ();
@@ -183,9 +183,9 @@ Buffer::read_file_contents (ReadFileContext &rfc, xread_stream &sin)
       if (int (t - last_tick) >= 300)
         {
           last_tick = t;
-          sprintf (msg, "Reading %d/%d bytes...",
-                   total_bytes - sin.input_stream ().rest_chars (),
-                   total_bytes);
+          wsprintfW (msg, L"Reading %d/%d bytes...",
+                     total_bytes - sin.input_stream ().rest_chars (),
+                     total_bytes);
           app.status_window.text (msg);
         }
     }
@@ -279,7 +279,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, const char *filename,
 
   xinput_strstream str (bb, be - bb);
 
-  WIN32_FIND_DATA fd;
+  find_data fd;
   if (WINFS::get_file_data (filename, fd))
     rfc.r_modtime = fd.ftLastWriteTime;
   else if (!GetFileTime (mf, 0, 0, &rfc.r_modtime))
@@ -472,17 +472,17 @@ same_file_p (const char *path1, const char *path2)
 static int
 fatfs_basename (char *name)
 {
-  char *dot = jindex (name, '.');
+  char *dot = strchr (name, '.');
   if (!dot)
     {
       if (strlen (name) > 8)
-        name[check_kanji2 (name, 8) ? 7 : 8] = 0;
+        name[u8back (name, 8)] = 0;
       return 0;
     }
   else
     {
       if (dot - name > 8)
-        strcpy (name + (check_kanji2 (name, 8) ? 7 : 8), dot);
+        strcpy (name + u8back (name, 8), dot);
       return 1;
     }
 }
@@ -490,20 +490,13 @@ fatfs_basename (char *name)
 static void
 fatfs_append_suffix (char *name, int c)
 {
-  char *dot = jindex (name, '.');
+  char *dot = strchr (name, '.');
   if (!dot)
     return;
   dot++;
   int l = strlen (dot);
   if (l >= 3)
-    {
-      if (SJISP (*(u_char *)dot))
-        l = 2;
-      else if (SJISP (((u_char *)dot) [1]))
-        l = 1;
-      else
-        l = 2;
-    }
+    l = u8back (dot, 2);
   dot[l] = c;
   dot[l + 1] = 0;
 }
@@ -615,8 +608,8 @@ Buffer::make_auto_save_file_name (char *name)
 {
   if (!stringp (lfile_name))
     {
-      GetModuleFileName (0, name, PATH_MAX);
-      char *p = jrindex (name, '\\');
+      WINFS::GetModuleFileName (0, name, PATH_MAX);
+      char *p = strrchr (name, '\\');
       if (!p)
         return 0;
       p = stpcpy (p + 1, "#unnamed.");
@@ -723,7 +716,7 @@ Buffer::make_backup_file_name (char *backup, const char *xoriginal)
     {
       if (!longname)
         {
-          for (char *p = jindex (name, '.'); p; p = jindex (p, '.'))
+          for (char *p = strchr (name, '.'); p; p = strchr (p, '.'))
             *p++ = '~';
           fatfs_basename (name);
         }
@@ -737,7 +730,7 @@ Buffer::make_backup_file_name (char *backup, const char *xoriginal)
       u_char bitmap[MAXVERSIONS];
       bzero (bitmap, sizeof bitmap);
 
-      WIN32_FIND_DATA fd;
+      find_data fd;
       char tem[2];
       tem[0] = name[0];
       tem[1] = name[1];
@@ -1051,10 +1044,10 @@ make_backup_file (const char *filename, char *backup, int &result)
       if (name && name[1] != '.')
         {
           name++;
-          char *period = jindex (name, '.');
+          char *period = strchr (name, '.');
           if (!period
               || (period - name <= 8
-                  && !jindex (period + 1, '.')
+                  && !strchr (period + 1, '.')
                   && strlen (period) > 4))
             {
               char tem[PATH_MAX + 1];
@@ -1062,7 +1055,7 @@ make_backup_file (const char *filename, char *backup, int &result)
                 period = name + strlen (name);
               int l = period - backup;
               if (period - name >= 8)
-                l = name - backup + (check_kanji2 (name, 7) ? 6 : 7);
+                l = name - backup + u8back (name, 7);
               memcpy (tem, backup, l);
               memset (tem + l, '~', 7);
               l += 7;
@@ -1178,7 +1171,7 @@ Buffer::save_buffer (lisp encoding, lisp eol)
   lisp by_copying = symbol_value (Vbackup_by_copying, this);
   if (precious_flag != Qnil && by_copying == Kremote)
     {
-      switch (GetDriveType (root_path_name (tmpname, filename)))
+      switch (WINFS::GetDriveType (root_path_name (tmpname, filename)))
         {
         case DRIVE_REMOVABLE:
         case DRIVE_FIXED:
@@ -1224,7 +1217,7 @@ Buffer::save_buffer (lisp encoding, lisp eol)
             make_temp_file (backup, filename);
         }
 
-      if (*backup && !CopyFile (filename, backup, 0))
+      if (*backup && !WINFS::CopyFile (filename, backup, 0))
         {
           int e = GetLastError ();
           WINFS::DeleteFile (backup);

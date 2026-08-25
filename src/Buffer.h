@@ -34,9 +34,9 @@ enum wcolor_index
 
 struct wcolor_index_name
 {
-  const char *name;
+  const WCHAR *name;
   COLORREF rgb;
-  const char *display_name;
+  const WCHAR *display_name;
 };
 
 extern const wcolor_index_name wcolor_index_names[];
@@ -456,6 +456,10 @@ struct Buffer
   lisp lchar_encoding;
 # define Buffer_gc_end lchar_encoding
 
+  // 文字の言語。漢字を統合した符号位置から字形を選ぶ手掛かりになる。
+  // ENCODING_LANG_NIL は「符号が表す言語に従う」を意味する
+  int b_char_language;
+
   lisp lmarkers; // XXX
 
   u_char b_minibufferp;
@@ -656,6 +660,7 @@ struct Buffer
   void goto_eol (Point &) const;
   int forward_line (Point &, long) const;
   int forward_char (Point &, long) const;
+  void skip_surrogate_low (Point &, int) const;
   long count_lines ();
   int bolp (const Point &) const;
   int eolp (const Point &) const;
@@ -688,8 +693,11 @@ struct Buffer
   point_t coerce_to_restricted_point (lisp) const;
   static Buffer *coerce_to_buffer (lisp);
   char *buffer_name (char *, char *) const;
+  WCHAR *buffer_name (WCHAR *, WCHAR *) const;
   char *quoted_buffer_name (char *, char *, int, int) const;
   void modify_mode_line () const;
+  int char_language () const;
+  void change_char_language (int);
   void modify_buffer_bar ()
     {
       b_buffer_bar_modified |= BUFFER_BAR_MODIFIED;
@@ -766,7 +774,7 @@ struct Buffer
 
   void refresh_title_bar () const;
   void set_frame_title (int);
-  char *store_title (lisp, char *, char *) const;
+  WCHAR *store_title (lisp, WCHAR *, WCHAR *) const;
 
   void change_colors (const XCOLORREF *);
 

@@ -301,11 +301,11 @@ hash_method::hmac (lisp lkey, lisp input, lisp keys)
 {
   char *key;
   check_string (lkey);
-  int key_len = w2sl (lkey);
+  int key_len = w2bl (lkey);
   if (key_len <= block_size ())
     {
       key = (char *)alloca (key_len + 1);
-      w2s (key, xstring_contents (lkey), xstring_length (lkey));
+      w2b (key, xstring_contents (lkey), xstring_length (lkey));
     }
   else
     {

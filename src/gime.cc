@@ -16,7 +16,7 @@
 GlobalIME::GlobalIME ()
      : gi_app (0), gi_pump (0)
 {
-  ImmGetPropertyProc = (IMMGETPROPERTYPROC)GetProcAddress (GetModuleHandle ("imm32.dll"),
+  ImmGetPropertyProc = (IMMGETPROPERTYPROC)GetProcAddress (GetModuleHandleW (L"imm32.dll"),
                                                            "ImmGetProperty");
 }
 
@@ -81,14 +81,14 @@ GlobalIME::enable (ATOM *atoms, int natoms)
 }
 
 LRESULT
-GlobalIME::DefWindowProc (HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+GlobalIME::DefWindowProcW (HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
 #ifdef HAVE_DIMM_H
   LRESULT lr;
   if (gi_app && gi_app->OnDefWindowProc (hwnd, msg, wp, lp, &lr) == S_OK)
     return lr;
 #endif /* HAVE_DIMM_H */
-  return ::DefWindowProc (hwnd, msg, wp, lp);
+  return ::DefWindowProcW (hwnd, msg, wp, lp);
 }
 
 BOOL
@@ -133,17 +133,17 @@ GlobalIME::ImmSetCompositionWindow (HIMC himc, COMPOSITIONFORM *cf)
 }
 
 BOOL
-GlobalIME::ImmSetCompositionFont (HIMC himc, LOGFONT *lf)
+GlobalIME::ImmSetCompositionFontW (HIMC himc, LOGFONTW *lf)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->SetCompositionFontA (himc, lf) == S_OK;
+    return gi_app->SetCompositionFontW (himc, lf) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmSetCompositionFont (himc, lf);
+  return ::ImmSetCompositionFontW (himc, lf);
 }
 
 LONG
-GlobalIME::ImmGetCompositionString (HIMC himc, DWORD index, void *buf, DWORD bufl)
+GlobalIME::ImmGetCompositionStringA (HIMC himc, DWORD index, void *buf, DWORD bufl)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
@@ -152,7 +152,7 @@ GlobalIME::ImmGetCompositionString (HIMC himc, DWORD index, void *buf, DWORD buf
       return gi_app->GetCompositionStringA (himc, index, bufl, &len, buf) == S_OK ? len : 0;
     }
 #endif /* HAVE_DIMM_H */
-  return ::ImmGetCompositionString (himc, index, buf, bufl);
+  return ::ImmGetCompositionStringA (himc, index, buf, bufl);
 }
 
 LONG
@@ -189,25 +189,25 @@ GlobalIME::ImmSetOpenStatus (HIMC himc, BOOL f)
 }
 
 BOOL
-GlobalIME::ImmSetCompositionString (HIMC himc, DWORD index, void *comp,
-                                    DWORD compl, void *read, DWORD readl)
+GlobalIME::ImmSetCompositionStringW (HIMC himc, DWORD index, void *comp,
+                                     DWORD compl, void *read, DWORD readl)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->SetCompositionStringA (himc, index, comp,
+    return gi_app->SetCompositionStringW (himc, index, comp,
                                           compl, read, readl) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmSetCompositionString (himc, index, comp, compl, read, readl);
+  return ::ImmSetCompositionStringW (himc, index, comp, compl, read, readl);
 }
 
 BOOL
-GlobalIME::ImmConfigureIME (HKL hkl, HWND hwnd, DWORD mode, REGISTERWORD *data)
+GlobalIME::ImmConfigureIMEW (HKL hkl, HWND hwnd, DWORD mode, REGISTERWORDW *data)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
-    return gi_app->ConfigureIMEA (hkl, hwnd, mode, data) == S_OK;
+    return gi_app->ConfigureIMEW (hkl, hwnd, mode, data) == S_OK;
 #endif /* HAVE_DIMM_H */
-  return ::ImmConfigureIME (hkl, hwnd, mode, data);
+  return ::ImmConfigureIMEW (hkl, hwnd, mode, data);
 }
 
 UINT
@@ -224,16 +224,16 @@ GlobalIME::ImmGetVirtualKey (HWND hwnd)
 }
 
 UINT
-GlobalIME::ImmGetDescription (HKL hkl, LPTSTR buf, UINT size)
+GlobalIME::ImmGetDescriptionW (HKL hkl, LPWSTR buf, UINT size)
 {
 #ifdef HAVE_DIMM_H
   if (gi_app)
     {
       UINT n;
-      return gi_app->GetDescriptionA (hkl, size, buf, &n) == S_OK ? n : 0;
+      return gi_app->GetDescriptionW (hkl, size, buf, &n) == S_OK ? n : 0;
     }
 #endif /* HAVE_DIMM_H */
-  return ::ImmGetDescription (hkl, buf, size);
+  return ::ImmGetDescriptionW (hkl, buf, size);
 }
 
 DWORD

@@ -12,7 +12,7 @@
 #  include <stdio.h>
 # endif
 # define alloca _alloca
-# define jrindex(a, b) (char *)_mbsrchr ((const u_char *)(a), (b))
+# define jrindex(a, b) strrchr ((a), (b))
 
 typedef unsigned char u_char;
 
@@ -131,7 +131,7 @@ ArchiverP::match_suffix (const char *path, int l,
 static LRESULT CALLBACK
 NotifyWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  static const UINT extract = RegisterWindowMessage (WM_ARCEXTRACT);
+  static const UINT extract = RegisterWindowMessageA (WM_ARCEXTRACT);
   if (msg == extract)
     {
       EXTRACTINGINFO *i = (EXTRACTINGINFO *)lparam;
@@ -174,26 +174,27 @@ NotifyWndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         }
       return 0;
     }
-  return DefWindowProc (hwnd, msg, wparam, lparam);
+  return DefWindowProcA (hwnd, msg, wparam, lparam);
 }
 
 static const char NotifyClass[] = "ArcNotify";
 
+/* 知らせを受け取る相手が ANSI の DLL なので、この窓は ANSI のまま保つ */
 int
 register_wndclass ()
 {
-  WNDCLASS wc;
+  WNDCLASSA wc;
   wc.style = 0;
   wc.lpfnWndProc = NotifyWndProc;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
-  wc.hInstance = GetModuleHandle (0);
+  wc.hInstance = GetModuleHandleW (0);
   wc.hIcon = 0;
   wc.hCursor = 0;
   wc.hbrBackground = 0;
   wc.lpszMenuName = 0;
   wc.lpszClassName = NotifyClass;
-  return RegisterClass (&wc);
+  return RegisterClassA (&wc);
 }
 
 static HWND
@@ -202,8 +203,8 @@ create_notify_window (HWND parent)
   static int done;
   if (!done)
     done = register_wndclass ();
-  return CreateWindow (NotifyClass, "", parent ? WS_CHILD : WS_OVERLAPPEDWINDOW,
-                       0, 0, 0, 0, parent, 0, GetModuleHandle (0), 0);
+  return CreateWindowA (NotifyClass, "", parent ? WS_CHILD : WS_OVERLAPPEDWINDOW,
+                        0, 0, 0, 0, parent, 0, GetModuleHandleW (0), 0);
 }
 #endif /* NEED_EXTRACTINGINFO */
 
@@ -280,7 +281,7 @@ int
 ArchiverP::extract_noresp (HWND hwnd, const char *cmd,
                            int cmdl, const char *path) const
 {
-  stdio_file fp (fopen (path, "rb"));
+  stdio_file fp (WINFS::fopen (path, "rb"));
   if (!fp)
     return ARC_ERROR_FILE_OPEN;
   size_t size = _filelength (_fileno (fp));
@@ -744,7 +745,7 @@ SevenZip::puts_create (FILE *fp, char *name, const char *path) const
       putc ('\\', fp);
     }
   fputs (name, fp);
-  DWORD a = GetFileAttributes (path);
+  DWORD a = GetFileAttributesA (path);
   if (a != ~0 && a & FILE_ATTRIBUTE_DIRECTORY)
     {
       if (!has_trail_slash (path))
@@ -784,7 +785,7 @@ Archiver::get_creator (const char *path) const
 int
 Archiver::check_file_size (const char *path)
 {
-  WIN32_FIND_DATA fd;
+  find_data fd;
   return (strict_get_file_data (path, fd)
           && (fd.nFileSizeHigh || fd.nFileSizeLow));
 }
@@ -1060,15 +1061,22 @@ extract_or_remove (lisp lpath, lisp ldir, lisp lfiles)
 {
   char path[PATH_MAX + 1], dir[PATH_MAX + 1];
   char temp_name[PATH_MAX + 1];
+  /* 書庫を扱う DLL は ANSI の窓口なので、渡す形を別に持つ */
+  char apath[PATH_MAX + 1], adir[PATH_MAX + 1], atemp[PATH_MAX + 1];
 
   pathname2cstr (lpath, path);
+  u82s (apath, apath + sizeof apath, path);
+  *adir = 0;
   if (ldir)
-    pathname2cstr (ldir, dir);
+    {
+      pathname2cstr (ldir, dir);
+      u82s (adir, adir + sizeof adir, dir);
+    }
 
   const ArchiverP *ar;
   if (ldir)
     {
-      ar = archiver.get_extractor (path);
+      ar = archiver.get_extractor (apath);
       if (!ar)
         file_error (Euncompress_not_supported, lpath);
     }
@@ -1076,19 +1084,20 @@ extract_or_remove (lisp lpath, lisp ldir, lisp lfiles)
     {
       if (!consp (lfiles))
         return Qnil;
-      ar = archiver.get_remover (path);
+      ar = archiver.get_remover (apath);
       if (!ar)
         file_error (Eremove_not_supported, lpath);
     }
 
   if (!consp (lfiles))
-    *temp_name = 0;
+    *temp_name = *atemp = 0;
   else
     {
       char temp_path[PATH_MAX + 1];
-      GetTempPath (sizeof temp_path, temp_path);
+      WINFS::GetTempPath (sizeof temp_path, temp_path);
       WINFS::GetTempFileName (temp_path, "xyz", 0, temp_name);
-      stdio_file fp (fopen (temp_name, "w"));
+      u82s (atemp, atemp + sizeof atemp, temp_name);
+      stdio_file fp (WINFS::fopen (temp_name, "w"));
       if (!fp)
         {
           WINFS::DeleteFile (temp_name);
@@ -1111,10 +1120,10 @@ extract_or_remove (lisp lpath, lisp ldir, lisp lfiles)
   try
     {
       if (ldir)
-        archiver_error (ar->extract (get_active_window (), path, dir, temp_name),
+        archiver_error (ar->extract (get_active_window (), apath, adir, atemp),
                         lpath, Eextract_error);
       else
-        archiver_error (ar->remove (get_active_window (), path, temp_name),
+        archiver_error (ar->remove (get_active_window (), apath, atemp),
                         lpath, Eremove_error);
     }
   catch (nonlocal_jump &)
@@ -1151,7 +1160,11 @@ Fcreate_archive (lisp larcname, lisp lfiles, lisp ldir)
   if (!consp (lfiles))
     return Qnil;
 
-  const ArchiverP *ar = archiver.get_creator (arcname);
+  /* 書庫を扱う DLL は ANSI の窓口なので、渡す形を別に持つ */
+  char aarcname[PATH_MAX + 1], atemp[PATH_MAX + 1];
+  u82s (aarcname, aarcname + sizeof aarcname, arcname);
+
+  const ArchiverP *ar = archiver.get_creator (aarcname);
   if (!ar)
     file_error (Ecompress_not_supported, larcname);
 
@@ -1161,15 +1174,16 @@ Fcreate_archive (lisp larcname, lisp lfiles, lisp ldir)
   size_t dirl = strlen (dir);
 
   char temp_name[PATH_MAX + 1], temp_path[PATH_MAX + 1];
-  GetTempPath (sizeof temp_path, temp_path);
+  WINFS::GetTempPath (sizeof temp_path, temp_path);
   WINFS::GetTempFileName (temp_path, "xyz", 0, temp_name);
+  u82s (atemp, atemp + sizeof atemp, temp_name);
 
   WINFS::SetCurrentDirectory (dir);
 
   try
     {
       {
-        stdio_file fp (fopen (temp_name, "w"));
+        stdio_file fp (WINFS::fopen (temp_name, "w"));
         if (!fp)
           file_error (Ecannot_make_temp_file_name);
         for (; consp (lfiles); lfiles = xcdr (lfiles))
@@ -1182,11 +1196,14 @@ Fcreate_archive (lisp larcname, lisp lfiles, lisp ldir)
             else if (strlen (temp_path) == dirl - 1
                      && !_memicmp (temp_path, dir, dirl))
               continue;
-            ar->puts_create (fp, b, temp_path);
+            char ab[PATH_MAX + 1], afull[PATH_MAX + 1];
+            u82s (ab, ab + sizeof ab, b);
+            u82s (afull, afull + sizeof afull, temp_path);
+            ar->puts_create (fp, ab, afull);
             putc ('\n', fp);
           }
       }
-      int e = ar->create (get_active_window (), arcname, temp_name);
+      int e = ar->create (get_active_window (), aarcname, atemp);
       if (e == -1)
         file_error (Ecompress_not_supported, larcname);
       archiver_error (e, larcname, Ecompress_error);
@@ -1223,9 +1240,12 @@ Fconvert_to_SFX (lisp larcname, lisp lopt)
       w2s (opt, lopt);
     }
 
+  char aarcname[PATH_MAX + 1];
+  u82s (aarcname, aarcname + sizeof aarcname, arcname);
+
   try
     {
-      archiver_error (archiver.create_sfx (get_active_window (), arcname, opt),
+      archiver_error (archiver.create_sfx (get_active_window (), aarcname, opt),
                       larcname, Ecompress_error);
     }
   catch (nonlocal_jump &)
@@ -1240,9 +1260,10 @@ Fconvert_to_SFX (lisp larcname, lisp lopt)
 lisp
 Flist_archive (lisp larcname, lisp file_name_only)
 {
-  char arcname[PATH_MAX + 1];
+  char arcname[PATH_MAX + 1], aarcname[PATH_MAX + 1];
   pathname2cstr (larcname, arcname);
-  lisp x = archiver.list (arcname, file_name_only && file_name_only != Qnil);
+  u82s (aarcname, aarcname + sizeof aarcname, arcname);
+  lisp x = archiver.list (aarcname, file_name_only && file_name_only != Qnil);
   if (!x)
     FEarchiver_error (ARC_ERROR_NOT_ARC_FILE, larcname);
   return x;

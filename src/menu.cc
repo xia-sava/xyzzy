@@ -24,9 +24,9 @@ static u_long used_id[(MENU_ID_RANGE_MAX - MENU_ID_RANGE_MIN) / (sizeof (u_long)
 #endif
 
 #if WINVER >= 0x0500
-typedef MENUITEMINFO MENUITEMINFO5;
+typedef MENUITEMINFOW MENUITEMINFO5;
 #else
-struct MENUITEMINFO5: public tagMENUITEMINFOA
+struct MENUITEMINFO5: public tagMENUITEMINFOW
 {
   HBITMAP hbmpItem;
 };
@@ -57,7 +57,7 @@ lwin32_menu::~lwin32_menu ()
 }
 
 static void
-init_mii (MENUITEMINFO5 &m, UINT flags, UINT id, const char *name)
+init_mii (MENUITEMINFO5 &m, UINT flags, UINT id, const WCHAR *name)
 {
   if (sysdep.Win5p () || sysdep.Win98p ())
     {
@@ -73,34 +73,34 @@ init_mii (MENUITEMINFO5 &m, UINT flags, UINT id, const char *name)
       m.fMask = MIIM_ID | MIIM_TYPE;
       m.fType = MFT_RIGHTJUSTIFY | MFT_BITMAP;
       m.wID = id;
-      m.dwTypeData = (char *)HBMMENU_MBAR_CLOSE;
+      m.dwTypeData = (WCHAR *)HBMMENU_MBAR_CLOSE;
     }
 }
 
 static int
-append_menu (HMENU hmenu, UINT flags, UINT id, const char *name)
+append_menu (HMENU hmenu, UINT flags, UINT id, const WCHAR *name)
 {
   if (flags & MF_BITMAP)
     {
       MENUITEMINFO5 m;
       init_mii (m, flags, id, name);
-      return InsertMenuItem (hmenu, GetMenuItemCount (hmenu), 1, &m);
+      return InsertMenuItemW (hmenu, GetMenuItemCount (hmenu), 1, &m);
     }
   else
-    return AppendMenu (hmenu, flags, id, name);
+    return AppendMenuW (hmenu, flags, id, name);
 }
 
 static int
-insert_menu (HMENU hmenu, UINT pos, UINT flags, UINT id, const char *name)
+insert_menu (HMENU hmenu, UINT pos, UINT flags, UINT id, const WCHAR *name)
 {
   if (flags & MF_BITMAP)
     {
       MENUITEMINFO5 m;
       init_mii (m, flags, id, name);
-      return InsertMenuItem (hmenu, pos, flags & MF_BYPOSITION, &m);
+      return InsertMenuItemW (hmenu, pos, flags & MF_BYPOSITION, &m);
     }
   else
-    return InsertMenu (hmenu, pos, flags, id, name);
+    return InsertMenuW (hmenu, pos, flags, id, name);
 }
 
 lisp
@@ -159,7 +159,7 @@ redraw_menu (lisp lmenu)
 }
 
 static void
-add_menu (lisp lmenu, lisp item, UINT flags, const char *name, UINT id)
+add_menu (lisp lmenu, lisp item, UINT flags, const WCHAR *name, UINT id)
 {
   lisp new_items = xcons (item, xwin32_menu_items (lmenu));
   if (!append_menu (xwin32_menu_handle (lmenu), flags, id, name))
@@ -176,8 +176,8 @@ add_menu (lisp lmenu, lisp item, UINT flags, const char *name, UINT id)
 static void
 add_menu (lisp lmenu, lisp item, lisp name, UINT flags, UINT id)
 {
-  char b[1024];
-  w2s (b, b + sizeof b, xstring_contents (name), xstring_length (name));
+  WCHAR b[1024];
+  w2u (b, b + numberof (b), xstring_contents (name), xstring_length (name));
   add_menu (lmenu, item, flags, b, id);
 }
 
@@ -276,7 +276,7 @@ Fget_menu_position (lisp lmenu, lisp tag)
 }
 
 static void
-insert_menu (lisp lmenu, int pos, lisp item, UINT flags, const char *name, UINT id)
+insert_menu (lisp lmenu, int pos, lisp item, UINT flags, const WCHAR *name, UINT id)
 {
   int l = xlist_length (xwin32_menu_items (lmenu));
   if (pos >= l)
@@ -284,11 +284,11 @@ insert_menu (lisp lmenu, int pos, lisp item, UINT flags, const char *name, UINT 
   else
     {
       lisp tem = xcons (item, Qnil);
-      if (!InsertMenu (xwin32_menu_handle (lmenu), pos, MF_BYPOSITION | flags, id, name))
+      if (!InsertMenuW (xwin32_menu_handle (lmenu), pos, MF_BYPOSITION | flags, id, name))
         {
           protect_gc gcpro (tem);
           gc (1);
-          if (!InsertMenu (xwin32_menu_handle (lmenu), pos, MF_BYPOSITION | flags, id, name))
+          if (!InsertMenuW (xwin32_menu_handle (lmenu), pos, MF_BYPOSITION | flags, id, name))
             FEsimple_win32_error (GetLastError ());
         }
       l -= pos;
@@ -305,8 +305,8 @@ insert_menu (lisp lmenu, int pos, lisp item, UINT flags, const char *name, UINT 
 static void
 insert_menu (lisp lmenu, int pos, lisp item, lisp name, UINT flags, UINT id)
 {
-  char b[1024];
-  w2s (b, b + sizeof b, xstring_contents (name), xstring_length (name));
+  WCHAR b[1024];
+  w2u (b, b + numberof (b), xstring_contents (name), xstring_length (name));
   insert_menu (lmenu, pos, item, flags, b, id);
 }
 
@@ -531,14 +531,14 @@ init_menu_popup (lisp lmenu, int enablep)
   return f;
 }
 
-static char *
-keyname (char *p, Char c)
+static WCHAR *
+keyname (WCHAR *p, Char c)
 {
   if (function_char_p (c))
     {
       if (pseudo_ctlchar_p (c))
         {
-          p = stpcpy (p, "Ctrl+");
+          p = stpcpy (p, L"Ctrl+");
           *p++ = pseudo_ctl2char_table[c & 0xff];
           if (p[-1] == '&')
             *p++ = '&';
@@ -547,12 +547,12 @@ keyname (char *p, Char c)
       else
         {
           if (c & CCF_SHIFT_BIT)
-            p = stpcpy (p, "Shift+");
+            p = stpcpy (p, L"Shift+");
           if (c & CCF_CTRL_BIT)
-            p = stpcpy (p, "Ctrl+");
+            p = stpcpy (p, L"Ctrl+");
           const char *x = function_Char2name (c & ~(CCF_SHIFT_BIT | CCF_CTRL_BIT));
           if (x)
-            p = stpcpy (p, x);
+            p = s2u (p, x);
           else
             assert (0);
         }
@@ -561,19 +561,19 @@ keyname (char *p, Char c)
     {
       const char *x = standard_Char2name (c);
       if (x)
-        p = stpcpy (p, x);
+        p = s2u (p, x);
       else
         {
           if (c < ' ' || c == CC_DEL)
             {
-              p = stpcpy (p, "Ctrl+");
+              p = stpcpy (p, L"Ctrl+");
               *p++ = c == CC_DEL ? '?' : _char_downcase (c + '@');
             }
           else
             {
               if (c == '&')
-                *p++ = char (c);
-              *p++ = char (c);
+                *p++ = WCHAR (c);
+              *p++ = WCHAR (c);
             }
           *p = 0;
         }
@@ -586,17 +586,17 @@ keyname (char *p, Char c)
 static void
 modify_menu_string (HMENU hmenu, int id, int pos, const Char *b, const Char *be)
 {
-  char olds[1024], news[2048];
-  if (!GetMenuString (hmenu, pos, olds, sizeof olds, MF_BYPOSITION))
+  WCHAR olds[1024], news[2048];
+  if (!GetMenuStringW (hmenu, pos, olds, numberof (olds), MF_BYPOSITION))
     return;
-  strcpy (news, olds);
-  char *p = jindex (news, ACC_SEP);
+  wcscpy (news, olds);
+  WCHAR *p = wcschr (news, ACC_SEP);
   if (p)
     *p = 0;
   if (b)
     {
       if (!p)
-        p = news + strlen (news);
+        p = news + wcslen (news);
       int c = ACC_SEP;
       for (; b < be; b++)
         {
@@ -605,8 +605,8 @@ modify_menu_string (HMENU hmenu, int id, int pos, const Char *b, const Char *be)
           c = ' ';
         }
     }
-  if (strcmp (news, olds))
-    ModifyMenu (hmenu, pos, MF_BYPOSITION | MF_STRING, id, news);
+  if (wcscmp (news, olds))
+    ModifyMenuW (hmenu, pos, MF_BYPOSITION | MF_STRING, id, news);
 }
 
 static void
@@ -790,7 +790,7 @@ Fcopy_menu_items (lisp old_menu, lisp new_menu)
   for (int i = 0; i < count; i++)
     {
       MENUITEMINFO5 m;
-      char name[1024];
+      WCHAR name[1024];
       *name = 0;
       if (v5)
         {
@@ -798,17 +798,17 @@ Fcopy_menu_items (lisp old_menu, lisp new_menu)
           m.fMask = (MIIM_BITMAP | MIIM_FTYPE | MIIM_ID
                      | MIIM_STRING | MIIM_SUBMENU);
           m.dwTypeData = name;
-          m.cch = sizeof name;
+          m.cch = numberof (name);
         }
       else
         {
           m.cbSize = offsetof (MENUITEMINFO5, hbmpItem);
           m.fMask = MIIM_ID | MIIM_SUBMENU | MIIM_TYPE;
           m.dwTypeData = name;
-          m.cch = sizeof name;
+          m.cch = numberof (name);
         }
 
-      GetMenuItemInfo (xwin32_menu_handle (old_menu), i, 1, &m);
+      GetMenuItemInfoW (xwin32_menu_handle (old_menu), i, 1, &m);
       if (!m.hSubMenu)
         m.fMask &= ~MIIM_SUBMENU;
       if (v5)
@@ -820,7 +820,7 @@ Fcopy_menu_items (lisp old_menu, lisp new_menu)
           if (!m.dwTypeData || !m.cch)
             m.fMask &= ~MIIM_STRING;
         }
-      InsertMenuItem (xwin32_menu_handle (new_menu), i, 1, &m);
+      InsertMenuItemW (xwin32_menu_handle (new_menu), i, 1, &m);
     }
   return new_menu;
 }
