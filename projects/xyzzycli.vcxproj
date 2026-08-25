@@ -97,6 +97,9 @@
     <ResourceCompile Include="..\src\xyzzycli.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="..\src\longpath.manifest" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\src\inifile.h" />
     <ClInclude Include="..\src\listen.h" />
     <ClInclude Include="..\src\targetver.h" />
