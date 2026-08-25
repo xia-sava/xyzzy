@@ -2,46 +2,39 @@
 #include <malloc.h>
 
 typedef unsigned long u_long;
-typedef unsigned char u_char;
 
-static char *
-skip_token (char *p)
+static WCHAR *
+skip_token (WCHAR *p)
 {
   if (*p == '"')
     {
       for (p++; *p && *p != '"'; p++)
-        {
-          if (IsDBCSLeadByte (*p) && p[1])
-            p++;
-        }
+        ;
       if (*p == '"')
         p++;
     }
   else
-    {
-      for (; *p && *p != ' ' && *p != '\t'; p++)
-        if (IsDBCSLeadByte (*p) && p[1])
-          p++;
-    }
+    for (; *p && *p != ' ' && *p != '\t'; p++)
+      ;
   return p;
 }
 
-static char *
-skip_white (char *p)
+static WCHAR *
+skip_white (WCHAR *p)
 {
   for (; *p == ' ' || *p == '\t'; p++)
     ;
   return p;
 }
 
-static char *
-split (char *&beg)
+static WCHAR *
+split (WCHAR *&beg)
 {
-  char *p = skip_token (beg);
+  WCHAR *p = skip_token (beg);
   if (*beg == '"')
     {
       beg++;
-      if (*CharPrev (beg, p) == '"')
+      if (p[-1] == '"')
         p[-1] = 0;
     }
   else if (*p)
@@ -49,15 +42,15 @@ split (char *&beg)
   return skip_white (p);
 }
 
-static char *
-split (char *&beg, int &l)
+static WCHAR *
+split (WCHAR *&beg, int &l)
 {
-  char *p = skip_token (beg);
+  WCHAR *p = skip_token (beg);
   if (*beg == '"')
     {
       beg++;
       l = p - beg;
-      if (*CharPrev (beg, p) == '"')
+      if (p[-1] == '"')
         l--;
     }
   else
@@ -66,7 +59,7 @@ split (char *&beg, int &l)
 }
 
 static u_long
-parse_long (const char *p)
+parse_long (const WCHAR *p)
 {
   u_long val = 0;
   for (; *p >= '0' && *p <= '9'; p++)
@@ -81,83 +74,91 @@ char_upcase (int c)
 }
 
 static int
-bcasecmp (const void *b1, const void *b2, int size)
+bcasecmp (const WCHAR *p, const WCHAR *q, int size)
 {
-  const u_char *p = (const u_char *)b1, *const pe = p + size;
-  const u_char *q = (const u_char *)b2;
+  const WCHAR *const pe = p + size;
   int f;
   for (f = 0; p < pe && !(f = char_upcase (*p) - char_upcase (*q)); p++, q++)
     ;
   return f;
 }
 
+/* 標準エラー出力は端末とやりとりするバイト列なので CP932 に落とす */
 static void
-doprint (const char *fmt, ...)
+doprint (const WCHAR *fmt, ...)
 {
-  char buf[1024];
+  WCHAR buf[1024];
   va_list ap;
   va_start (ap, fmt);
-  wvsprintf (buf, fmt, ap);
+  wvsprintfW (buf, fmt, ap);
   va_end (ap);
+  char b[sizeof buf * 2];
+  int l = WideCharToMultiByte (CP_ACP, 0, buf, lstrlenW (buf),
+                               b, sizeof b, 0, 0);
   DWORD n;
-  WriteFile (GetStdHandle (STD_ERROR_HANDLE), buf, lstrlen (buf), &n, 0);
+  WriteFile (GetStdHandle (STD_ERROR_HANDLE), b, l, &n, 0);
 }
 
 static void
-syserror (int e, char *buf, int size)
+syserror (int e, WCHAR *buf, int size)
 {
-  if (!FormatMessage ((FORMAT_MESSAGE_FROM_SYSTEM
-                       | FORMAT_MESSAGE_IGNORE_INSERTS
-                       | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                      0, e, GetUserDefaultLangID (),
-                      buf, size, 0))
-    wsprintf (buf, "error %d", e);
+  if (!FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
+                        | FORMAT_MESSAGE_IGNORE_INSERTS
+                        | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                       0, e, GetUserDefaultLangID (),
+                       buf, size, 0))
+    wsprintfW (buf, L"error %d", e);
 }
 
 static int
-cmdmatch (const char *p, const char *pe, const char *s)
+cmdmatch (const WCHAR *p, const WCHAR *pe, const WCHAR *s)
 {
-  if (pe - p >= 4 && (!bcasecmp (pe - 4, ".exe", 4)
-                      || !bcasecmp (pe - 4, ".com", 4)))
+  if (pe - p >= 4 && (!bcasecmp (pe - 4, L".exe", 4)
+                      || !bcasecmp (pe - 4, L".com", 4)))
     pe -= 4;
-  int l = lstrlen (s);
+  int l = lstrlenW (s);
   return pe - p >= l && !bcasecmp (pe - l, s, l);
 }
 
 static void
-set_title (char *cmd)
+set_title (WCHAR *cmd)
 {
   int cmdl;
-  char *opt = split (cmd, cmdl);
-  if (cmdmatch (cmd, cmd + cmdl, "cmd")
-      || cmdmatch (cmd, cmd + cmdl, "command"))
+  WCHAR *opt = split (cmd, cmdl);
+  if (cmdmatch (cmd, cmd + cmdl, L"cmd")
+      || cmdmatch (cmd, cmd + cmdl, L"command"))
     {
       int optl;
-      char *arg = split (opt, optl);
-      if (optl == 2 && !bcasecmp (opt, "/c", 2))
+      WCHAR *arg = split (opt, optl);
+      if (optl == 2 && !bcasecmp (opt, L"/c", 2))
         {
           cmd = arg;
           split (cmd, cmdl);
         }
     }
 
-  char *title = (char *)_alloca (cmdl + 1);
-  memcpy (title, cmd, cmdl);
+  WCHAR *title = (WCHAR *)_alloca ((cmdl + 1) * sizeof (WCHAR));
+  memcpy (title, cmd, cmdl * sizeof (WCHAR));
   title[cmdl] = 0;
-  SetConsoleTitle (title);
+  SetConsoleTitleW (title);
 }
 
 int
 main (void)
 {
-  char buf[256];
-  char *myname = skip_white (GetCommandLine ());
-  char *opt = split (myname);
+  WCHAR buf[256];
+  /* 区切るときに書き込むので、コマンドラインは写してから使う */
+  const WCHAR *const cl = GetCommandLineW ();
+  WCHAR *const clcopy = (WCHAR *)_alloca ((lstrlenW (cl) + 1) * sizeof (WCHAR));
+  lstrcpyW (clcopy, cl);
+
+  WCHAR *myname = skip_white (clcopy);
+  WCHAR *opt = split (myname);
   WORD show = 0;
-  char *event;
-  if (!strncmp (opt, "-s", 2))
+  WCHAR *event;
+  if (!wcsncmp (opt, L"-s", 2))
     {
-      if (strlen (opt) > 2)
+      if (lstrlenW (opt) > 2)
         show = static_cast <WORD> (parse_long (opt + 2));
       event = split (opt);
     }
@@ -165,9 +166,9 @@ main (void)
     {
       event = opt;
     }
-  char *cmdline = split (event);
-  char *dir = 0;
-  int no_events = !lstrcmp (event, "--");
+  WCHAR *cmdline = split (event);
+  WCHAR *dir = 0;
+  int no_events = !lstrcmpW (event, L"--");
 
   if (no_events)
     {
@@ -178,7 +179,7 @@ main (void)
   set_title (cmdline);
 
   PROCESS_INFORMATION pi;
-  STARTUPINFO si = {sizeof si};
+  STARTUPINFOW si = {sizeof si};
 
   si.dwFlags = STARTF_USESTDHANDLES;
   if (show)
@@ -190,11 +191,11 @@ main (void)
   si.hStdOutput = GetStdHandle (STD_OUTPUT_HANDLE);
   si.hStdError = GetStdHandle (STD_ERROR_HANDLE);
 
-  if (!CreateProcess (0, cmdline, 0, 0, 1, CREATE_NEW_PROCESS_GROUP,
-                      0, dir, &si, &pi))
+  if (!CreateProcessW (0, cmdline, 0, 0, 1, CREATE_NEW_PROCESS_GROUP,
+                       0, dir, &si, &pi))
     {
-      syserror (GetLastError (), buf, sizeof buf);
-      doprint ("%s: %s: %s\n", myname, cmdline, buf);
+      syserror (GetLastError (), buf, sizeof buf / sizeof *buf);
+      doprint (L"%s: %s: %s\n", myname, cmdline, buf);
       ExitProcess (2);
     }
 
@@ -204,8 +205,8 @@ main (void)
     {
       if (WaitForSingleObject (pi.hProcess, INFINITE) == WAIT_FAILED)
         {
-          syserror (GetLastError (), buf, sizeof buf);
-          doprint ("%s: %s\n", myname, buf);
+          syserror (GetLastError (), buf, sizeof buf / sizeof *buf);
+          doprint (L"%s: %s\n", myname, buf);
           ExitProcess (2);
         }
     }
@@ -221,8 +222,8 @@ main (void)
           DWORD r = WaitForMultipleObjects (2, objects, 0, INFINITE);
           if (r == WAIT_FAILED)
             {
-              syserror (GetLastError (), buf, sizeof buf);
-              doprint ("%s: %s\n", myname, buf);
+              syserror (GetLastError (), buf, sizeof buf / sizeof *buf);
+              doprint (L"%s: %s\n", myname, buf);
               ExitProcess (2);
             }
           if (r == WAIT_OBJECT_0 + 1)
