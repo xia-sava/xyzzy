@@ -32,6 +32,8 @@ mkdir %DISTDIR%\reference
 mkdir %DISTDIR%\site-lisp
 
 xcopy /F /G /H /R /K /Y *.exe %DISTDIR%
+rem "アプリの [ヘルプ]-[更新を確認] が呼ぶ入れ替え役"
+xcopy /F /G /H /R /K /Y misc\update-app.sh %DISTDIR%
 xcopy /F /G /H /R /K /Y LICENSE %DISTDIR%\docs\
 xcopy /F /G /H /R /K /Y LEGAL.md %DISTDIR%\docs\
 xcopy /F /G /H /R /K /Y /S /E lisp %DISTDIR%\lisp\

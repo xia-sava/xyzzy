@@ -98,7 +98,9 @@ jobs:
             "xyzzy/xyzzycli.exe",
             "xyzzy/xyzzyenv.exe",
             "xyzzy/lisp/startup.l",
-            "xyzzy/etc/Basic"
+            "xyzzy/lisp/update.l",
+            "xyzzy/etc/Basic",
+            "xyzzy/update-app.sh"
           )
           foreach ($name in $required) {
             if ($names -notcontains $name) { throw "missing from archive: $name" }
