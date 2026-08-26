@@ -257,6 +257,17 @@ if exist "%INSTALL%\xyzzy.wxp" (
 ) else (
   echo         ダンプは無い
 )
+
+rem "配布物に .lc は入っていないので、導入先の lisp に残っている .lc は前の版のもの。"
+rem "xyzzy は .lc を優先して読むため、残したままだと新しい .l ではなく古い .lc が"
+rem "読まれ、入れ替えたはずの定義が効かない。消す先は lisp の下の .lc だけ。"
+call :count_lc "%INSTALL%\lisp" LISPLC
+if not "!LISPLC!"=="0" (
+  call :act "lisp の古い .lc を !LISPLC! 個消す"
+  if not defined DRY_RUN del /s /q "%INSTALL%\lisp\*.lc" >nul 2>&1
+) else (
+  echo         lisp に古い .lc は無い
+)
 set "MOVED_LC="
 if defined KEEP_LC (
   echo         site-lisp の .lc はそのまま使える（バイトコードの形式は !NEW_BYTECODE! のまま）
