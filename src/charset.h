@@ -109,6 +109,7 @@
 
 #define UNICODE_BOM 0xfeff
 #define UNICODE_REVBOM 0xfffe
+#define UNICODE_REPLACEMENT_CHAR 0xfffd
 #define UNICODE_CHAR_LIMIT 0x110000
 
 #define UNICODE_IPA_MIN      0x0250

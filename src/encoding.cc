@@ -59,13 +59,24 @@ sjis_to_internal_stream::refill_internal ()
       int c1 = s_in.get ();
       if (c1 == eof)
         break;
-      if (SJISP (c1))
+      if (!SJISP (c1))
         {
-          int c2 = s_in.get ();
-          if (c2 != eof)
-            c1 = (c1 << 8) + c2;
+          put (i2w (c1));
+          continue;
         }
-      put (i2w (c1));
+      int c2 = s_in.get ();
+      if (c2 != eof)
+        {
+          ucs2_t wc = i2w ((c1 << 8) + c2);
+          if (wc != CHAR_INVALID)
+            {
+              put (wc);
+              continue;
+            }
+          // 先導バイトは単独では字にならない。2 バイト目は字の頭として読み直す
+          s_in.putback (c2);
+        }
+      put (UNICODE_REPLACEMENT_CHAR);
     }
 }
 
@@ -82,9 +93,23 @@ fast_sjis_to_internal_stream::refill_internal ()
   for (; d < de && s < se; d++)
     {
       int c1 = *s++;
-      if (SJISP (c1) && s < se)
-        c1 = (c1 << 8) + *s++;
-      *d = i2w (c1);
+      if (!SJISP (c1))
+        {
+          *d = i2w (c1);
+          continue;
+        }
+      if (s < se)
+        {
+          // 組が成立したときだけ 2 バイト目を消費する
+          ucs2_t wc = i2w ((c1 << 8) + *s);
+          if (wc != CHAR_INVALID)
+            {
+              s++;
+              *d = wc;
+              continue;
+            }
+        }
+      *d = UNICODE_REPLACEMENT_CHAR;
     }
   s_in.end_direct_input (s);
   end_direct_output (d);

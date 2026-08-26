@@ -181,6 +181,9 @@ public:
   sjis_to_internal_stream (xinput_stream <u_char> &in) : xbuffered_read_stream (in) {}
 };
 
+// begin_direct_input は下位ストリームを refill しないので、入力全体が一個の
+// バッファに載っていることを前提とする。バッファの末尾に残った先導バイトは
+// 真の入力終端として扱う
 class fast_sjis_to_internal_stream: public xbuffered_read_stream
 {
 protected:
