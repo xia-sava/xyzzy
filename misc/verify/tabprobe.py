@@ -1,17 +1,12 @@
 """別デスクトップで起動した xyzzy のタブの文字を読む。"""
-import ctypes, ctypes.wintypes as w, sys, time
+import ctypes, ctypes.wintypes as w, struct, sys, time
 import dlgtext as D
 
 u32, k32 = D.u32, D.k32
 TCM_GETITEMCOUNT = 0x1304
 TCM_GETITEMW = 0x133C
-
-
-class TCITEMW(ctypes.Structure):
-    _fields_ = [("mask", ctypes.c_uint), ("dwState", ctypes.c_uint),
-                ("dwStateMask", ctypes.c_uint), ("pszText", w.LPWSTR),
-                ("cchTextMax", ctypes.c_int), ("iImage", ctypes.c_int),
-                ("lParam", w.LPARAM)]
+TCIF_TEXT = 1
+TCITEM_SIZE = 28          # mask..lParam
 
 
 def children(h):
@@ -19,7 +14,8 @@ def children(h):
 
 
 # コモンコントロールはプロセスを跨いでポインタを解決しないので、
-# 相手のアドレス空間に置いた領域を渡して読み返す
+# 相手のアドレス空間に置いた領域を渡して読み返す。相手は 32 ビットなので
+# 構造体の並びは手で組む
 def tab_text(hwnd, i, cch=256):
     pid = w.DWORD()
     u32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
@@ -28,22 +24,19 @@ def tab_text(hwnd, i, cch=256):
     if not hp:
         return "(プロセスを開けない)"
     k32.VirtualAllocEx.restype = ctypes.c_void_p
-    size = ctypes.sizeof(TCITEMW) + cch * 2
-    rem = k32.VirtualAllocEx(hp, None, size, 0x3000, 4)  # COMMIT|RESERVE, RW
+    rem = k32.VirtualAllocEx(hp, None, 64 + cch * 2, 0x3000, 4)  # COMMIT|RESERVE, RW
     if not rem:
         k32.CloseHandle(hp)
         return "(領域を確保できない)"
     try:
-        it = TCITEMW()
-        it.mask = 1  # TCIF_TEXT
-        it.pszText = ctypes.cast(ctypes.c_void_p(rem + ctypes.sizeof(TCITEMW)), w.LPWSTR)
-        it.cchTextMax = cch
-        k32.WriteProcessMemory(hp, ctypes.c_void_p(rem), ctypes.byref(it),
-                               ctypes.sizeof(it), None)
+        text_at = rem + 64
+        it = struct.pack("<IIIIiiI", TCIF_TEXT, 0, 0, text_at, cch, 0, 0)
+        k32.WriteProcessMemory(hp, ctypes.c_void_p(rem), it, TCITEM_SIZE, None)
+        k32.WriteProcessMemory(hp, ctypes.c_void_p(text_at), b"\0" * (cch * 2),
+                               cch * 2, None)
         u32.SendMessageW(hwnd, TCM_GETITEMW, i, ctypes.c_void_p(rem))
         buf = ctypes.create_unicode_buffer(cch)
-        k32.ReadProcessMemory(hp, ctypes.c_void_p(rem + ctypes.sizeof(TCITEMW)),
-                              buf, cch * 2, None)
+        k32.ReadProcessMemory(hp, ctypes.c_void_p(text_at), buf, cch * 2, None)
         return buf.value
     finally:
         k32.VirtualFreeEx(hp, ctypes.c_void_p(rem), 0, 0x8000)  # MEM_RELEASE
