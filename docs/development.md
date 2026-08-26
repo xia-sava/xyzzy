@@ -287,6 +287,28 @@ driver から呼ぶときは `bytecompile.bat` の前処理も写すこと。**`
 （builtin.l で定義されていない builtin 関数が存在しないこと）が落ちる。
 `lisp/builtin.l` に `(si::defun-builtin ...)` を対で足す。
 
+### バッファローカル変数は `*protected-local-variables*` に入れる
+
+`MAKE_SYMBOL2F (..., SFmake_buffer_local)` で作った変数へ C++ から
+`set_local_variable` で値を入れても、**モードが `kill-all-local-variables` を
+呼んだ時点で消える**。`find-file` は読み込みのあとにモードを決めるので、
+読み込み中に記録した値は残らない。残すものは `lisp/defs.l` の
+`*protected-local-variables*` に足す。
+
+### `gen-syms.cc` で作った変数は special ではない
+
+`(let ((*foo* nil)) ...)` と書いても**動的束縛にならず、C++ から
+`xsymbol_value` で読む値は変わらない**。`lisp/buffer.l` が
+`(declare (special *expected-fileio-encoding*))` を添えているのはこのため。
+テストで C 側の変数を縛るときも同じ宣言が要る。宣言を落とすとテストは
+「縛れていないのに通ってしまう」ことがある。
+
+### ファイルを開いたときの知らせは Lisp 側に置く
+
+C++ の `insert_file_contents` からミニバッファへ出したメッセージは、直後に走る
+`find-file-notice`（`lisp/files.l`）の「〜行読み込みました」に上書きされる。
+開いたときに伝えたいことは `find-file-notice` と `read-file` に書く。
+
 ## 別デスクトップで検証するときの罠
 
 ### 例外を外へ逃がさない
