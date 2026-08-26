@@ -44,6 +44,7 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 |---|---|
 | `pathcheck.l` | 13 の操作 × 4 種の名前（ascii／日本語／`résumé`／`寿司🍣`）でパスが通るか |
 | `paircheck.l` | サロゲート対の内側にカーソルが入らないか。移動・削除・桁・上書き |
+| `isearchkey.l` | キーを表す文字で isearch が抜けるか。押鍵は `unread-char` で押し戻す |
 | `longpathcheck.py` | 260 文字を超えるパスを開く・書く・消す。深さを引数で変えられる |
 | `longnamecheck.py` | 一区画の名前が長くても一覧に出るか。かなの個数を引数で変えられる |
 | `cmdlinecheck.py` | 非 ASCII の名前をコマンドラインから開けるか。`CreateProcessW` で直接渡す |
