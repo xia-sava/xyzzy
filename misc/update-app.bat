@@ -5,7 +5,8 @@ rem "  update-app.bat [選択肢] <導入先>"
 rem ""
 rem "    /dry-run    何をするかだけ表示し、一切変更しない"
 rem "    /force      同じ版でも適用する"
-rem "    /no-backup  退避を取らない。導入先の中だけで完結する"
+rem "    /no-backup  退避を常に取らない。導入先の中だけで完結する"
+rem "    /backup     退避を常に取る（既定は形式が変わる回だけ）"
 rem "    /from-app   xyzzy から呼ばれた。終了を待ってから始め、終わったら開き直す"
 rem ""
 rem "Windows 同梱の道具だけで動く。curl・certutil・tar・robocopy・powershell。"
@@ -28,6 +29,7 @@ set "FROM_APP="
 set "INSTALL="
 set "BACKUP_DONE="
 set "NO_BACKUP="
+set "FORCE_BACKUP="
 set "BASE_URL=%XYZZY_UPDATE_BASE_URL%"
 if not defined BASE_URL set "BASE_URL=https://github.com/xia-sava/xyzzy/releases/download/latest"
 
@@ -43,6 +45,8 @@ if /i "%~1"=="/force" (set "FORCE=1" & shift & goto parse)
 if /i "%~1"=="--force" (set "FORCE=1" & shift & goto parse)
 if /i "%~1"=="/no-backup" (set "NO_BACKUP=1" & shift & goto parse)
 if /i "%~1"=="--no-backup" (set "NO_BACKUP=1" & shift & goto parse)
+if /i "%~1"=="/backup" (set "FORCE_BACKUP=1" & shift & goto parse)
+if /i "%~1"=="--backup" (set "FORCE_BACKUP=1" & shift & goto parse)
 if /i "%~1"=="/from-app" (set "FROM_APP=1" & shift & goto parse)
 if /i "%~1"=="--from-app" (set "FROM_APP=1" & shift & goto parse)
 if /i "%~1"=="/?" goto usage
@@ -113,6 +117,12 @@ if defined OLD_VERSION (
   echo         導入済み  不明（このスクリプトで更新した記録が無い）
 )
 echo         配布中    %NEW_VERSION%
+
+rem "バイトコードの形式が変わっていなければ、古い .lc はそのまま使える。形式は特殊"
+rem "形式の名前で表され、改名されると古い .lc が読めなくなる。名前が同じなら触らない。"
+rem "どちらかが分からないときは、安全側に倒して退ける。"
+set "KEEP_LC="
+if defined OLD_BYTECODE if defined NEW_BYTECODE if /i "!OLD_BYTECODE!"=="!NEW_BYTECODE!" set "KEEP_LC=1"
 
 if defined OLD_SHA if /i "!OLD_SHA!"=="%NEW_SHA%" if not defined FORCE (
   echo.
@@ -186,10 +196,17 @@ if not "!COUNT!"=="0" (
 
 rem "--- 4. 退避する -------------------------------------------------------"
 echo [4/7] 退避する
-rem "退避は直前の姿だけを 1 つ残す。それより古い姿へ戻したいときは、版ごとのリリース"
-rem "から取り直せばよい。/no-backup なら退避を取らず、導入先の中だけで完結する。"
+rem "退避を取るのはバイトコードの形式が変わる回だけにする。その回は site-lisp の .lc"
+rem "を退けて作り直すので、起動できなくなる余地がある。形式が変わらない回は実行ファイル"
+rem "と lisp・etc を置き換えるだけで、戻したければ版ごとのリリースから取り直せる。"
+rem ""
+rem "残すのは直前の姿ひとつ。/no-backup で常に取らない、/backup で常に取る。"
 if defined NO_BACKUP (
   echo         退避を取らない（/no-backup）
+  goto overlay
+)
+if defined KEEP_LC if not defined FORCE_BACKUP (
+  echo         退避を取らない（バイトコードの形式が変わらないため）
   goto overlay
 )
 if exist "%BACKUP%" (
@@ -240,12 +257,7 @@ if exist "%INSTALL%\xyzzy.wxp" (
 ) else (
   echo         ダンプは無い
 )
-rem "バイトコードの形式が変わっていなければ、古い .lc はそのまま使える。形式は"
-rem "特殊形式の名前で表され、改名されると古い .lc が読めなくなる。名前が同じなら"
-rem "触らない。どちらかが分からないときは、安全側に倒して退ける。"
 set "MOVED_LC="
-set "KEEP_LC="
-if defined OLD_BYTECODE if defined NEW_BYTECODE if /i "!OLD_BYTECODE!"=="!NEW_BYTECODE!" set "KEEP_LC=1"
 if defined KEEP_LC (
   echo         site-lisp の .lc はそのまま使える（バイトコードの形式は !NEW_BYTECODE! のまま）
 ) else if exist "%INSTALL%\site-lisp" (
@@ -318,7 +330,8 @@ echo   update-app.bat [選択肢] ^<導入先^>
 echo.
 echo     /dry-run    何をするかだけ表示し、一切変更しない
 echo     /force      同じ版でも適用する
-echo     /no-backup  退避を取らない。導入先の中だけで完結する
+echo     /no-backup  退避を常に取らない。導入先の中だけで完結する
+echo     /backup     退避を常に取る（既定は形式が変わる回だけ）
 echo     /from-app   xyzzy から呼ばれた。終了を待ってから始め、終わったら開き直す
 echo.
 echo   導入先は環境変数 XYZZY_INSTALL_DIR でも渡せる。
