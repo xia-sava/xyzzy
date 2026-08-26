@@ -4,27 +4,22 @@
 static const WCHAR csComboBox[] = L"ComboBox";
 static const WCHAR csEdit[] = L"Edit";
 static const WCHAR csListBox[] = L"ListBox";
+static const WCHAR PropOrgWndProc[] = L"PropStdctlWndProc";
 
-static WNDPROC org_lbx_wndproc;
-static WNDPROC org_edt_wndproc;
-static WNDPROC org_cbx_wndproc;
+static HHOOK stdctl_cbt_hook;
 
 static inline LRESULT
-lbx_sendmsg (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+org_sendmsg (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  return CallWindowProc (org_lbx_wndproc, hwnd, msg, wparam, lparam);
+  return CallWindowProcW (WNDPROC (GetPropW (hwnd, PropOrgWndProc)),
+                          hwnd, msg, wparam, lparam);
 }
 
 static inline LRESULT
-cbx_sendmsg (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+org_ncdestroy (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-  return CallWindowProc (org_cbx_wndproc, hwnd, msg, wparam, lparam);
-}
-
-static inline LRESULT
-edt_sendmsg (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-  return CallWindowProc (org_edt_wndproc, hwnd, msg, wparam, lparam);
+  return CallWindowProcW (WNDPROC (RemovePropW (hwnd, PropOrgWndProc)),
+                          hwnd, msg, wparam, lparam);
 }
 
 static int
@@ -77,21 +72,21 @@ lbx_keydown (HWND hwnd, int vk)
       || GetKeyState (VK_SHIFT) < 0)
     return 0;
 
-  int i = lbx_sendmsg (hwnd, LB_GETCARETINDEX, 0, 0);
+  int i = org_sendmsg (hwnd, LB_GETCARETINDEX, 0, 0);
   switch (vk)
     {
     case VK_UP:
       if (i > 0)
-        lbx_sendmsg (hwnd, LB_SETCARETINDEX, i - 1, 0);
+        org_sendmsg (hwnd, LB_SETCARETINDEX, i - 1, 0);
       break;
 
     case VK_DOWN:
-      if (i < lbx_sendmsg (hwnd, LB_GETCOUNT, 0, 0) - 1)
-        lbx_sendmsg (hwnd, LB_SETCARETINDEX, i + 1, 0);
+      if (i < org_sendmsg (hwnd, LB_GETCOUNT, 0, 0) - 1)
+        org_sendmsg (hwnd, LB_SETCARETINDEX, i + 1, 0);
       break;
 
     default:
-      lbx_sendmsg (hwnd, LB_SETSEL, !lbx_sendmsg (hwnd, LB_GETSEL, i, 0), i);
+      org_sendmsg (hwnd, LB_SETSEL, !org_sendmsg (hwnd, LB_GETSEL, i, 0), i);
       break;
     }
   return 1;
@@ -115,8 +110,8 @@ lbx_char (HWND hwnd, int ch)
     stdctl_default (hwnd);
   else
     {
-      lbx_sendmsg (hwnd, WM_KEYDOWN, op, 0);
-      lbx_sendmsg (hwnd, WM_KEYUP, op, 0);
+      org_sendmsg (hwnd, WM_KEYDOWN, op, 0);
+      org_sendmsg (hwnd, WM_KEYUP, op, 0);
     }
   return 1;
 }
@@ -126,6 +121,9 @@ lbx_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
   switch (msg)
     {
+    case WM_NCDESTROY:
+      return org_ncdestroy (hwnd, msg, wparam, lparam);
+
     case WM_KEYDOWN:
       if (lbx_keydown (hwnd, wparam))
         return 0;
@@ -136,7 +134,7 @@ lbx_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 0;
       break;
     }
-  return lbx_sendmsg (hwnd, msg, wparam, lparam);
+  return org_sendmsg (hwnd, msg, wparam, lparam);
 }
 
 static int
@@ -149,8 +147,8 @@ cbx_char (HWND hwnd, int ch)
     stdctl_default (hwnd);
   else
     {
-      cbx_sendmsg (hwnd, WM_KEYDOWN, op, 0);
-      cbx_sendmsg (hwnd, WM_KEYUP, op, 0);
+      org_sendmsg (hwnd, WM_KEYDOWN, op, 0);
+      org_sendmsg (hwnd, WM_KEYUP, op, 0);
     }
   return 1;
 }
@@ -158,9 +156,11 @@ cbx_char (HWND hwnd, int ch)
 static LRESULT CALLBACK
 cbx_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
+  if (msg == WM_NCDESTROY)
+    return org_ncdestroy (hwnd, msg, wparam, lparam);
   if (msg == WM_CHAR && cbx_char (hwnd, wparam))
     return 0;
-  return cbx_sendmsg (hwnd, msg, wparam, lparam);
+  return org_sendmsg (hwnd, msg, wparam, lparam);
 }
 
 static int
@@ -181,8 +181,8 @@ edt_char (HWND hwnd, int ch)
     stdctl_default (hwnd_parent);
   else
     {
-      edt_sendmsg (hwnd, WM_KEYDOWN, op, 0);
-      edt_sendmsg (hwnd, WM_KEYUP, op, 0);
+      org_sendmsg (hwnd, WM_KEYDOWN, op, 0);
+      org_sendmsg (hwnd, WM_KEYUP, op, 0);
     }
   return 1;
 }
@@ -190,29 +190,53 @@ edt_char (HWND hwnd, int ch)
 static LRESULT CALLBACK
 edt_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
+  if (msg == WM_NCDESTROY)
+    return org_ncdestroy (hwnd, msg, wparam, lparam);
   if (msg == WM_CHAR && edt_char (hwnd, wparam))
     return 0;
-  return CallWindowProc (org_edt_wndproc, hwnd, msg, wparam, lparam);
+  return org_sendmsg (hwnd, msg, wparam, lparam);
 }
 
-static int
-init_hook (HINSTANCE hinst, const WCHAR *class_name,
-           WNDPROC wndproc, WNDPROC &org_wndproc)
+static void
+subclass (HWND hwnd)
 {
-  WNDCLASSW wc;
-  if (!GetClassInfoW (0, class_name, &wc))
-    return 0;
+  WCHAR class_name[16];
+  if (!GetClassNameW (hwnd, class_name, numberof (class_name)))
+    return;
 
-  org_wndproc = wc.lpfnWndProc;
-  wc.lpfnWndProc = wndproc;
-  wc.hInstance = hinst;
-  return RegisterClassW (&wc);
+  WNDPROC wndproc;
+  if (!_wcsicmp (class_name, csComboBox))
+    wndproc = cbx_wndproc;
+  else if (!_wcsicmp (class_name, csEdit))
+    wndproc = edt_wndproc;
+  else if (!_wcsicmp (class_name, csListBox))
+    wndproc = lbx_wndproc;
+  else
+    return;
+
+  if (!SetPropW (hwnd, PropOrgWndProc,
+                 HANDLE (GetWindowLongW (hwnd, GWL_WNDPROC))))
+    return;
+  SetWindowLongW (hwnd, GWL_WNDPROC, LONG (wndproc));
 }
 
+// コモンコントロールの版 6 はクラス名を版付きの名前へ引き直すので、標準の
+// クラスを同名で登録し直しても、ダイアログが作る窓はそちらへ届かない。
+// 作られた窓を一つずつ差し替える。窓の作り手で絞り、xyzzy が作るダイアログ
+// だけを相手にする。
+static LRESULT CALLBACK
+cbt_proc (int code, WPARAM wparam, LPARAM lparam)
+{
+  if (code == HCBT_CREATEWND
+      && ((CBT_CREATEWND *)lparam)->lpcs->hInstance == app.hinst)
+    subclass (HWND (wparam));
+  return CallNextHookEx (stdctl_cbt_hook, code, wparam, lparam);
+}
+
+// ダイアログを作るスレッドで呼ぶ。フックはそのスレッドにだけ掛かる。
 void
-stdctl_hook_init (HINSTANCE hinst)
+stdctl_hook_init ()
 {
-  init_hook (hinst, csComboBox, cbx_wndproc, org_cbx_wndproc);
-  init_hook (hinst, csEdit, edt_wndproc, org_edt_wndproc);
-  init_hook (hinst, csListBox, lbx_wndproc, org_lbx_wndproc);
+  stdctl_cbt_hook = SetWindowsHookExW (WH_CBT, cbt_proc, 0,
+                                       GetCurrentThreadId ());
 }

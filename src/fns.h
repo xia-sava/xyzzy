@@ -184,7 +184,7 @@ void ForceSetForegroundWindow (HWND);
 lisp get_tooltip_text (lisp);
 
 /* stdctl.cc */
-void stdctl_hook_init (HINSTANCE);
+void stdctl_hook_init ();
 int stdctl_operation (int);
 
 #endif

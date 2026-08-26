@@ -757,7 +757,7 @@ register_wndclasses (HINSTANCE hinst)
   if (!RegisterClassW (&wc))
     return 0;
 
-  stdctl_hook_init (hinst);
+  stdctl_hook_init ();
 
   return 1;
 }

@@ -2,9 +2,10 @@
 
     python stdctlprobe.py <exe> -q -l <...>/stdctl.l
 
-`stdctl_hook_init` は `GetClassInfoW` で標準クラスを写し取り、`lpfnWndProc` を
-差し替えて**同名で**登録し直す。効いていれば、そのクラスを登録したモジュールは
-`xyzzy.exe` になる。効かなくなれば `user32.dll` や `comctl32.dll` に変わる。
+`stdctl_hook_init` は `WH_CBT` で作られた窓を捕まえ、標準コントロールを一つずつ
+差し替える。**クラスを登録したモジュールは合否ではない** — 差し替えは窓ごとなので、
+クラスは `user32.dll` や `comctl32.dll` のままになる。ここに出るのは、いまどの実装が
+標準コントロールを供給しているか。合否は実際の動きで見る。
 
 見た目には出ず、落ちもせず、**キーが効かなくなるだけ**なので、クラスの出所と
 実際の動きの両方を見る。動きは二つある。`*std-control-down-char*` による選択の
@@ -74,7 +75,7 @@ def main():
         edt = child_of_class(dlg, "Edit")
         cbx_edt = child_of_class(cbx, "Edit") if cbx else None
 
-        print("=== クラスを登録したモジュール")
+        print("=== 標準コントロールを供給しているモジュール")
         for name, h in (("ダイアログ", dlg), ("ListBox", lbx), ("ComboBox", cbx),
                         ("Edit", edt), ("ComboBox の Edit", cbx_edt)):
             if h:
