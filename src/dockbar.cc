@@ -509,43 +509,11 @@ tab_bar::nth (int i) const
 }
 
 void
-tab_bar::modify_spin ()
-{
-  HWND hwnd_spin = GetDlgItem (b_hwnd, IDC_TAB_SPIN);
-  if (!hwnd_spin)
-    return;
-
-  HWND *buf = (HWND *)GetWindowLong (b_hwnd, 0);
-
-  int offset;
-  if (IsBadWritePtr (buf, sizeof *buf * 10)
-      || (buf[offset = 9] != hwnd_spin
-          && buf[offset = 6] != hwnd_spin)
-      || buf[6] == buf[9])
-    return;
-
-  DWORD style = GetWindowLong (hwnd_spin, GWL_STYLE);
-  if (style & UDS_HORZ ? !dock_vert_p () : dock_vert_p ())
-    return;
-
-  HWND hwnd = CreateWindowExW (GetWindowLongW (hwnd_spin, GWL_EXSTYLE),
-                               UPDOWN_CLASSW, L"", (style ^ UDS_HORZ) & ~UDS_WRAP,
-                               0, 0, 0, 0, b_hwnd, HMENU (IDC_TAB_SPIN),
-                               app.hinst, 0);
-  if (!hwnd)
-    return;
-
-  DestroyWindow (hwnd_spin);
-  buf[offset] = hwnd;
-}
-
-void
 tab_bar::dock_edge ()
 {
   dock_bar::dock_edge ();
   if (new_comctl_p ())
     {
-      modify_spin ();
       switch (edge ())
         {
         case EDGE_TOP:

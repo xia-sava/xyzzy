@@ -301,7 +301,6 @@ protected:
   virtual int do_context_menu (const POINT *);
   virtual lisp context_menu (int) {return Qnil;}
 private:
-  void modify_spin ();
   void paint_left (HDC, const RECT &, const RECT &, int);
   void paint_top (HDC, const RECT &, const RECT &, int);
   void paint_right (HDC, const RECT &, const RECT &, int);
