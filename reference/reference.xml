@@ -38743,12 +38743,15 @@ CHAR が欧文(ISO8859)の単語構成文字かを判定します。
 <package>lisp</package>
 <description>
 CHAR が印字文字かどうかを判定します。
+キーを表す文字と単独のサロゲートは印字文字ではありません。
 
   (graphic-char-p #\A)
   =&gt;t
   (graphic-char-p #\SPC)
   =&gt;t
   (graphic-char-p #\TAB)
+  =&gt;nil
+  (graphic-char-p #\F1)
   =&gt;nil
 </description>
 <seealso></seealso>

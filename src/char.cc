@@ -15,6 +15,9 @@ Fgraphic_char_p (lisp cc)
 {
   check_char (cc);
   Char c = xchar_code (cc);
+  // キーの符号は Unicode の外に置いてあるので、字ではない
+  if (c >= CHAR_LIMIT)
+    return Qnil;
   // 制御文字と、単独では字にならないサロゲート以外を字とみなす
   if (c < ' ' || c == CC_DEL || (c >= 0x80 && c < 0xa0))
     return Qnil;
