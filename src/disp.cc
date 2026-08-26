@@ -361,6 +361,22 @@ surrogate_font ()
   return hfont;
 }
 
+static HFONT
+replacement_font ()
+{
+  static HFONT hfont;
+  static SIZE size;
+  const SIZE &sz = app.text_font.size ();
+  if (!hfont || size.cx != sz.cx || size.cy != sz.cy)
+    {
+      if (hfont)
+        DeleteObject (hfont);
+      hfont = create_replacement_font (sz);
+      size = sz;
+    }
+  return hfont;
+}
+
 // 升目ごとに切り取って一文字ずつ描く。字形が升目より広いとき、はみ出した分は
 // 次の升目が塗り消す
 class paint_chars_ctx
@@ -514,6 +530,16 @@ paint_surrogate_chars (HDC hdc, int x, int y, int flags, const RECT &r,
 }
 
 static inline void
+paint_replacement_chars (HDC hdc, int x, int y, int flags, const RECT &r,
+                         const glyph_t *g, int len)
+{
+  HGDIOBJ of = SelectObject (hdc, replacement_font ());
+  paint_chars_ctx ctx (x, y, r);
+  paint_cells (hdc, ctx, flags, g, len);
+  SelectObject (hdc, of);
+}
+
+static inline void
 paint_smlcdm_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                     const glyph_t *g, int len)
 {
@@ -554,6 +580,10 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
     case GLYPH_FONT_SURROGATE_HIGH:
       paint_cell_chars (hdc, x, y, flags, r, g, len,
                         app.text_font.font (FONT_ASCII));
+      break;
+
+    case GLYPH_FONT_REPLACEMENT:
+      paint_replacement_chars (hdc, x, y, flags, r, g, len);
       break;
 
     default:
@@ -1375,6 +1405,12 @@ glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, glyph_t f, int flags, int 
     font = GLYPH_FONT_SMLCDM;
   else if (utf16_surrogate_high_p (cc))
     font = GLYPH_FONT_SURROGATE_HIGH;
+  else if (cc == UNICODE_REPLACEMENT_CHAR)
+    {
+      // 元のファイルに無い字なので、制御文字と同じ色で描く
+      f = (f & ~GLYPH_TEXT_MASK) | GLYPH_CTRL;
+      font = GLYPH_FONT_REPLACEMENT;
+    }
   else
     font = MAKE_GLYPH_FONT (font_slot_of (cc, lang));
 

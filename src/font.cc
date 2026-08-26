@@ -169,6 +169,20 @@ create_surrogate_font (const SIZE &cell)
   return CreateFontIndirectW (&lf);
 }
 
+// 日本語のフォントは U+FFFD の字形を持たない。フォントリンクで拾われる字形は
+// 環境によって中黒と見分けの付かない点になるので、字形を持つフォントを名指しする。
+// 高さに対して字幅がおよそ 5/8 なので、一桁に収まるようその比で抑える
+HFONT
+create_replacement_font (const SIZE &cell)
+{
+  LOGFONTW lf;
+  bzero (&lf, sizeof lf);
+  lf.lfHeight = min (long (cell.cy), cell.cx * 8 / 5);
+  lf.lfCharSet = DEFAULT_CHARSET;
+  wcscpy (lf.lfFaceName, L"Microsoft Sans Serif");
+  return CreateFontIndirectW (&lf);
+}
+
 int
 FontObject::create (const WCHAR *face, int h, int charset)
 {

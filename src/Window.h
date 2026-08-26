@@ -110,7 +110,9 @@ typedef unsigned long long glyph_t;
 # define GLYPH_FONT_SURROGATE        MAKE_GLYPH_FONT (FONT_MAX + 1)
 // 対にならなかった上位サロゲート。字が無いので ASCII のフォントで描く
 # define GLYPH_FONT_SURROGATE_HIGH   MAKE_GLYPH_FONT (FONT_MAX + 2)
-# if FONT_MAX + 2 > 31
+// 置換文字。日本語のフォントは字形を持たないので、持つフォントで描く
+# define GLYPH_FONT_REPLACEMENT      MAKE_GLYPH_FONT (FONT_MAX + 3)
+# if FONT_MAX + 3 > 31
 #  error "wrong GLYPH_FONT_MASK"
 # endif
 

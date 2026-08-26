@@ -499,7 +499,7 @@ printer_device::get_dev_copies (print_settings &ps)
 print_engine::print_engine (Buffer *bp, const printer_device &dev,
                             print_settings &settings)
      : pe_bp (bp), pe_dev (dev), pe_settings (settings),
-       pe_surrogate_font (0), pe_hbm (0)
+       pe_surrogate_font (0), pe_replacement_font (0), pe_hbm (0)
 {
   for (int i = 0; i < FONT_MAX; i++)
     pe_hfonts[i] = 0;
@@ -518,6 +518,11 @@ print_engine::cleanup ()
     {
       DeleteObject (pe_surrogate_font);
       pe_surrogate_font = 0;
+    }
+  if (pe_replacement_font)
+    {
+      DeleteObject (pe_replacement_font);
+      pe_replacement_font = 0;
     }
   if (pe_hbm)
     {
@@ -551,6 +556,10 @@ print_engine::init_font (HDC hdc)
   if (pe_surrogate_font)
     DeleteObject (pe_surrogate_font);
   pe_surrogate_font = create_surrogate_font (pe_cell);
+
+  if (pe_replacement_font)
+    DeleteObject (pe_replacement_font);
+  pe_replacement_font = create_replacement_font (pe_cell);
 
   pe_fixed_pitch = 1;
 
@@ -879,6 +888,20 @@ print_engine::paint_surrogate_pair (PaintCtx &ctx, ucs4_t lc) const
   SelectObject (ctx.hdc, of);
 }
 
+// 置換文字。日本語のフォントは字形を持たないので、専用のフォントで描く
+void
+print_engine::paint_replacement (PaintCtx &ctx, Char cc) const
+{
+  ucs2_t wc = ucs2_t (cc);
+  HGDIOBJ of = SelectObject (ctx.hdc, pe_replacement_font);
+  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, &wc, 1, 0);
+  SelectObject (ctx.hdc, of);
+  ctx.column++;
+  ctx.x += (pe_fixed_pitch
+            ? pe_print_cell.cx
+            : get_glyph_width (cc, pe_glyph_width));
+}
+
 void
 print_engine::paint_lucida (PaintCtx &ctx, Char cc) const
 {
@@ -1006,6 +1029,8 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
         }
       else if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
         paint_lucida (ctx, cc);
+      else if (cc == UNICODE_REPLACEMENT_CHAR)
+        paint_replacement (ctx, cc);
       else
         paint_char (ctx, cc);
     }
