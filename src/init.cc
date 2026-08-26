@@ -395,6 +395,8 @@ init_symbol_value_once ()
   xsymbol_value (Vdetect_char_encoding_buffer_size) = make_fixnum (DEFAULT_DETECT_BUFFER_SIZE);
   xsymbol_value (Vdefault_eol_code) = make_fixnum (eol_crlf);
   xsymbol_value (Vexpected_eol_code) = make_fixnum (eol_guess);
+  xsymbol_value (Vread_only_if_unmappable) = Qt;
+  xsymbol_value (Vbuffer_unmappable_count) = make_fixnum (0);
 
   xsymbol_value (Qor_string_integer) =
     xcons (Qor, xcons (Qstring, xcons (Qinteger, Qnil)));

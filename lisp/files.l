@@ -73,10 +73,14 @@
 (defun find-file-notice (filename nlines nomsg)
   (cond ((file-writable-p filename)
 	 (unless nomsg
-	   (if buffer-read-only
-	       (message "~aは他のプロセスが上書き禁止で開いています。~d行読み込みました"
-			filename nlines)
-	     (message "~d行読み込みました" nlines))))
+	   (cond ((plusp buffer-unmappable-count)
+		  (message "~aには符号変換で写せないバイトが~d箇所あります。~d行読み込みました"
+			   filename buffer-unmappable-count nlines))
+		 (buffer-read-only
+		  (message "~aは他のプロセスが上書き禁止で開いています。~d行読み込みました"
+			   filename nlines))
+		 (t
+		  (message "~d行読み込みました" nlines)))))
 	(t
 	 (setq buffer-read-only t)
 	 (or nomsg
@@ -340,7 +344,10 @@
 	(warn "~a\nメモリが足りなくてすべて読み込めませんでした" filename)
 	(set-buffer-truncated-p t))
       (or nomsg
-	  (message "~d行読み込みました" nlines))
+	  (if (plusp buffer-unmappable-count)
+	      (message "符号変換で写せないバイトが~d箇所ありました。~d行読み込みました"
+		       buffer-unmappable-count nlines)
+	    (message "~d行読み込みました" nlines)))
       nlines)))
 
 (defun insert-file (filename &optional encoding)

@@ -607,6 +607,9 @@ struct Buffer
     {return symbol_value (Vbuffer_read_only, this) != Qnil;}
   void check_read_only () const;
 
+  int unmappable_p () const
+    {return symbol_value_as_integer (Vbuffer_unmappable_count, this) > 0;}
+
   int delete_surplus_undo ();
   UndoInfo *setup_save_undo ();
   UndoInfo *setup_insert_undo (point_t, int);
@@ -943,6 +946,7 @@ struct ReadFileContext
   Chunk *r_chunk;
   Chunk *r_tail;
   int r_cr;
+  long r_unmappable;
 };
 
 void create_default_buffers ();

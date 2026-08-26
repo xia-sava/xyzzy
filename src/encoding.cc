@@ -76,6 +76,7 @@ sjis_to_internal_stream::refill_internal ()
           // 先導バイトは単独では字にならない。2 バイト目は字の頭として読み直す
           s_in.putback (c2);
         }
+      unmappable ();
       put (UNICODE_REPLACEMENT_CHAR);
     }
 }
@@ -109,6 +110,7 @@ fast_sjis_to_internal_stream::refill_internal ()
               continue;
             }
         }
+      unmappable ();
       *d = UNICODE_REPLACEMENT_CHAR;
     }
   s_in.end_direct_input (s);

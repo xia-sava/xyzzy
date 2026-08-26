@@ -27,7 +27,12 @@ public:
   WCHAR *file_or_buffer_name (WCHAR *, WCHAR *, int) const;
   WCHAR *mode_name (WCHAR *, WCHAR *, int) const;
   WCHAR *encoding (WCHAR *b, WCHAR *be) const
-    {return w2u (b, be, xchar_encoding_name (b_bufp->lchar_encoding));}
+    {
+      b = w2u (b, be, xchar_encoding_name (b_bufp->lchar_encoding));
+      if (b < be && b_bufp->unmappable_p ())
+        *b++ = '!';
+      return b;
+    }
   WCHAR *encoding_lang (WCHAR *, WCHAR *) const;
   WCHAR *eol_code (WCHAR *b, WCHAR *be) const
     {return stpncpy (b, b_eol_name[b_bufp->b_eol_code], be - b);}

@@ -775,6 +775,16 @@ Buffer::insert_file_contents (Window *wp, lisp filename, lisp visit,
     post_buffer_modified (Kinsert, wp->w_point,
                           wp->w_point.p_point,
                           wp->w_point.p_point + rfc.r_nchars);
+
+  // 差し込みは元からある置換文字に足す。ファイルを開いたときは数え直す
+  long unmappable = rfc.r_unmappable;
+  if (visit == Qnil)
+    unmappable += symbol_value_as_integer (Vbuffer_unmappable_count, this);
+  set_local_variable (Vbuffer_unmappable_count, make_fixnum (unmappable));
+
+  if (rfc.r_unmappable && visit != Qnil
+      && xsymbol_value (Vread_only_if_unmappable) != Qnil)
+    set_local_variable (Vbuffer_read_only, Qt);
 }
 
 lisp

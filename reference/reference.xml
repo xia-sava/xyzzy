@@ -2330,6 +2330,32 @@ nilならreader-errorが発生します。
 </chapter>
 
 <chapter>
+<title>*read-only-if-unmappable*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+符号変換で写せない符号があったファイルを開いたとき、そのバッファを
+読み取り専用にするかどうかを制御します。
+
+  t     buffer-read-only を t にする
+  nil   何もしない
+
+標準はtです。
+
+写せなかった符号は &#65533;(U+FFFD) になっており、そのまま上書き保存すると
+元のバイトが失われます。読み取り専用にするのはそれを防ぐためです。
+編集するには toggle-read-only で解除してください。
+</description>
+<seealso>buffer-unmappable-count</seealso>
+<seealso>buffer-read-only</seealso>
+<seealso>toggle-read-only</seealso>
+<link></link>
+<section>変数と定数</section>
+<file></file>
+</chapter>
+
+<chapter>
 <title>*save-buffer-no-filenames-hook*</title>
 <type>Variable</type>
 <arguments></arguments>
@@ -5733,6 +5759,25 @@ buffer-streamであるストリームの入出力のポイントを指定しま�
 <seealso>substring</seealso>
 <section>文字列</section>
 <file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>buffer-unmappable-count</title>
+<type>BufferLocal</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+符号変換で写せず &#65533;(U+FFFD) になった符号の数です。
+ファイルを開くと数え直し、insert-file-contents で差し込んだ分は足されます。
+
+この数が 0 でないバッファは、モードラインの符号名に ! が付きます。
+また、ファイルを開いたときは buffer-read-only が t になります。
+</description>
+<seealso>*read-only-if-unmappable*</seealso>
+<seealso>mode-line-format</seealso>
+<seealso>insert-file-contents</seealso>
+<section>変数と定数</section>
+<file></file>
 </chapter>
 
 <chapter>
@@ -19022,6 +19067,7 @@ NUMBER がゼロより小さければ t 、そうでなければ nil を返し�
   %M    モード(マイナーモード含む)
   %m    モード
   %k    エンコーディング
+        符号変換で写せない符号があったバッファでは末尾に ! が付く
   %K    エンコーディングが表す言語
   %l    改行コード
   %i    IMEの状態
@@ -30215,6 +30261,7 @@ catchで指定されたラベルまで、非局所脱出します。
   %M    モード(マイナーモード含む) 
   %m    モード 
   %k    エンコーディング
+        符号変換で写せない符号があったバッファでは末尾に ! が付く
   %K    エンコーディングが表す言語
   %l    改行コード
   %!    xyzzyが管理者として実行されている場合は "管理者: "

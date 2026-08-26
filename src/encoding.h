@@ -132,8 +132,15 @@ public:
 
 class xread_stream: public xfilter_stream <u_char, Char>
 {
+private:
+  int s_unmappable;
 protected:
-  xread_stream (xinput_stream <u_char> &in) : xfilter_stream <u_char, Char> (in) {}
+  xread_stream (xinput_stream <u_char> &in)
+       : xfilter_stream <u_char, Char> (in), s_unmappable (0) {}
+  // 写せない符号を置換文字で読んだと記録する。読み終わってから問い合わせる
+  void unmappable () {s_unmappable++;}
+public:
+  int unmappable_count () const {return s_unmappable;}
 };
 
 template <class T, int SZ, int PAD>
@@ -728,6 +735,7 @@ public:
   operator xread_stream & () const {return *s_stream;}
   xread_stream *operator -> () const {return s_stream;}
   int utf16_byte_order () const {return s_byte_order;}
+  int unmappable_count () const {return s_stream->unmappable_count ();}
 };
 
 class encoding_output_stream_helper

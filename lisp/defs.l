@@ -94,6 +94,7 @@
 	  '(kept-undo-information
 	    need-not-save
 	    buffer-read-only
+	    buffer-unmappable-count
 	    auto-save
 	    lock-file
 	    abbrev-mode)))

@@ -1712,6 +1712,7 @@ zerop
 *quotation-prefix*
 *random-state*
 *read-eval*
+*read-only-if-unmappable*
 *readtable*
 *rectangle-kill-buffer*
 *save-history*
@@ -1756,6 +1757,7 @@ auto-save
 backup-by-copying
 buffer-mode
 buffer-read-only
+buffer-unmappable-count
 call-arguments-limit
 char-code-limit
 ctl-x-4-map

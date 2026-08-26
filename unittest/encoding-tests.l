@@ -41,6 +41,81 @@
       (princ "A\x85\x40B\x82\x0aC" o))
     (with-temp-buffer
       (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
         (insert-file-contents f))
       (map 'list #'char-code (buffer-substring (point-min) (point-max)))))
   => (65 65533 64 66 65533 10 67))
+
+(deftest sjis-unmappable-count ()
+  "写せなかった数がバッファに記録される"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x85\x40B\x86\x41C" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
+        (insert-file-contents f))
+      buffer-unmappable-count))
+  => 2)
+
+(deftest sjis-unmappable-count-none ()
+  "写せる符号だけなら数は 0"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x82\xa0B" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
+        (insert-file-contents f))
+      buffer-unmappable-count))
+  => 0)
+
+(deftest sjis-unmappable-count-accumulates ()
+  "差し込みは元からある置換文字に足す"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x85\x40B" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
+        (insert-file-contents f)
+        (insert-file-contents f))
+      buffer-unmappable-count))
+  => 2)
+
+(deftest sjis-unmappable-read-only ()
+  "写せない符号があるファイルを開いたバッファは read-only になる"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x85\x40B" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
+        (insert-file-contents f t))
+      buffer-read-only))
+  => t)
+
+(deftest sjis-unmappable-read-only-suppressed ()
+  "*read-only-if-unmappable* が nil なら read-only にしない"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x85\x40B" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*)
+            (*read-only-if-unmappable* nil))
+        (declare (special *expected-fileio-encoding* *read-only-if-unmappable*))
+        (insert-file-contents f t))
+      buffer-read-only))
+  => nil)
+
+(deftest sjis-unmappable-no-read-only-without-visit ()
+  "差し込みでは read-only にしない"
+  (with-temp-files (f)
+    (with-open-file (o f :direction :output :encoding :binary)
+      (princ "A\x85\x40B" o))
+    (with-temp-buffer
+      (let ((*expected-fileio-encoding* *encoding-sjis*))
+        (declare (special *expected-fileio-encoding*))
+        (insert-file-contents f))
+      buffer-read-only))
+  => nil)

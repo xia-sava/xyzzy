@@ -262,6 +262,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, const char *filename,
   rfc.r_chunk = 0;
   rfc.r_eol_code = rfc.r_expect_eol;
   rfc.r_cr = 0;
+  rfc.r_unmappable = 0;
 
   mapf mf;
   if (!mf.open (filename, FILE_FLAG_SEQUENTIAL_SCAN, 1))
@@ -303,6 +304,7 @@ Buffer::read_file_contents (ReadFileContext &rfc, const char *filename,
 
       encoding_input_stream_helper sin (rfc.r_char_encoding, str, 1);
       int r = read_file_contents (rfc, sin);
+      rfc.r_unmappable = sin.unmappable_count ();
 
       if (xchar_encoding_type (rfc.r_char_encoding) == encoding_utf16
           && !(xchar_encoding_utf_flags (rfc.r_char_encoding)
@@ -350,6 +352,7 @@ Buffer::readin_chunk (ReadFileContext &rfc, const char *filename)
   rfc.r_expect_eol = eol_guess;
   rfc.r_eol_code = eol_guess;
   rfc.r_cr = 0;
+  rfc.r_unmappable = 0;
 
   mapf mf;
   if (!mf.open (filename, FILE_FLAG_SEQUENTIAL_SCAN, 1))
@@ -369,7 +372,9 @@ Buffer::readin_chunk (ReadFileContext &rfc, const char *filename)
       rfc.r_char_encoding = rfc.r_expect_char_encoding;
 
       encoding_input_stream_helper sin (rfc.r_char_encoding, str, 1);
-      return readin_chunk (rfc, sin);
+      int r = readin_chunk (rfc, sin);
+      rfc.r_unmappable = sin.unmappable_count ();
+      return r;
     }
   catch (Win32Exception &e)
     {
