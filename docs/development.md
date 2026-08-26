@@ -132,15 +132,18 @@ CRT / STL と名前が衝突するヘッダが多数ある。本来のビルド�
 ## 文字符号
 
 UTF-8（BOM なし）へ変換済み: `src/*.cc` `*.h`、`src/*.rc`、`*.bat`、`docs/old/*.html`、
-`etc/README.gendic`。
+`etc/README.gendic`、`lisp/*.l`、`unittest/*.l`、`misc/*.l`。
+
+**Lisp のソースは読み手が符号を判別する。** `load` と `compile-file` は
+`si:*detect-stream-encoding`（`src/stream.cc`）でファイル全体を厳密な UTF-8 として
+検査し、通ったものだけを UTF-8 として読む。通らなければ CP932 として読むので、
+利用者の `siteinit.l` や第三者の site-lisp が CP932 のままでも壊れない。
+**新しく足す `.l` は UTF-8 で書く。** `open` の動作は変えていない。
 
 **まだ CP932 のもの**:
 
-- `unittest/*.l`、`misc/*.l`、`etc/{IDL,TeX,Sql-NonStd/*}` — xyzzy が実行時に読むデータ。
-  **単純に変換してはいけない。** `load` が使う `getc_file_stream` の `ENCODE_CANON` は
-  `if (SJISP (c))` で 2 バイト目を繋ぐだけで（`src/stream.cc`）、**符号判別が一切ない**。
-  CP932 決め打ちで読まれる。UTF-8 化するには先に読み手を変える必要があり、その際は
-  利用者の `siteinit.l` や第三者の site-lisp が CP932 のままであることを壊さないこと
+- `etc/{IDL,TeX,Sql-NonStd/*}` — 言語ごとのキーワード表。`load-keyword-file` が
+  `insert-file` で読む（`lisp/kwd.l`）ので、Lisp のソースとは別の経路になる
 - **`.lc` は「正しい CP932」ではない。** バイトコードの命令語が `Char` 値として文字列
   リテラルに入るため、大半が CP932 として不正な後続バイトを含む。往復できているのは
   書き手と読み手がどちらも無検査だから。符号判別を導入するなら **`.l` だけに適用し
