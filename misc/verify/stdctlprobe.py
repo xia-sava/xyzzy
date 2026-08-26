@@ -6,8 +6,11 @@
 差し替えて**同名で**登録し直す。効いていれば、そのクラスを登録したモジュールは
 `xyzzy.exe` になる。効かなくなれば `user32.dll` や `comctl32.dll` に変わる。
 
-見た目には出ず、落ちもせず、**C-p / C-n が効かなくなるだけ**なので、
-クラスの出所と実際の動きの両方を見る。
+見た目には出ず、落ちもせず、**キーが効かなくなるだけ**なので、クラスの出所と
+実際の動きの両方を見る。動きは二つある。`*std-control-down-char*` による選択の
+移動と、リストボックスを文字で選ぶ動き（`WM_PRIVATE_LISTBOX_CHAR` を親へ送る
+経路。所有者描画のリストボックスは `LBS_HASSTRINGS` を落としてあるので、
+実装まかせでは文字で選べない）。
 """
 import ctypes, sys, time
 import dlgtext as D
@@ -95,6 +98,19 @@ def main():
                                             "OK" if ok else "NG"))
             if not ok:
                 ng += 1
+
+        print("=== リストボックスを文字で選べるか")
+        if lbx:
+            u32.SendMessageW(lbx, LB_SETCURSEL, 0, 0)
+            u32.SendMessageW(lbx, WM_CHAR, ord("c"), 1)      # charlie は 3 番目
+            after = u32.SendMessageW(lbx, LB_GETCURSEL, 0, 0)
+            ok = after == 2
+            print("  c を投げる        0 -> %d  %s" % (after, "OK" if ok else "NG"))
+            if not ok:
+                ng += 1
+        else:
+            print("  見つからない")
+            ng += 1
         print("NG=%d" % ng)
         return 0 if ng == 0 else 1
     finally:
