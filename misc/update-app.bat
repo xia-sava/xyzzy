@@ -5,6 +5,7 @@ rem "  update-app.bat [選択肢] <導入先>"
 rem ""
 rem "    /dry-run    何をするかだけ表示し、一切変更しない"
 rem "    /force      同じ版でも適用する"
+rem "    /no-backup  退避を取らない。導入先の中だけで完結する"
 rem "    /from-app   xyzzy から呼ばれた。終了を待ってから始め、終わったら開き直す"
 rem ""
 rem "Windows 同梱の道具だけで動く。curl・certutil・tar・robocopy・powershell。"
@@ -26,6 +27,7 @@ set "FORCE="
 set "FROM_APP="
 set "INSTALL="
 set "BACKUP_DONE="
+set "NO_BACKUP="
 set "BASE_URL=%XYZZY_UPDATE_BASE_URL%"
 if not defined BASE_URL set "BASE_URL=https://github.com/xia-sava/xyzzy/releases/download/latest"
 
@@ -39,6 +41,8 @@ if /i "%~1"=="/dry-run" (set "DRY_RUN=1" & shift & goto parse)
 if /i "%~1"=="--dry-run" (set "DRY_RUN=1" & shift & goto parse)
 if /i "%~1"=="/force" (set "FORCE=1" & shift & goto parse)
 if /i "%~1"=="--force" (set "FORCE=1" & shift & goto parse)
+if /i "%~1"=="/no-backup" (set "NO_BACKUP=1" & shift & goto parse)
+if /i "%~1"=="--no-backup" (set "NO_BACKUP=1" & shift & goto parse)
 if /i "%~1"=="/from-app" (set "FROM_APP=1" & shift & goto parse)
 if /i "%~1"=="--from-app" (set "FROM_APP=1" & shift & goto parse)
 if /i "%~1"=="/?" goto usage
@@ -69,7 +73,6 @@ if /i "%~dp0"=="%INSTALL%\" if not defined XYZZY_UPDATE_RELOCATED (
 )
 
 set "BACKUP=%INSTALL%.bak"
-set "BACKUP_PREV=%INSTALL%.bak.1"
 set "HOLD=%INSTALL%.lc-hold"
 set "STAMP=%INSTALL%\.xyzzy-update"
 
@@ -183,13 +186,15 @@ if not "!COUNT!"=="0" (
 
 rem "--- 4. 退避する -------------------------------------------------------"
 echo [4/7] 退避する
-rem "退避は 2 世代残す。直前の姿が一番戻したいものなので、古い方を送って場所を空ける。"
+rem "退避は直前の姿だけを 1 つ残す。それより古い姿へ戻したいときは、版ごとのリリース"
+rem "から取り直せばよい。/no-backup なら退避を取らず、導入先の中だけで完結する。"
+if defined NO_BACKUP (
+  echo         退避を取らない（/no-backup）
+  goto overlay
+)
 if exist "%BACKUP%" (
-  call :act "前の退避を送る: %BACKUP% から %BACKUP_PREV% へ"
-  if not defined DRY_RUN (
-    if exist "%BACKUP_PREV%" rmdir /s /q "%BACKUP_PREV%"
-    move "%BACKUP%" "%BACKUP_PREV%" >nul || (call :fail "前の退避を送れない" & exit /b 1)
-  )
+  call :act "前の退避を捨てる: %BACKUP%"
+  if not defined DRY_RUN rmdir /s /q "%BACKUP%"
 )
 call :act "%INSTALL% から %BACKUP% へ"
 if not defined DRY_RUN (
@@ -206,6 +211,7 @@ if not defined DRY_RUN (
   echo         !AFTER! 個を退避した
 )
 
+:overlay
 rem "--- 5. 被せる ---------------------------------------------------------"
 echo [5/7] 新しいものを被せる
 for %%f in (xyzzy.exe xyzzycli.exe xyzzyenv.exe) do (
@@ -279,7 +285,11 @@ if defined DRY_RUN (
 echo %NEW_VERSION% にした。
 echo.
 echo   * 次の起動で etc\DOC とダンプが作り直される（少し待たされ、窓が前に出る）
-echo   * 直前の姿は %BACKUP%、その前は %BACKUP_PREV% に残っている
+if defined BACKUP_DONE (
+  echo   * 直前の姿は %BACKUP% に残っている。それより古い版はリリースから取り直せる
+) else (
+  echo   * 退避は取っていない。戻すなら版ごとのリリースから取り直す
+)
 rem "xyzzy から呼ばれた回は開き直しのついでに作り直すので、ここでは言わない。"
 if defined MOVED_LC if not defined FROM_APP (
   echo   * site-lisp の .lc を退けた。M-x update-rebuild-site-lisp で作り直せる
@@ -308,6 +318,7 @@ echo   update-app.bat [選択肢] ^<導入先^>
 echo.
 echo     /dry-run    何をするかだけ表示し、一切変更しない
 echo     /force      同じ版でも適用する
+echo     /no-backup  退避を取らない。導入先の中だけで完結する
 echo     /from-app   xyzzy から呼ばれた。終了を待ってから始め、終わったら開き直す
 echo.
 echo   導入先は環境変数 XYZZY_INSTALL_DIR でも渡せる。
