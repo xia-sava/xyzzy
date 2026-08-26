@@ -13,6 +13,10 @@ import time
 u32 = ctypes.WinDLL("user32", use_last_error=True)
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
+# 相手は DPI に対応した窓を持つ。こちらが対応しないままだと GetWindowRect が
+# 96dpi へ縮めた座標を返し、コントロールから貰う矩形と桁が合わなくなる。
+u32.SetProcessDPIAware()
+
 DESKTOP_NAME = "xyzzy-offscreen"
 GENERIC_ALL = 0x10000000
 STARTF_USESTDHANDLES = 0x00000100
