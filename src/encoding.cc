@@ -621,10 +621,10 @@ big5_to_internal_stream::refill_internal ()
       int c1 = s_in.get ();
       if (c1 == eof)
         break;
-      if (c1 >= 0xa1 && c1 <= 0xf8 && c1 != 0xc8)
+      if (big5_lead_p (c1))
         {
           int c2 = s_in.get ();
-          if (c2 >= 0x40 && c2 <= 0x7e || c2 >= 0xa1 && c2 <= 0xfe)
+          if (big5_trail_p (c2))
             {
               ucs2_t wc = i2w (big5_to_int (c1, c2));
               if (wc != CHAR_INVALID)

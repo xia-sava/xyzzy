@@ -143,3 +143,17 @@
   (map 'list #'char-code
        (convert-encoding-to-internal *encoding-windows-latin1* "A\x80B"))
   => (65 8364 66))
+
+(deftest big5-decode-eten-row ()
+  "ETen 拡張の 0xF9 行も読める。書ける符号は読めなければならない"
+  (map 'list #'char-code
+       (convert-encoding-to-internal *encoding-big5* "A\xf9\x40B"))
+  => (65 32408 66))
+
+(deftest big5-roundtrip-eten-row ()
+  "0xF9 行は書いて読み直すと元に戻る"
+  (map 'list #'char-code
+       (convert-encoding-to-internal
+        *encoding-big5*
+        (convert-encoding-from-internal *encoding-big5* "纘")))
+  => (32408))
