@@ -15754,12 +15754,12 @@ internされます。make-symbolも文字列からシンボルを作り出しま
   nil  半角カナ文字でない。
 
 カナ文字は以下の範囲です。
-  Code          Char
-  ----          ----
-  0xa1 .. 0xb0  #\｡ .. #\ｰ
-  0xb1 .. 0xdd  #\ｱ .. #\ﾝ
-  0xde          #\ﾞ
-  0xdf          #\ﾟ
+  Code              Char
+  ----              ----
+  U+FF61 .. U+FF70  #\｡ .. #\ｰ
+  U+FF71 .. U+FF9D  #\ｱ .. #\ﾝ
+  U+FF9E            #\ﾞ
+  U+FF9F            #\ﾟ
 </description>
 <seealso>kanji-char-p</seealso>
 <seealso>characterp</seealso>
