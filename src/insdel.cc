@@ -1262,16 +1262,16 @@ make_string_from_cf_text_sjis (lisp lstring, const u_char *s)
         {
           if (!s[1])
             {
-              *b = *s;
+              *b = s2w_char (*s);
               break;
             }
-          *b++ = (*s << 8) | s[1];
+          *b++ = s2w_char ((*s << 8) | s[1]);
           s += 2;
         }
       else if (*s == '\r' && s[1] == '\n')
         s++;
       else
-        *b++ = *s++;
+        *b++ = s2w_char (*s++);
     }
   return 1;
 }
