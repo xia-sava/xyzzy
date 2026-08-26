@@ -62,7 +62,7 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | | 何を読むか |
 |---|---|
 | `caretprobe.py` | カーソルの矩形。全角と同じ幅になっているかを画素で見る |
-| `lvprobe.py` | 一覧（ListView）の項目 |
+| `lvprobe.py` | 一覧（ListView）の項目と見出しの書式。並べ替えの印を移して矢印が付け替わるかも見る |
 | `tabprobe.py` | タブの文字 |
 | `ttprobe.py` | ツールチップの本文。載せずに取り出す |
 | `menuprobe.py` | メニューの文字 |
