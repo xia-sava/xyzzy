@@ -97,7 +97,6 @@ public:
   int perf_counter_present_p;
 
   DWORD comctl32_version;
-  DWORD shell32_version;
 
   void load_colors ();
   void load_settings ();

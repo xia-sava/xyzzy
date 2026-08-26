@@ -137,7 +137,6 @@ Sysdep::Sysdep ()
   perf_counter_present_p = QueryPerformanceFrequency ((LARGE_INTEGER *)&perf_freq);
 
   comctl32_version = get_dll_version (L"comctl32.dll");
-  shell32_version = get_dll_version (L"shell32.dll");
 
   load_colors ();
   load_settings ();
