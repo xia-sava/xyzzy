@@ -65,7 +65,11 @@ InitPrivateControls ()
   if (PrivateControlsInitialized)
     return;
 
-  InitCommonControls ();
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof icc;
+  icc.dwICC = (ICC_BAR_CLASSES | ICC_TAB_CLASSES
+               | ICC_LISTVIEW_CLASSES | ICC_UPDOWN_CLASS);
+  InitCommonControlsEx (&icc);
 
   if (!init_listview_class ()
       || !init_url_class ())

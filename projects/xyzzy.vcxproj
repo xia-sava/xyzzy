@@ -282,6 +282,7 @@
     <ResourceCompile Include="..\src\gen\xyzzy.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="..\src\comctl6.manifest" />
     <Manifest Include="..\src\longpath.manifest" />
   </ItemGroup>
   <ItemGroup>
