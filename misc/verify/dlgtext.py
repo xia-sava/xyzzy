@@ -28,6 +28,8 @@ TH32CS_SNAPMODULE = 0x00000008
 TH32CS_SNAPMODULE32 = 0x00000010
 MAX_MODULE_NAME32 = 255
 GCLP_HMODULE = -16
+GWLP_HINSTANCE = -6
+GWL_STYLE = -16
 
 
 class STARTUPINFOW(ctypes.Structure):
@@ -96,6 +98,8 @@ k32.CreateToolhelp32Snapshot.restype = w.HANDLE
 # クラスの hModule は番地なので GetClassLongW では ERROR_INVALID_INDEX になる
 u32.GetClassLongPtrW.restype = ctypes.c_ulonglong
 u32.GetClassLongPtrW.argtypes = [w.HWND, ctypes.c_int]
+u32.GetWindowLongPtrW.restype = ctypes.c_ulonglong
+u32.GetWindowLongPtrW.argtypes = [w.HWND, ctypes.c_int]
 
 
 def quote(a):
@@ -165,16 +169,27 @@ def file_version(path):
     return "%d.%d.%d.%d" % (ms >> 16, ms & 0xFFFF, ls >> 16, ls & 0xFFFF)
 
 
+def module_at(mods, addr):
+    for base, size, name, path in mods:
+        if base <= addr < base + size:
+            return "%s %s" % (name, file_version(path))
+    return "(番地 %08X のモジュールが判らない)" % addr
+
+
 def class_module(mods, hwnd):
     """その窓のクラスを登録したモジュールの名前と版。
 
     どのコモンコントロールが効いているかは、載っているかではなくここに出る。
     """
-    addr = u32.GetClassLongPtrW(hwnd, GCLP_HMODULE)
-    for base, size, name, path in mods:
-        if base <= addr < base + size:
-            return "%s %s" % (name, file_version(path))
-    return "(番地 %08X のモジュールが判らない)" % addr
+    return module_at(mods, u32.GetClassLongPtrW(hwnd, GCLP_HMODULE))
+
+
+def window_module(mods, hwnd):
+    """その窓を作った側の hInstance の名前と版。
+
+    コントロールが自分で作った子か、xyzzy が作り直したものかがここに出る。
+    """
+    return module_at(mods, u32.GetWindowLongPtrW(hwnd, GWLP_HINSTANCE))
 
 
 def dump(hwnd):

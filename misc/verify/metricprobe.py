@@ -7,6 +7,11 @@
 訊いていない。実装がボタンを大きくすると、バーが足りずに右端が切れる。
 それを数で見るための道具。タブとステータスバーの区画も併せて出す。
 
+タブのスピンは、縦置きのとき xyzzy が作り直して向きを変えている
+（`src/dockbar.cc` `tab_bar::modify_spin`）。作り直せているかは
+その窓の hInstance に出るので、向きと併せて示す。縦置きの絵は
+`barsvert.l` を `-l` で読ませると出る。
+
 段 0 と段 1 の出力を `diff` して読む。
 """
 import ctypes, struct, sys, time
@@ -21,6 +26,7 @@ TCM_GETITEMCOUNT = 0x1304
 TCM_GETITEMRECT = 0x130A
 SB_GETPARTS = 0x0400 + 6
 SB_GETRECT = 0x0400 + 10
+UDS_HORZ = 0x0040
 
 
 def rect(h):
@@ -78,13 +84,20 @@ def show_toolbar(h):
           % (far, cx, cy, "収まっている" if far <= max(cx, cy) else "はみ出している"))
 
 
-def show_tab(h):
+def show_tab(h, mods):
     cx, cy = size(h)
     n = u32.SendMessageW(h, TCM_GETITEMCOUNT, 0, 0)
     print("SysTabControl32 %08X 窓 %dx%d タブ %d 枚" % (h, cx, cy, n))
     for i in range(n):
         r = remote_rect(h, TCM_GETITEMRECT, i)
         print("  [%d] %s" % (i, "(%d,%d)-(%d,%d)" % r if r else "取れない"))
+    for c in D.enum(u32.EnumChildWindows, h):
+        if D.class_name(c) != "msctls_updown32":
+            continue
+        style = u32.GetWindowLongW(c, D.GWL_STYLE)
+        print("  スピン %08X 向き %s 作り手 %s"
+              % (c, "横" if style & UDS_HORZ else "縦",
+                 D.window_module(mods, c)))
 
 
 def show_status(h):
@@ -114,13 +127,14 @@ def main():
                 continue
             time.sleep(1.5)
             top = tops[0]
+            mods = D.modules(pi.dwProcessId)
             print("本体 %dx%d" % size(top))
             for c in D.enum(u32.EnumChildWindows, top):
                 cls = D.class_name(c)
                 if cls == "ToolbarWindow32":
                     show_toolbar(c)
                 elif cls == "SysTabControl32":
-                    show_tab(c)
+                    show_tab(c, mods)
                 elif cls == "msctls_statusbar32":
                     show_status(c)
             return 0

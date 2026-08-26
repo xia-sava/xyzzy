@@ -24,6 +24,18 @@ Windows の API 越しに見る。文字コードや窓まわりのように、L
 `dlgtext.py` を読み込んだ時点で `SetProcessDPIAware` を呼んでいるので、
 python の検証台はすべてこれに従う。
 
+## 96 dpi のときの寸法を、画面の設定を変えずに見る
+
+寸法は DPI で変わるので、拡大された画面だけで測ると等倍のときの詰まり方を
+見落とす。`__COMPAT_LAYER=DPIUNAWARE` を環境変数に置いて起動すると、
+マニフェストの宣言を上書きして **DPI 非対応のプロセスとして走る**。
+`GetDeviceCaps (LOGPIXELSY)` が 96 を返すので `dpi_scale` が等倍になり、
+コモンコントロールも 96 dpi で寸法を決める。利用者の画面設定は変わらない。
+
+```bash
+__COMPAT_LAYER=DPIUNAWARE python misc/verify/metricprobe.py <xyzzy.exe> -q -l misc/verify/bars.l
+```
+
 ## 走らせ方
 
 作業ファイルの置き場は環境変数 `XYZZY_VERIFY_WORK` で決める。指定しないと
@@ -71,7 +83,7 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | `hoverprobe.py` | カーソルを載せたときの挙動。別デスクトップなので利用者の手は動かない |
 | `comctlprobe.py` | どの comctl32 が窓のクラスを登録したか。**載っている版では判らない** |
 | `stdctlprobe.py` | 標準コントロールのサブクラス（`src/stdctl.cc`）が効いているか |
-| `metricprobe.py` | バー類の寸法。ツールバーのボタンが窓に収まっているか |
+| `metricprobe.py` | バー類の寸法。ツールバーのボタンが窓に収まっているか。タブのスピンの向きと作り手も出す |
 
 ### 土台と道具
 
@@ -89,5 +101,6 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | | |
 |---|---|
 | `bars.l` | ツールバー・バッファバー・ファンクションバーを出す |
+| `barsvert.l` | バッファバーを左端へ縦置きで出す。タブが溢れるのでスピンも出る |
 | `stdctl.l` | リストボックスとコンボボックスの載ったダイアログを出す |
 | `openfiler.l` | `docs/` を開いたファイラを出す |
