@@ -45,11 +45,12 @@ static char *
 error_str (int e)
 {
   void *buf = 0;
+  // 言語 ID に 0 を渡すと、言語中立・利用者の設定・システムの設定の順で探す
   FormatMessage ((FORMAT_MESSAGE_ALLOCATE_BUFFER
                   | FORMAT_MESSAGE_IGNORE_INSERTS
                   | FORMAT_MESSAGE_FROM_SYSTEM
                   | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                 0, e, GetUserDefaultLangID (), (char *)&buf, 0, 0);
+                 0, e, 0, (char *)&buf, 0, 0);
   return (char *)buf;
 }
 

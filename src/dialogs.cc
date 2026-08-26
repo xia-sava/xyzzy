@@ -1136,11 +1136,13 @@ int
 ODN::error (HWND hwnd, int e)
 {
   WCHAR buf[1024];
-  FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
-                   | FORMAT_MESSAGE_IGNORE_INSERTS
-                   | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                  0, e, GetUserDefaultLangID (),
-                  buf, numberof (buf), 0);
+  // 言語 ID に 0 を渡すと、言語中立・利用者の設定・システムの設定の順で探す
+  if (!FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
+                        | FORMAT_MESSAGE_IGNORE_INSERTS
+                        | FORMAT_MESSAGE_MAX_WIDTH_MASK),
+                       0, e, 0,
+                       buf, numberof (buf), 0))
+    wsprintfW (buf, L"error %d", e);
   MsgBox (hwnd, buf, TitleBarString, MB_OK | MB_ICONEXCLAMATION,
           xsymbol_value (Vbeep_on_error) != Qnil);
   return 1;

@@ -102,10 +102,11 @@ doprint (const WCHAR *fmt, ...)
 static void
 syserror (int e, WCHAR *buf, int size)
 {
+  // 言語 ID に 0 を渡すと、言語中立・利用者の設定・システムの設定の順で探す
   if (!FormatMessageW ((FORMAT_MESSAGE_FROM_SYSTEM
                         | FORMAT_MESSAGE_IGNORE_INSERTS
                         | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                       0, e, GetUserDefaultLangID (),
+                       0, e, 0,
                        buf, size, 0))
     wsprintfW (buf, L"error %d", e);
 }

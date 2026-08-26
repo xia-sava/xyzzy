@@ -1362,9 +1362,10 @@ print_error (wStream &stream, const print_control &, lisp object)
           /* 受け取る側がバイト列なので、綴りは CP932 のまま組み立てる */
           char buf[1024];
           static char *args[] = {"", "", "", "", 0,};
+          // 言語 ID に 0 を渡すと、言語中立・利用者の設定・システムの設定の順で探す
           if (!FormatMessageA ((FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY
                                 | FORMAT_MESSAGE_MAX_WIDTH_MASK),
-                               0, xerror_number (object), GetUserDefaultLangID (),
+                               0, xerror_number (object), 0,
                                buf, sizeof buf, args))
             *buf = 0;
           if (!*buf)
