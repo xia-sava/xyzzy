@@ -205,7 +205,7 @@ class iso2022_noesc_to_internal_stream: public xbuffered_read_stream
 protected:
   u_char s_g[4];
   const int s_vender;
-  void put_legacy (Char, int, int);
+  void put_legacy (Char);
   void to_internal (u_char, int, int);
   virtual void refill_internal ();
 public:

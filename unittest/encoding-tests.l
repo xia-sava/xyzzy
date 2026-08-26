@@ -119,3 +119,27 @@
         (insert-file-contents f))
       buffer-read-only))
   => nil)
+
+(deftest big5-decode-unmappable-pair ()
+  "Big5 で割り当ての無い組も U+FFFD になる"
+  (map 'list #'char-code
+       (convert-encoding-to-internal *encoding-big5* "A\xa3\xc0B"))
+  => (65 65533 66))
+
+(deftest big5-decode-lone-lead-at-eof ()
+  "Big5 の末尾に残った先導バイトも U+FFFD"
+  (map 'list #'char-code
+       (convert-encoding-to-internal *encoding-big5* "A\xa1"))
+  => (65 65533))
+
+(deftest windows-codepage-decode-unmappable ()
+  "コードページで割り当ての無いバイトも U+FFFD"
+  (map 'list #'char-code
+       (convert-encoding-to-internal *encoding-windows-latin1* "A\x81B"))
+  => (65 65533 66))
+
+(deftest windows-codepage-decode-valid ()
+  "割り当てのあるバイトはこれまでどおり"
+  (map 'list #'char-code
+       (convert-encoding-to-internal *encoding-windows-latin1* "A\x80B"))
+  => (65 8364 66))

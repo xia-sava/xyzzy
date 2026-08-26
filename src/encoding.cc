@@ -152,17 +152,17 @@ iso2022_noesc_to_internal_stream::iso2022_noesc_to_internal_stream (xinput_strea
 }
 
 // 文字集合の中での位置は、符号変換の中でだけ内部コードとして扱う。バッファへは
-// Unicode で入れる。写せない符号は元のバイトをそのまま残す
+// Unicode で入れる
 void
-iso2022_noesc_to_internal_stream::put_legacy (Char cc, int oc1, int oc2)
+iso2022_noesc_to_internal_stream::put_legacy (Char cc)
 {
   ucs2_t wc = i2w (cc);
   if (wc != CHAR_INVALID)
     put (wc);
   else
     {
-      put (oc1);
-      put (oc2);
+      unmappable ();
+      put (UNICODE_REPLACEMENT_CHAR);
     }
 }
 
@@ -176,7 +176,12 @@ iso2022_noesc_to_internal_stream::to_internal (u_char ccs, int c1, int oc1)
       else
         {
           ucs2_t wc = i2w ((ccs << 7) | c1);
-          put (wc != CHAR_INVALID ? wc : oc1);
+          if (wc == CHAR_INVALID)
+            {
+              unmappable ();
+              wc = UNICODE_REPLACEMENT_CHAR;
+            }
+          put (wc);
         }
     }
   else
@@ -203,35 +208,33 @@ iso2022_noesc_to_internal_stream::to_internal (u_char ccs, int c1, int oc1)
               case ccs_jisx0208:
                 if (s_vender == ENCODING_ISO_VENDER_OSFJVC && c1 >= 0x75)
                   c1 += 10;
-                put_legacy ((j2sh (c1, c2) << 8) | j2sl (c1, c2), oc1, oc2);
+                put_legacy ((j2sh (c1, c2) << 8) | j2sl (c1, c2));
                 break;
 
               case ccs_jisx0212:
-                put_legacy (jisx0212_to_internal (c1, c2, s_vender), oc1, oc2);
+                put_legacy (jisx0212_to_internal (c1, c2, s_vender));
                 break;
 
               case ccs_gb2312:
-                put_legacy (gb2312_to_int (c1, c2), oc1, oc2);
+                put_legacy (gb2312_to_int (c1, c2));
                 break;
 
               case ccs_big5_1:
               case ccs_big5_2:
                 mule_g2b (ccs, c1, c2);
-                put_legacy (big5_to_int (c1, c2), oc1, oc2);
+                put_legacy (big5_to_int (c1, c2));
                 break;
 
               case ccs_cns11643_1:
-                put_legacy (cns11643_1_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)],
-                            oc1, oc2);
+                put_legacy (cns11643_1_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)]);
                 break;
 
               case ccs_cns11643_2:
-                put_legacy (cns11643_2_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)],
-                            oc1, oc2);
+                put_legacy (cns11643_2_to_internal[c1 * 94 + c2 - (0x21 * 94 + 0x21)]);
                 break;
 
               case ccs_ksc5601:
-                put_legacy (ksc5601_to_int (c1, c2), oc1, oc2);
+                put_legacy (ksc5601_to_int (c1, c2));
                 break;
 
               default:
@@ -629,12 +632,13 @@ big5_to_internal_stream::refill_internal ()
                   put (wc);
                   continue;
                 }
-              // Unicode に対応の無い符号は、元のバイトをそのまま残す
-              put (c1);
-              c1 = c2;
             }
           else
+            // 先導バイトは単独では字にならない。2 バイト目は字の頭として読み直す
             s_in.putback (c2);
+          unmappable ();
+          put (UNICODE_REPLACEMENT_CHAR);
+          continue;
         }
       put (c1);
     }
@@ -937,8 +941,12 @@ iso8859_to_internal_stream::refill_internal ()
       if (c >= 0xa0)
         {
           ucs2_t wc = i2w (s_charset | (c & 127));
-          if (wc != CHAR_INVALID)
-            c = wc;
+          if (wc == CHAR_INVALID)
+            {
+              unmappable ();
+              wc = UNICODE_REPLACEMENT_CHAR;
+            }
+          c = wc;
         }
       put (c);
     }
@@ -952,11 +960,16 @@ windows_codepage_to_internal_stream::refill_internal ()
       int c = s_in.get ();
       if (c == eof)
         break;
-      if (c >= 0x80 && s_translate[c - 0x80] != CHAR_INVALID)
+      if (c >= 0x80)
         {
-          ucs2_t wc = i2w (s_translate[c - 0x80]);
-          if (wc != CHAR_INVALID)
-            c = wc;
+          Char cc = s_translate[c - 0x80];
+          ucs2_t wc = cc != CHAR_INVALID ? i2w (cc) : CHAR_INVALID;
+          if (wc == CHAR_INVALID)
+            {
+              unmappable ();
+              wc = UNICODE_REPLACEMENT_CHAR;
+            }
+          c = wc;
         }
       put (c);
     }
