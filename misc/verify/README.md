@@ -69,11 +69,25 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | `uniprobe.py` | その窓が Unicode 窓か（`IsWindowUnicode`） |
 | `fmtprobe.py` | 通知を A/W どちらで受けるつもりか（`WM_NOTIFYFORMAT`） |
 | `hoverprobe.py` | カーソルを載せたときの挙動。別デスクトップなので利用者の手は動かない |
+| `comctlprobe.py` | どの comctl32 が窓のクラスを登録したか。**載っている版では判らない** |
+| `stdctlprobe.py` | 標準コントロールのサブクラス（`src/stdctl.cc`）が効いているか |
+| `metricprobe.py` | バー類の寸法。ツールバーのボタンが窓に収まっているか |
 
 ### 土台と道具
 
 | | |
 |---|---|
 | `rundesk.py` | 別デスクトップを作ってコマンドを走らせる。全部これを通る |
-| `dlgtext.py` | 窓の列挙・クラス名・文字取得。python の検証台が読み込む |
+| `dlgtext.py` | 窓の列挙・クラス名・文字取得・モジュール一覧。python の検証台が読み込む |
 | `recompile.l` | site-lisp の `.lc` を `.l` から一括で作り直す。`XYZZY_LC_HOLD` と `XYZZY_SITE_LISP` で場所を渡す |
+
+### 足場の Lisp
+
+`-q` で起動すると利用者の設定が読まれないので、見たいものが出てこない。
+`-l` で先に読ませる。
+
+| | |
+|---|---|
+| `bars.l` | ツールバー・バッファバー・ファンクションバーを出す |
+| `stdctl.l` | リストボックスとコンボボックスの載ったダイアログを出す |
+| `openfiler.l` | `docs/` を開いたファイラを出す |

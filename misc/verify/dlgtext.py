@@ -24,6 +24,10 @@ CREATE_SUSPENDED = 0x00000004
 JobObjectExtendedLimitInformation = 9
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 WAIT_SECONDS = 30
+TH32CS_SNAPMODULE = 0x00000008
+TH32CS_SNAPMODULE32 = 0x00000010
+MAX_MODULE_NAME32 = 255
+GCLP_HMODULE = -16
 
 
 class STARTUPINFOW(ctypes.Structure):
@@ -70,6 +74,15 @@ class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
                 ("PeakJobMemoryUsed", ctypes.c_size_t)]
 
 
+class MODULEENTRY32W(ctypes.Structure):
+    _fields_ = [("dwSize", w.DWORD), ("th32ModuleID", w.DWORD),
+                ("th32ProcessID", w.DWORD), ("GlblcntUsage", w.DWORD),
+                ("ProccntUsage", w.DWORD), ("modBaseAddr", ctypes.c_void_p),
+                ("modBaseSize", w.DWORD), ("hModule", ctypes.c_void_p),
+                ("szModule", ctypes.c_wchar * (MAX_MODULE_NAME32 + 1)),
+                ("szExePath", ctypes.c_wchar * 260)]
+
+
 ENUMPROC = ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
 
 # 既定の restype は 32 ビット整数なので、ハンドルが切り詰められる
@@ -79,6 +92,10 @@ u32.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, ctypes.c_void_p,
 u32.EnumDesktopWindows.argtypes = [w.HANDLE, ENUMPROC, w.LPARAM]
 u32.EnumChildWindows.argtypes = [w.HWND, ENUMPROC, w.LPARAM]
 k32.CreateJobObjectW.restype = w.HANDLE
+k32.CreateToolhelp32Snapshot.restype = w.HANDLE
+# クラスの hModule は番地なので GetClassLongW では ERROR_INVALID_INDEX になる
+u32.GetClassLongPtrW.restype = ctypes.c_ulonglong
+u32.GetClassLongPtrW.argtypes = [w.HWND, ctypes.c_int]
 
 
 def quote(a):
@@ -107,6 +124,57 @@ def enum(fn, arg):
 
     fn(arg, ENUMPROC(cb), 0)
     return out
+
+
+def modules(pid):
+    """相手のプロセスに載っているモジュールを (番地, 大きさ, 名前, パス) で並べる。
+
+    32 ビットのプロセスを 64 ビットから覗くので SNAPMODULE32 を併せて渡す。
+    """
+    snap = k32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid)
+    if snap == w.HANDLE(-1).value:
+        return []
+    out = []
+    try:
+        me = MODULEENTRY32W()
+        me.dwSize = ctypes.sizeof(me)
+        ok = k32.Module32FirstW(snap, ctypes.byref(me))
+        while ok:
+            out.append((me.modBaseAddr or 0, me.modBaseSize,
+                        me.szModule, me.szExePath))
+            ok = k32.Module32NextW(snap, ctypes.byref(me))
+    finally:
+        k32.CloseHandle(snap)
+    return out
+
+
+def file_version(path):
+    ver = ctypes.WinDLL("version", use_last_error=True)
+    n = ver.GetFileVersionInfoSizeW(path, None)
+    if not n:
+        return "?"
+    buf = ctypes.create_string_buffer(n)
+    if not ver.GetFileVersionInfoW(path, 0, n, buf):
+        return "?"
+    p = ctypes.c_void_p()
+    size = ctypes.c_uint()
+    if not ver.VerQueryValueW(buf, "\\", ctypes.byref(p), ctypes.byref(size)):
+        return "?"
+    # VS_FIXEDFILEINFO の dwFileVersionMS / LS は先頭から 4 つ目と 5 つ目
+    ms, ls = ctypes.cast(p, ctypes.POINTER(w.DWORD * 4)).contents[2:4]
+    return "%d.%d.%d.%d" % (ms >> 16, ms & 0xFFFF, ls >> 16, ls & 0xFFFF)
+
+
+def class_module(mods, hwnd):
+    """その窓のクラスを登録したモジュールの名前と版。
+
+    どのコモンコントロールが効いているかは、載っているかではなくここに出る。
+    """
+    addr = u32.GetClassLongPtrW(hwnd, GCLP_HMODULE)
+    for base, size, name, path in mods:
+        if base <= addr < base + size:
+            return "%s %s" % (name, file_version(path))
+    return "(番地 %08X のモジュールが判らない)" % addr
 
 
 def dump(hwnd):
