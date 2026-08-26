@@ -142,6 +142,45 @@ jobs:
             if (-not ($lc.Name -contains $name)) { throw "$name が作られていない" }
           }
 
+      # cmd 経由で起動する。test-environ は cmd.exe /c set の出力と si:environ を突き
+      # 合わせるが、cmd は起動時に自分の環境へ PROMPT を足すため、親に PROMPT が無いと
+      # xyzzy 側にだけ無い変数ができて落ちる。
+      #
+      # XYZZYCONFIGPATH は wxp という名前の空ディレクトリを指す。
+      # user-config-path-and-dump-image-path-8-test が pathname-name に wxp を期待する。
+      - name: Test
+        shell: cmd
+        timeout-minutes: 10
+        env:
+          XYZZY_TEST_OUT: ${{ runner.temp }}\xyzzy-test-results.txt
+        run: |
+          mkdir "%RUNNER_TEMP%\testcfg\wxp"
+          set XYZZYCONFIGPATH=%RUNNER_TEMP%\testcfg\wxp
+          .\xyzzy.exe -q -trace -l misc\run-tests.l -kill
+
+      # 画面を要求する OLE の 4 件は Windows Server では必ず落ちる
+      # （InternetExplorer.Application が無い）。それ以外が落ちたら回帰とみなす。
+      - name: Verify test results
+        shell: pwsh
+        env:
+          XYZZY_TEST_OUT: ${{ runner.temp }}\xyzzy-test-results.txt
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (-not (Test-Path $env:XYZZY_TEST_OUT)) { throw "結果が書き出されていない" }
+          $text = Get-Content $env:XYZZY_TEST_OUT -Raw -Encoding utf8
+          $total = ($text -split "`n" | Where-Object { $_ -match "^Total \d+ tests" })[0]
+          Write-Host $total
+
+          $allowed = @("test-ole-method*-args", "test-ole-method*-named-args",
+                       "fix-ole-event-sink-load-typelib", "fix-ole-for-each")
+          $failed = @($text -split "`n" |
+                      ForEach-Object { if ($_ -match "^(.*)\.\.\.Failed\s*$") { $Matches[1].Trim() } })
+          $unexpected = @($failed | Where-Object { $allowed -notcontains $_ })
+          foreach ($name in $failed) { Write-Host "Failed: $name" }
+          if ($unexpected.Count -gt 0) {
+            throw "画面を要求する OLE 以外が落ちた: $($unexpected -join ', ')"
+          }
+
       # 更新機構は latest の manifest.json を読み、同じリリースにある asset を取りに行く。
       # latest へ置く zip は版番号を含まない固定の名前にする。版ごとの名前のまま置くと、
       # 名前が毎回変わるので古い zip が latest に積み上がる。
