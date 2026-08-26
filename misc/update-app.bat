@@ -280,6 +280,11 @@ echo %NEW_VERSION% にした。
 echo.
 echo   * 次の起動で etc\DOC とダンプが作り直される（少し待たされ、窓が前に出る）
 echo   * 直前の姿は %BACKUP%、その前は %BACKUP_PREV% に残っている
+rem "xyzzy から呼ばれた回は開き直しのついでに作り直すので、ここでは言わない。"
+if defined MOVED_LC if not defined FROM_APP (
+  echo   * site-lisp の .lc を退けた。M-x update-rebuild-site-lisp で作り直せる
+  echo     ^(作り直さなくても .l が読まれる。起動が遅くなるだけ^)
+)
 
 rem "xyzzy から呼ばれたのなら、終わらせた当人を開き直す。退けた .lc があれば、"
 rem "開き直したついでに作り直させる。"
