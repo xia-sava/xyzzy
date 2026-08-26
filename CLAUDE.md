@@ -74,3 +74,16 @@ xyzzy は `.lc` があればそちらを読む。`.l` だけ直して動かす�
 第三者製の書庫 DLL、DDE、文字集合ごとのフォント見本、winhelp の索引などは、
 相手側の形式が CP932 やバイト列で決まっている。**W 系へ移し忘れているのではなく、
 意図してそこに置いてある。** 触る前にその場のコメントを読む。
+
+## 綴りに W が無い Win32 呼び出しも、実体は W
+
+`xyzzy.exe` は `CharacterSet=Unicode` で建てるので、`UNICODE` と `_UNICODE` が
+全ファイルに入る。`SendMessage`・`SetWindowLong`・`CallWindowProc`・`SB_SETTEXT`・
+`LVM_INSERTCOLUMN` のように A/W の綴りが無いものは、**実体が W**。`TCHAR` は
+使っていないので、効くのはこの写像だけ。
+
+**`vcxproj` の `PreprocessorDefinitions` を見ても `UNICODE` の綴りは出てこない。**
+これを見落として「A のまま残っている」と読むと、無い不具合を直しに行くことになる。
+
+`xyzzycli` と `xyzzyenv` は `CharacterSet=NotSet` だが、裸の呼び出しを持たず
+明示的な W で書いてある。

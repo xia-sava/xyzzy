@@ -129,6 +129,18 @@ CRT / STL と名前が衝突するヘッダが多数ある。本来のビルド�
 ファイルごとにログへ落として個別に終了コードを見る。`cl` の出力は CP932 / CRLF なので
 `iconv -f CP932 -t UTF-8` と `dos2unix` を通す。
 
+### 実際に定義されるマクロは vcxproj を読んでも分からない
+
+`UNICODE` / `_UNICODE` は `PreprocessorDefinitions` ではなく
+`<CharacterSet>Unicode</CharacterSet>` から入る。MSBuild が `/D _UNICODE /D UNICODE`
+へ展開するので、**vcxproj を grep しても綴りは出てこない**。
+
+確実なのは建てたあとの記録を読むこと。UTF-16 なので `tr` でヌルを落とす。
+
+```bash
+tr -d '\0' < Release/xyzzy/xyzzy.tlog/CL.command.1.tlog | grep -o "/D [A-Za-z_0-9]*" | sort -u
+```
+
 ## 文字符号
 
 UTF-8（BOM なし）へ変換済み: `src/*.cc` `*.h`、`src/*.rc`、`*.bat`、`docs/old/*.html`、
