@@ -134,7 +134,7 @@ char_prev (const WCHAR *b, const WCHAR *p)
 
 static int
 paint_text (HDC hdc, WCHAR *s, int l, int fmt, const RECT &r,
-            int offset, int dots, int no_extend, int on, int path_ellipse)
+            int offset, int dots, int no_extend, int path_ellipse)
 {
   int w = r.right - r.left - 2 * offset;
   SIZE ext;
@@ -198,13 +198,13 @@ paint_text (HDC hdc, WCHAR *s, int l, int fmt, const RECT &r,
       rr.top = r.top;
       rr.right = x + ext.cx + offset;
       rr.bottom = r.bottom;
-      ExtTextOutW (hdc, x + on, (r.top + r.bottom - ext.cy) / 2 + on,
+      ExtTextOutW (hdc, x, (r.top + r.bottom - ext.cy) / 2,
                    ETO_OPAQUE | ETO_CLIPPED, &rr, s, l, 0);
       return rr.right;
     }
   else
     {
-      ExtTextOutW (hdc, x + on, (r.top + r.bottom - ext.cy) / 2 + on,
+      ExtTextOutW (hdc, x, (r.top + r.bottom - ext.cy) / 2,
                    ETO_OPAQUE | ETO_CLIPPED, &r, s, l, 0);
       return (ofmt == LVCFMT_RIGHT
               ? (trim ? r.left : x)
@@ -227,7 +227,7 @@ paint_item_text (HWND hwnd, HDC hdc, int item, int subitem, int fmt,
   if (s != lvi.pszText)
     memcpy (s, lvi.pszText, l * sizeof (WCHAR));
   s[l] = 0;
-  return paint_text (hdc, s, l, fmt, r, offset, dots, no_extend, 0,
+  return paint_text (hdc, s, l, fmt, r, offset, dots, no_extend,
                      data->path_ellipse_indices & (1 << subitem));
 }
 
@@ -576,6 +576,25 @@ find_header (HWND hwnd)
 }
 
 static int
+sort_arrow (const listview_item_data *data, int col)
+{
+  if (col < 0 || col != data->sort_mark_id)
+    return 0;
+  return data->sort_mark_dir == LVSM_DOWN ? HDF_SORTUP : HDF_SORTDOWN;
+}
+
+static void
+set_sort_arrow (HWND hwnd_header, int col, int fmt)
+{
+  HD_ITEMW hi;
+  hi.mask = HDI_FORMAT;
+  if (col < 0 || !SendMessageW (hwnd_header, HDM_GETITEMW, col, LPARAM (&hi)))
+    return;
+  hi.fmt = (hi.fmt & ~(HDF_SORTUP | HDF_SORTDOWN)) | fmt;
+  SendMessageW (hwnd_header, HDM_SETITEMW, col, LPARAM (&hi));
+}
+
+static int
 insert_column (HWND hwnd, listview_item_data *data,
                int col, const LV_COLUMN *lc)
 {
@@ -584,106 +603,13 @@ insert_column (HWND hwnd, listview_item_data *data,
     {
       HD_ITEM hi;
       hi.mask = HDI_FORMAT;
-      hi.fmt = HDF_OWNERDRAW;
+      // 列を作り直しても並べ替えの印が消えないよう、ここで戻す
+      hi.fmt = HDF_STRING | sort_arrow (data, r);
       if (lc->mask & LVCF_FMT)
         hi.fmt |= lc->fmt & LVCFMT_JUSTIFYMASK;
       Header_SetItem (data->hwnd_header, r, &hi);
     }
   return r;
-}
-
-static void
-paint_up (HDC hdc, int x, const RECT &r, int on)
-{
-  int y = (r.top + r.bottom + 1) / 2 - 4 + on;
-  x += on;
-  HGDIOBJ open = SelectObject (hdc, CreatePen (PS_SOLID, 0,
-                                               GetSysColor (COLOR_BTNSHADOW)));
-  MoveToEx (hdc, x + 7, y, 0);
-  LineTo (hdc, x, y);
-  LineTo (hdc, x + 3, y + 7);
-  DeleteObject (SelectObject (hdc, CreatePen (PS_SOLID, 0,
-                                              GetSysColor (COLOR_BTNHIGHLIGHT))));
-  MoveToEx (hdc, x + 7, y, 0);
-  LineTo (hdc, x + 4, y + 7);
-  DeleteObject (SelectObject (hdc, open));
-}
-
-static void
-paint_down (HDC hdc, int x, const RECT &r, int on)
-{
-  int y = (r.top + r.bottom + 1) / 2 + 2 + on;
-  x += on;
-  HGDIOBJ open = SelectObject (hdc, CreatePen (PS_SOLID, 1,
-                                               GetSysColor (COLOR_BTNSHADOW)));
-  MoveToEx (hdc, x, y, 0);
-  LineTo (hdc, x + 3, y - 7);
-  DeleteObject (SelectObject (hdc, CreatePen (PS_SOLID, 0,
-                                              GetSysColor (COLOR_BTNHIGHLIGHT))));
-  MoveToEx (hdc, x, y, 0);
-  LineTo (hdc, x + 7, y);
-  LineTo (hdc, x + 4, y - 7);
-  DeleteObject (SelectObject (hdc, open));
-}
-
-static void
-draw_header (HWND hwnd, listview_item_data *data, const DRAWITEMSTRUCT *dis)
-{
-  WCHAR b[1024 + 10];
-  HD_ITEMW hi;
-  hi.mask = HDI_FORMAT | HDI_TEXT;
-  hi.pszText = b;
-  hi.cchTextMax = 1024;
-  if (!SendMessageW (data->hwnd_header, HDM_GETITEMW, dis->itemID, LPARAM (&hi)))
-    return;
-
-  int sort_mark = (data->sort_mark_id >= 0
-                   && int (dis->itemID) == data->sort_mark_id);
-
-  RECT r (dis->rcItem);
-  int fmt = hi.fmt & HDF_JUSTIFYMASK;
-  if (sort_mark)
-    {
-      if (fmt != HDF_RIGHT)
-        r.right -= 12;
-      else
-        r.left += 12;
-      if (r.left >= r.right)
-        return;
-    }
-
-  SIZE dots;
-  GetTextExtentPoint32W (dis->hDC, L"...", 3, &dots);
-
-  int on = dis->itemState & ODS_SELECTED ? 1 : 0;
-  int x = paint_text (dis->hDC, b, wcslen (b), fmt,
-                      r, OFFSET_REST, dots.cx, 0, on, 0);
-
-  if (sort_mark)
-    {
-      if (fmt != HDF_RIGHT)
-        {
-          x = min (x + 16, r.right + 2);
-          if (x + 8 < dis->rcItem.right)
-            {
-              if (data->sort_mark_dir == LVSM_DOWN)
-                paint_down (dis->hDC, x, dis->rcItem, on);
-              else
-                paint_up (dis->hDC, x, dis->rcItem, on);
-            }
-        }
-      else
-        {
-          x = max (x - 24, r.left - 10);
-          if (x >= dis->rcItem.left)
-            {
-              if (data->sort_mark_dir == LVSM_DOWN)
-                paint_down (dis->hDC, x, dis->rcItem, on);
-              else
-                paint_up (dis->hDC, x, dis->rcItem, on);
-            }
-        }
-    }
 }
 
 static void
@@ -694,11 +620,16 @@ set_header_sort_mark (HWND hwnd, listview_item_data *data, int index, int dir)
   if (data->sort_mark_id != index
       || data->sort_mark_dir != dir)
     {
+      int last = data->sort_mark_id;
       data->sort_mark_id = index;
       data->sort_mark_dir = dir;
       if ((data->style & LVS_TYPEMASKEX) >= LVS_EXREPORT
           && data->hwnd_header)
-        InvalidateRect (data->hwnd_header, 0, 1);
+        {
+          if (last != index)
+            set_sort_arrow (data->hwnd_header, last, 0);
+          set_sort_arrow (data->hwnd_header, index, sort_arrow (data, index));
+        }
     }
 }
 
@@ -1155,20 +1086,6 @@ ListViewExProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
             && data->style & LVS_PROCESSKEY
             && send_process_key (hwnd, msg, wparam, lparam, data))
           return 0;
-        break;
-      }
-
-    case WM_DRAWITEM:
-      {
-        listview_item_data *data = get_listview_item_data (hwnd);
-        DRAWITEMSTRUCT *dis = (DRAWITEMSTRUCT *)lparam;
-        if ((data->style & LVS_TYPEMASKEX) >= LVS_EXREPORT
-            && data->hwnd_header
-            && dis->hwndItem == data->hwnd_header)
-          {
-            draw_header (hwnd, data, dis);
-            return 1;
-          }
         break;
       }
 
