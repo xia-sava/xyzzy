@@ -89,16 +89,19 @@ call :json "%WORK%\manifest.json" version NEW_VERSION
 call :json "%WORK%\manifest.json" asset   NEW_ASSET
 call :json "%WORK%\manifest.json" sha256  NEW_SHA
 call :json "%WORK%\manifest.json" commit  NEW_COMMIT
+call :json "%WORK%\manifest.json" bytecode NEW_BYTECODE
 if not defined NEW_VERSION (call :fail "manifest.json を読めない" & exit /b 1)
 if not defined NEW_ASSET   (call :fail "manifest.json を読めない" & exit /b 1)
 if not defined NEW_SHA     (call :fail "manifest.json を読めない" & exit /b 1)
 
 set "OLD_VERSION="
 set "OLD_SHA="
+set "OLD_BYTECODE="
 if exist "%STAMP%" (
   for /f "usebackq tokens=1,* delims==" %%a in ("%STAMP%") do (
     if /i "%%a"=="version" set "OLD_VERSION=%%b"
     if /i "%%a"=="sha256" set "OLD_SHA=%%b"
+    if /i "%%a"=="bytecode" set "OLD_BYTECODE=%%b"
   )
 )
 if defined OLD_VERSION (
@@ -231,8 +234,15 @@ if exist "%INSTALL%\xyzzy.wxp" (
 ) else (
   echo         ダンプは無い
 )
+rem "バイトコードの形式が変わっていなければ、古い .lc はそのまま使える。形式は"
+rem "特殊形式の名前で表され、改名されると古い .lc が読めなくなる。名前が同じなら"
+rem "触らない。どちらかが分からないときは、安全側に倒して退ける。"
 set "MOVED_LC="
-if exist "%INSTALL%\site-lisp" (
+set "KEEP_LC="
+if defined OLD_BYTECODE if defined NEW_BYTECODE if /i "!OLD_BYTECODE!"=="!NEW_BYTECODE!" set "KEEP_LC=1"
+if defined KEEP_LC (
+  echo         site-lisp の .lc はそのまま使える（バイトコードの形式は !NEW_BYTECODE! のまま）
+) else if exist "%INSTALL%\site-lisp" (
   call :count_lc "%INSTALL%\site-lisp" LCCOUNT
   if not "!LCCOUNT!"=="0" (
     call :act "site-lisp の .lc を !LCCOUNT! 個 %HOLD% へ退ける"
@@ -255,6 +265,7 @@ if not defined DRY_RUN (
   > "%STAMP%" echo version=%NEW_VERSION%
   >>"%STAMP%" echo sha256=%NEW_SHA%
   >>"%STAMP%" echo commit=%NEW_COMMIT%
+  >>"%STAMP%" echo bytecode=%NEW_BYTECODE%
   >>"%STAMP%" echo applied=%DATE% %TIME%
 )
 

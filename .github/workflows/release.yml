@@ -29,6 +29,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       asset: ${{ steps.version.outputs.asset }}
+      bytecode: ${{ steps.version.outputs.bytecode }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,9 +70,19 @@ jobs:
           if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne "v$version") {
             throw "tag $($env:GITHUB_REF_NAME) does not match src/version.h (v$version)"
           }
-          Write-Host "version: $version"
+          # バイトコードの世代。古い .lc は特殊形式の名前で弾かれる（改名すると
+          # 読めなくなる）ので、この名前がそのまま形式の識別になる。配布物に載せて
+          # おくと、更新のときに形式が変わった回だけ .lc を退けられる。
+          $syms = Get-Content src/gen-syms.cc -Raw
+          if ($syms -notmatch "SI_DEFSF3\s*\(\s*(\*byte-code[^\s)]*)\s*\)") {
+            throw "src/gen-syms.cc: byte-code の特殊形式が見つからない"
+          }
+          $bytecode = $Matches[1]
+
+          Write-Host "version: $version  bytecode: $bytecode"
           "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
           "asset=xyzzy-$version.zip" | Out-File $env:GITHUB_OUTPUT -Append
+          "bytecode=$bytecode" | Out-File $env:GITHUB_OUTPUT -Append
 
       - name: Build
         shell: cmd
@@ -119,16 +130,18 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           ASSET: ${{ steps.version.outputs.asset }}
+          BYTECODE: ${{ steps.version.outputs.bytecode }}
         run: |
           $ErrorActionPreference = "Stop"
           Copy-Item (Join-Path "_dist" $env:ASSET) "_dist/xyzzy.zip"
           $hash = (Get-FileHash "_dist/xyzzy.zip" -Algorithm SHA256).Hash.ToLower()
           [ordered] @{
-            version = $env:VERSION
-            tag     = "v$($env:VERSION)"
-            commit  = $env:GITHUB_SHA
-            asset   = "xyzzy.zip"
-            sha256  = $hash
+            version  = $env:VERSION
+            tag      = "v$($env:VERSION)"
+            commit   = $env:GITHUB_SHA
+            asset    = "xyzzy.zip"
+            sha256   = $hash
+            bytecode = $env:BYTECODE
           } | ConvertTo-Json | Set-Content -Path "_dist/manifest.json" -Encoding utf8
           Get-Content "_dist/manifest.json"
 
