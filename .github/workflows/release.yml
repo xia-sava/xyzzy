@@ -122,6 +122,26 @@ jobs:
           }
           Write-Host "$($names.Count) entries"
 
+      # 書庫を固めた後に走らせる。バイトコンパイルは lisp に .lc を作るので、配布物へ
+      # 混ざらない位置に置く。落ちれば公開へ進まない。
+      #
+      # makelc は失敗すると msgbox を出して待つ。押せる人がいないランナーでは居座って
+      # しまうので、必ず時間で切る。
+      - name: Byte compile
+        shell: cmd
+        timeout-minutes: 5
+        run: .\bytecompile.bat
+
+      - name: Verify byte compile
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $lc = @(Get-ChildItem -Path lisp -Recurse -Filter *.lc)
+          Write-Host "$($lc.Count) 個の .lc を作った"
+          foreach ($name in @("startup.lc", "update.lc", "loadup.lc")) {
+            if (-not ($lc.Name -contains $name)) { throw "$name が作られていない" }
+          }
+
       # 更新機構は latest の manifest.json を読み、同じリリースにある asset を取りに行く。
       # latest へ置く zip は版番号を含まない固定の名前にする。版ごとの名前のまま置くと、
       # 名前が毎回変わるので古い zip が latest に積み上がる。
