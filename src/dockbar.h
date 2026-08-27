@@ -350,6 +350,8 @@ public:
     {return sendmsg (TCM_SETCURSEL, i, 0);}
   int get_cursel () const
     {return sendmsg (TCM_GETCURSEL, 0, 0);}
+  int select (int i) {return set_cursel (i);}
+  int cursel () const {return get_cursel ();}
   HWND get_tooltips () const
     {return (HWND)sendmsg (TCM_GETTOOLTIPS, 0, 0);}
   int get_item_rect (int i, RECT &r) const

@@ -842,7 +842,7 @@ tab_bar::paint_left (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, t_horz_text ? sysdep.ui_font () : sysdep.ui_font90 ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   for (int i = 0; i < n; i++)
     {
       RECT r;
@@ -887,7 +887,7 @@ tab_bar::paint_top (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   RECT ir;
   items_rect (n, ir);
   int dy = cr.bottom - 1 - ir.bottom;
@@ -937,7 +937,7 @@ tab_bar::paint_right (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, t_horz_text ? sysdep.ui_font () : sysdep.ui_font270 ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   for (int i = 0; i < n; i++)
     {
       RECT r;
@@ -982,7 +982,7 @@ tab_bar::paint_bottom (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   RECT ir;
   items_rect (n, ir);
   int dy = cr.top + 1 - ir.top;
@@ -1413,7 +1413,7 @@ tab_bar::move_tab (int x, int y)
   TC_HITTESTINFO htinfo;
   htinfo.pt = pt;
   int oindex = hit_test (htinfo);
-  if (oindex < 0 || oindex != get_cursel ())
+  if (oindex < 0 || oindex != cursel ())
     return 0;
 
   HCURSOR hcur_old = GetCursor ();
@@ -1474,7 +1474,7 @@ tab_bar::move_tab (int x, int y)
                 set_no_redraw ();
                 if (get_item (oindex, ti) && insert_item (index, ti) >= 0)
                   {
-                    set_cursel (index);
+                    select (index);
                     delete_item (oindex < index ? oindex : oindex + 1);
                   }
                 set_redraw ();
@@ -1565,7 +1565,7 @@ tab_bar::do_context_menu (const POINT *pt)
 
   if (!pt)
     {
-      i = get_cursel ();
+      i = cursel ();
       if (i >= 0)
         {
           RECT r;

@@ -71,7 +71,7 @@ user_tab_bar::gc_mark (void (*f)(lisp))
 lisp
 user_tab_bar::current () const
 {
-  int i = get_cursel ();
+  int i = cursel ();
   return i >= 0 ? nth (i) : 0;
 }
 
@@ -266,12 +266,12 @@ user_tab_bar::delete_item (lisp item)
     return 0;
 
   int selchg = 0;
-  if (i == get_cursel ())
+  if (i == cursel ())
     {
       if (i)
-        selchg = set_cursel (i - 1) >= 0;
+        selchg = select (i - 1) >= 0;
       else if (i != item_count () - 1)
-        selchg = set_cursel (i + 1) >= 0;
+        selchg = select (i + 1) >= 0;
     }
 
   int r = tab_bar::delete_item (i);
@@ -288,7 +288,7 @@ int
 user_tab_bar::select_item (lisp item)
 {
   int i = item_pos (item);
-  return i == -1 ? 0 : set_cursel (i) >= 0;
+  return i == -1 ? 0 : select (i) >= 0;
 }
 
 lisp
