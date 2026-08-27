@@ -390,6 +390,8 @@ struct multi_cursor
 {
   point_t mc_point;
   point_t mc_mark;
+  /* *multi-cursor-local-variables* と同じ並びの値。まだ持たなければ nil */
+  lisp mc_locals;
 };
 
 struct Window
@@ -500,9 +502,10 @@ struct Window
   /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き (1: 下 -1: 上 0: 無し) */
   long w_mc_column;
   int w_mc_direction;
-  /* 一つずつ回している間、w_point を明け渡した主カーソルの居場所。
+  /* 一つずつ回している間、w_point と w_mark を明け渡した主カーソルの居場所。
      編集に連れて動く必要があるので窓に持たせる */
   point_t w_mc_saved_point;
+  point_t w_mc_saved_mark;
 
   const COLORREF *w_colors;
   COLORREF w_colors_buf[WCOLOR_MAX];

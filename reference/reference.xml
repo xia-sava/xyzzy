@@ -1916,6 +1916,26 @@ xyzzyの終了時に実行されます。
 </chapter>
 
 <chapter>
+<title>*multi-cursor-local-variables*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+増やしたカーソルが、それぞれ別に持つ変数のリストです。
+デフォルトでは *kill-ring* と *kill-ring-yank-pointer* と *last-command* が
+入っています。
+
+カーソルごとの実行の間だけ、その値へ差し替わります。切り取ったものが
+カーソルをまたいで混ざらないのはこのためです。
+カーソルを増やした直後は、どのカーソルもその時点の値から始めます。
+</description>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>*multi-cursor-no-repeat-commands*</seealso>
+<section>変数と定数</section>
+<file>region.l</file>
+</chapter>
+
+<chapter>
 <title>*multi-cursor-no-repeat-commands*</title>
 <type>Variable</type>
 <arguments></arguments>

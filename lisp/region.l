@@ -23,6 +23,11 @@
 
 (defvar *sync-kill-ring-with-clipboard* nil)
 
+;;; 増やしたカーソルは、これらの値をそれぞれ別に持つ。切り取ったものが
+;;; カーソルをまたいで混ざらないようにするため。
+(setq *multi-cursor-local-variables*
+      '(*kill-ring* *kill-ring-yank-pointer* *last-command*))
+
 (defun push-kill-ring (x ring max)
   (push x ring)
   (let ((l (length ring)))

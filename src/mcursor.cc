@@ -60,6 +60,7 @@ Window::mc_add (point_t point, point_t mark)
            sizeof *w_mcursors * (w_nmcursors - i));
   w_mcursors[i].mc_point = point;
   w_mcursors[i].mc_mark = mark;
+  w_mcursors[i].mc_locals = Qnil;
   w_nmcursors++;
   return 1;
 }
@@ -178,23 +179,86 @@ Window::mc_adjust_deletion (point_t from, int size)
     mc_merge ();
 }
 
-/* 一つのカーソルで実行する間だけ w_point をそこへ移し、済んだら主カーソルへ戻す。
-   例外で抜けても戻るよう、後始末をデストラクタに置く */
+/* 一つのカーソルで実行する間だけ w_point と w_mark をそこへ移し、済んだら
+   結果を書き戻して主カーソルへ返す。例外で抜けても返るようデストラクタに置く */
 class mc_visit
 {
   Window *v_wp;
+  int v_index;
 public:
-  mc_visit (Window *wp, point_t point) : v_wp (wp)
+  mc_visit (Window *wp, int i) : v_wp (wp), v_index (i)
     {
       v_wp->w_mc_saved_point = v_wp->w_point.p_point;
-      v_wp->w_bufp->goto_char (v_wp->w_point, point);
+      v_wp->w_mc_saved_mark = v_wp->w_mark;
+      v_wp->w_mark = v_wp->w_mcursors[i].mc_mark;
+      v_wp->w_bufp->goto_char (v_wp->w_point, v_wp->w_mcursors[i].mc_point);
     }
   ~mc_visit ()
     {
-      point_t saved = v_wp->w_mc_saved_point;
+      v_wp->w_mcursors[v_index].mc_point = v_wp->w_point.p_point;
+      v_wp->w_mcursors[v_index].mc_mark = v_wp->w_mark;
+      point_t point = v_wp->w_mc_saved_point;
+      v_wp->w_mark = v_wp->w_mc_saved_mark;
       v_wp->w_mc_saved_point = NO_MARK_SET;
-      v_wp->w_bufp->goto_char (v_wp->w_point, saved);
+      v_wp->w_mc_saved_mark = NO_MARK_SET;
+      v_wp->w_bufp->goto_char (v_wp->w_point, point);
     }
+};
+
+/* カーソルが抱えている値を変数へ移す。まだ持っていなければ今の値のまま */
+static void
+mc_load_locals (lisp vals)
+{
+  lisp vars = xsymbol_value (Vmulti_cursor_local_variables);
+  for (; consp (vars) && consp (vals); vars = xcdr (vars), vals = xcdr (vals))
+    {
+      lisp sym = xcar (vars);
+      if (symbolp (sym))
+        xsymbol_value (sym) = xcar (vals);
+    }
+}
+
+/* 今の変数の値を集める。OLD の長さが合えば中身を差し替えて使い回す */
+static lisp
+mc_store_locals (lisp old)
+{
+  lisp vars = xsymbol_value (Vmulti_cursor_local_variables);
+
+  lisp v = vars, p = old;
+  while (consp (v) && consp (p))
+    {
+      v = xcdr (v);
+      p = xcdr (p);
+    }
+  if (!consp (v) && !consp (p))
+    {
+      for (v = vars, p = old; consp (v); v = xcdr (v), p = xcdr (p))
+        {
+          lisp sym = xcar (v);
+          if (symbolp (sym))
+            xcar (p) = xsymbol_value (sym);
+        }
+      return old;
+    }
+
+  lisp r = Qnil;
+  protect_gc gcpro (r);
+  for (v = vars; consp (v); v = xcdr (v))
+    {
+      lisp sym = xcar (v);
+      r = xcons (symbolp (sym) ? xsymbol_value (sym) : Qnil, r);
+    }
+  return Fnreverse (r);
+}
+
+/* 回している間に触った変数を、済んだら主カーソルのものへ戻す */
+class mc_locals_guard
+{
+  lisp v_saved;
+  protect_gc v_gcpro;
+public:
+  mc_locals_guard () : v_saved (mc_store_locals (Qnil)), v_gcpro (v_saved) {}
+  ~mc_locals_guard () {mc_load_locals (v_saved);}
 };
 
 lisp
@@ -222,12 +286,16 @@ mc_command_execute (lisp command)
     }
 
   /* 後ろから回す。前のカーソルの位置は後ろでの編集に動かされない */
-  for (int i = wp->w_nmcursors - 1; i >= 0; i--)
-    {
-      mc_visit visit (wp, wp->w_mcursors[i].mc_point);
-      Fcommand_execute (command, 0);
-      wp->w_mcursors[i].mc_point = wp->w_point.p_point;
-    }
+  {
+    mc_locals_guard locals;
+    for (int i = wp->w_nmcursors - 1; i >= 0; i--)
+      {
+        mc_visit visit (wp, i);
+        mc_load_locals (wp->w_mcursors[i].mc_locals);
+        Fcommand_execute (command, 0);
+        wp->w_mcursors[i].mc_locals = mc_store_locals (wp->w_mcursors[i].mc_locals);
+      }
+  }
 
   wp->mc_merge ();
   int i = wp->mc_search (wp->w_point.p_point);

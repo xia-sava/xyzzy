@@ -800,6 +800,15 @@ gc_mark_in_stack ()
     }
 }
 
+/* 窓が抱えるもの。増やしたカーソルは変数の値を持っている */
+static void
+gc_mark_window (Window *wp)
+{
+  gc_mark_object (wp->lwp);
+  for (int i = 0; i < wp->w_nmcursors; i++)
+    gc_mark_object (wp->w_mcursors[i].mc_locals);
+}
+
 void
 gc_mark_object ()
 {
@@ -855,11 +864,11 @@ gc_mark_object ()
     }
 
   for (Window *wp = app.active_frame.windows; wp; wp = wp->w_next)
-    gc_mark_object (wp->lwp);
+    gc_mark_window (wp);
   for (Window *wp = app.active_frame.reserved; wp; wp = wp->w_next)
-    gc_mark_object (wp->lwp);
+    gc_mark_window (wp);
   for (Window *wp = app.active_frame.deleted; wp; wp = wp->w_next)
-    gc_mark_object (wp->lwp);
+    gc_mark_window (wp);
 
   for (Buffer *bp = Buffer::b_blist; bp; bp = bp->b_next)
     {

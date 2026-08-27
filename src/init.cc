@@ -446,6 +446,7 @@ init_symbol_value_once ()
   xsymbol_value (Vlast_command) = Qnil;
   xsymbol_value (Vmulti_cursor_no_repeat_commands) =
     xcons (Sundo, xcons (Sredo, Qnil));
+  xsymbol_value (Vmulti_cursor_local_variables) = Qnil;
 
   xsymbol_value (Qapp_user_model_id) =
     make_string (ProgramAppUserModelId);
