@@ -41,7 +41,7 @@
 
 (add-option-prop-page
  'disp
- '(dialog 0 0 263 195
+ '(dialog 0 0 263 206
    (:caption "表示")
    (:control
     (:button nil "表示する?" #x50000007 4 3 181 79)
@@ -89,7 +89,8 @@
     (:button blink "キャレットを点滅(&A)" #x50010003 125 146 73 10)
     (:button markline "マーク行の行番号を反転(&P)" #x50010003 125 158 97 10)
     (:button rev "ちゃんと反転する(&Q)" #x50010003 125 170 75 10)
-    (:button horztext "タブバーを横書きにする(&*)" #x50010003 125 181 93 10)))
+    (:button horztext "タブバーを横書きにする(&*)" #x50010003 125 181 93 10)
+    (:button multirow "タブバーを多段にする(&-)" #x50010003 125 192 93 10)))
  #'(lambda ()
      (let ((flags (get-window-flags)))
        (list (cons 'vscr (not (zerop (logand flags *window-flag-vscroll-bar*))))
@@ -135,6 +136,7 @@
 	     (cons 'caption *title-bar-text-order*)
 	     (cons 'blink *blink-caret*)
 	     (cons 'horztext *tab-bar-horizontal-text*)
+	     (cons 'multirow *tab-bar-multi-row*)
 	     (cons 'hidecursor *hide-mouse-cursor*)
 	     (cons 'markline (default-value '*inverse-mark-line*)))))
  '((modeline :enable (inverse))
@@ -204,9 +206,12 @@
      (setq *overwrite-caret-shape* (cdr (assoc 'ovwrtcaret data)))
      (set-cursor (if (zerop (cdr (assoc 'mousecur data))) :arrow :ibeam))
      (setq *blink-caret* (cdr (assoc 'blink data)))
-     (let ((x (cdr (assoc 'horztext data))))
-       (unless (eq x *tab-bar-horizontal-text*)
+     (let ((x (cdr (assoc 'horztext data)))
+	   (y (cdr (assoc 'multirow data))))
+       (unless (and (eq x *tab-bar-horizontal-text*)
+		    (eq y *tab-bar-multi-row*))
 	 (setq *tab-bar-horizontal-text* x)
+	 (setq *tab-bar-multi-row* y)
 	 (refresh-tool-bars)))
      (setq *hide-mouse-cursor* (cdr (assoc 'hidecursor data)))
      (setq *inverse-mark-line* (cdr (assoc 'markline data)))))
@@ -215,7 +220,7 @@
  '(*inverse-mode-line* *normal-caret-shape* *overwrite-caret-shape*
    *title-bar-text-order* highlight-keyword *blink-caret* *tab-columns*
    *inverse-mark-line* *cursor-shape* *hide-mouse-cursor*
-   buffer-fold-width *tab-bar-horizontal-text*))
+   buffer-fold-width *tab-bar-horizontal-text* *tab-bar-multi-row*))
 
 (defvar *backup-prop-page-template*
   '(dialog 0 0 194 165
