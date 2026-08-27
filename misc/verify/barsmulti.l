@@ -12,11 +12,27 @@
 ;;;
 ;;; `XYZZY_TAB_SELECT` にバッファ名を渡すと最後にそれを選ぶ。多段では選んだ
 ;;; タブの段が編集領域の側へ移るので、段の並び替わりを見るのに使う。
+;;;
+;;; `XYZZY_VERIFY_WORK` があれば、タブで選ばれたバッファの名前をそこの
+;;; `tabclick.txt` へ書く。`tabclick.py` がタブを押したあとで読む。
+
+(defvar *bm-out*
+  (let ((w (si:getenv "XYZZY_VERIFY_WORK")))
+    (and w
+         (concat (map 'string #'(lambda (c) (if (char= c #\\) #\/ c)) w)
+                 "/tabclick.txt"))))
 
 (ignore-errors
   (progn
     (dotimes (i 40)
       (create-new-buffer (format nil "multi~D" i)))
+    (when *bm-out*
+      (setq-default *buffer-bar-hook*
+                    #'(lambda (bp)
+                        (set-buffer bp)
+                        (with-open-file (o *bm-out* :direction :output
+                                           :if-exists :supersede)
+                          (format o "~A~%" (buffer-name bp))))))
     (create-buffer-bar)
     (show-tool-bar 'buffer-bar :top)
     (let ((m (si:getenv "XYZZY_MULTI_ROW")))

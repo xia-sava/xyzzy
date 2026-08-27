@@ -68,6 +68,7 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | `longnamecheck.py` | 一区画の名前が長くても一覧に出るか。かなの個数を引数で変えられる |
 | `cmdlinecheck.py` | 非 ASCII の名前をコマンドラインから開けるか。`CreateProcessW` で直接渡す |
 | `ccscheck.l` | どの文字集合でその字を書けるか（`parse-char-encoding-*`） |
+| `tabclick.py` | 多段のタブを押して、段の並びが動かないか。選ばれたバッファ名は `barsmulti.l` が `tabclick.txt` へ書く |
 
 ### 窓の中を読むもの
 
@@ -102,5 +103,6 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 |---|---|
 | `bars.l` | ツールバー・バッファバー・ファンクションバーを出す |
 | `barsvert.l` | バッファバーを左端へ縦置きで出す。タブが溢れるのでスピンも出る |
+| `barsmulti.l` | バッファバーを上へ出す。`XYZZY_MULTI_ROW` で一段・多段・戻したところを選ぶ |
 | `stdctl.l` | リストボックスとコンボボックスの載ったダイアログを出す |
 | `openfiler.l` | `docs/` を開いたファイラを出す |
