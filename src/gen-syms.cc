@@ -2018,6 +2018,9 @@ static symbols ed[] =
   /* mcursor.cc */
   DEFCMD3 (multi-cursor-add-below, 0, 1, 0, "p"),
   DEFCMD3 (multi-cursor-add-above, 0, 1, 0, "p"),
+  DEFCMD3 (multi-cursor-add-right, 0, 1, 0, "p"),
+  DEFCMD3 (multi-cursor-add-left, 0, 1, 0, "p"),
+  DEFUN3 (multi-cursor-toggle-at, 1, 0, 0),
   DEFUN3 (multi-cursor-clear, 0, 0, 0),
   DEFUN3 (multi-cursor-list, 0, 0, 0),
   DEFVAR2 (*multi-cursor-no-repeat-commands*),

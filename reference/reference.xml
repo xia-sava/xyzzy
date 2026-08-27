@@ -19332,6 +19332,69 @@ ARG が負のときは上へ伸ばします。
 </chapter>
 
 <chapter>
+<title>multi-cursor-add-left</title>
+<type>Function</type>
+<arguments>multi-cursor-add-left &amp;optional (ARG 1)</arguments>
+<package>editor</package>
+<description>
+カーソルの並びを一文字左へ伸ばします。
+[M-S-Left]
+
+伸ばした向きと逆へ呼ぶと、最後に足したカーソルを取り除きます。
+上下へ伸ばしていたときは畳まず、左右へ伸ばし直します。
+ARG が負のときは右へ伸ばします。
+
+足せた数を返します。一つも足せなければ nil を返します。
+</description>
+<seealso>multi-cursor-add-right</seealso>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>multi-cursor-add-right</title>
+<type>Function</type>
+<arguments>multi-cursor-add-right &amp;optional (ARG 1)</arguments>
+<package>editor</package>
+<description>
+カーソルの並びを一文字右へ伸ばします。
+[M-S-Right]
+
+伸ばした向きと逆へ呼ぶと、最後に足したカーソルを取り除きます。
+上下へ伸ばしていたときは畳まず、左右へ伸ばし直します。
+ARG が負のときは左へ伸ばします。
+
+足せた数を返します。一つも足せなければ nil を返します。
+</description>
+<seealso>multi-cursor-add-left</seealso>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>multi-cursor-toggle-at</title>
+<type>Function</type>
+<arguments>multi-cursor-toggle-at POINT</arguments>
+<package>editor</package>
+<description>
+POINT にカーソルがあれば取り除き、無ければ足します。
+マウスでは [M-S-LBtnDown]（Alt+Shift+左ボタン）が押した場所に対してこれを呼びます。
+
+point が返すカーソルの居場所には何もせず、nil を返します。
+足したり取り除いたりしたときは t を返します。
+</description>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<seealso>multi-cursor-list</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
 <title>multi-cursor-clear</title>
 <type>Function</type>
 <arguments>multi-cursor-clear</arguments>

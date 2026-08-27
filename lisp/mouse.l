@@ -9,7 +9,8 @@
 
 (export '(goto-last-mouse-point mouse-left-press mouse-left-motion
 	  mouse-ctl-left-motion mouse-ctl-left-press mouse-nop
-	  mouse-menu-popup apps-popup))
+	  mouse-menu-popup apps-popup
+	  mouse-toggle-multi-cursor))
 
 (defun goto-last-mouse-point (&optional ex)
   (goto-virtual-line *last-mouse-line*)
@@ -271,6 +272,17 @@
 (or (boundp 'mouse-wheel-handler)
     (setq-default mouse-wheel-handler #'mouse-wheel-scroll))
 
+(defun mouse-toggle-multi-cursor ()
+  (interactive)
+  (if (eq (selected-window) *last-mouse-window*)
+      (multi-cursor-toggle-at (save-excursion
+				(goto-last-mouse-point t)
+				(point)))
+    (progn
+      (set-window *last-mouse-window*)
+      (cancel-mouse-event)))
+  t)
+
 (global-set-key #\LBtnDown 'mouse-left-press)
 (global-set-key #\LBtnMove 'mouse-left-motion)
 (global-set-key #\LBtnUp 'mouse-nop)
@@ -280,6 +292,9 @@
 (global-set-key #\S-LBtnDown 'mouse-shift-left-press)
 (global-set-key #\S-LBtnMove 'mouse-left-motion)
 (global-set-key #\S-LBtnUp 'mouse-nop)
+(global-set-key #\M-S-LBtnDown 'mouse-toggle-multi-cursor)
+(global-set-key #\M-S-LBtnMove 'mouse-nop)
+(global-set-key #\M-S-LBtnUp 'mouse-nop)
 (global-set-key #\RBtnDown 'mouse-nop)
 (global-set-key #\RBtnUp 'mouse-menu-popup)
 (global-set-key #\Apps 'apps-popup)

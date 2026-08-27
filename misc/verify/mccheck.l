@@ -110,10 +110,54 @@
     (set-buffer buf))
   (mc-check "dropped on the way to another buffer" nil (multi-cursor-list))
 
+  ;; Growing sideways works on characters, one at a time.
+  (mc-fill 3)
+  (mc-check "three added to the right" 3 (multi-cursor-add-right 3))
+  (mc-check "one character apart" '(4 5 6) (multi-cursor-list))
+  (multi-cursor-add-left)
+  (mc-check "the last one folded back" '(4 5) (multi-cursor-list))
+
+  ;; The other axis grows instead of folding.
+  (mc-fill 3)
+  (multi-cursor-add-below 3)
+  (multi-cursor-add-right)
+  (mc-check "sideways after downwards grows" '(10 16 20 21) (multi-cursor-list))
+
+  ;; Nothing past either end of the buffer.
+  (mc-fill 0)
+  (mc-check "nothing left of the first slot" nil (multi-cursor-add-left))
+  (mc-fill 23)
+  (mc-check "nothing right of the last slot" nil (multi-cursor-add-right))
+
+  ;; Toggling one at a given place.
+  (mc-fill 3)
+  (mc-check "toggled one on" t (multi-cursor-toggle-at 10))
+  (mc-check "it is there" '(10) (multi-cursor-list))
+  (mc-check "toggled the same one off" t (multi-cursor-toggle-at 10))
+  (mc-check "it is gone" nil (multi-cursor-list))
+  (mc-check "the main cursor is left alone" nil (multi-cursor-toggle-at 3))
+
+  ;; What the mouse command does, without a real click: it reads the place
+  ;; from the same variables a click would have filled in.
+  (mc-fill 3)
+  (setq *last-mouse-window* (selected-window))
+  (setq *last-mouse-line* 2)
+  (setq *last-mouse-column* 3)
+  (mouse-toggle-multi-cursor)
+  (mc-check "the mouse put one where it pointed" '(10) (multi-cursor-list))
+  (mouse-toggle-multi-cursor)
+  (mc-check "pointing at it again took it away" nil (multi-cursor-list))
+
   ;; The keys they are reached by.
   (mc-check "M-S-Down grows downwards" 'multi-cursor-add-below
             (lookup-keymap *global-keymap* #\M-S-Down))
   (mc-check "M-S-Up grows upwards" 'multi-cursor-add-above
             (lookup-keymap *global-keymap* #\M-S-Up))
+  (mc-check "M-S-Right grows to the right" 'multi-cursor-add-right
+            (lookup-keymap *global-keymap* #\M-S-Right))
+  (mc-check "M-S-Left grows to the left" 'multi-cursor-add-left
+            (lookup-keymap *global-keymap* #\M-S-Left))
+  (mc-check "M-S-LBtnDown toggles one" 'mouse-toggle-multi-cursor
+            (lookup-keymap *global-keymap* #\M-S-LBtnDown))
 
   (mc-say "-- ~D NG" *mc-ng*)))

@@ -999,6 +999,8 @@
 (global-set-key #\S-C-Up 'scroll-down-both-window)
 (global-set-key #\M-S-Down 'multi-cursor-add-below)
 (global-set-key #\M-S-Up 'multi-cursor-add-above)
+(global-set-key #\M-S-Right 'multi-cursor-add-right)
+(global-set-key #\M-S-Left 'multi-cursor-add-left)
 (global-set-key #\Insert 'toggle-over)
 
 (define-key esc-map #\C-o 'split-line)

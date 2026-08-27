@@ -183,12 +183,14 @@ Window::mc_merge ()
   w_nmcursors = d + 1;
 }
 
-/* DIR (1: 下 -1: 上) の端から一行先へ足す。伸ばした向きと逆なら最後の一つを畳む */
+/* DIR (1: 先へ -1: 手前へ) の端から一つ先へ足す。BY_LINE なら行、さもなくば
+   文字を単位にする。同じ軸を逆へ呼ばれたときは最後の一つを畳む */
 int
-Window::mc_extend (int dir)
+Window::mc_extend (int dir, int by_line)
 {
   Buffer *bp = w_bufp;
   const int folded = bp->b_fold_columns != Buffer::FOLD_NONE;
+  const int way = dir * (by_line ? 1 : 2);
 
   if (!w_nmcursors)
     {
@@ -198,9 +200,9 @@ Window::mc_extend (int dir)
       w_mc_direction = 0;
     }
 
-  if (w_mc_direction && w_mc_direction != dir)
+  if (w_mc_direction == -way)
     {
-      int i = w_mc_direction > 0 ? w_nmcursors - 1 : 0;
+      int i = dir > 0 ? 0 : w_nmcursors - 1;
       point_t p1, p2;
       mc_span (w_mcursors[i], p1, p2);
       bp->set_modified_region (p1, p2);
@@ -222,7 +224,14 @@ Window::mc_extend (int dir)
   point.p_chunk = bp->b_chunkb;
   point.p_offset = 0;
   bp->goto_char (point, base);
-  if (folded)
+
+  if (!by_line)
+    {
+      if (!bp->forward_char (point, dir))
+        return 0;
+      bp->check_range (point);
+    }
+  else if (folded)
     {
       if (!bp->folded_forward_line (point, dir))
         return 0;
@@ -241,8 +250,35 @@ Window::mc_extend (int dir)
   if (point.p_point == w_point.p_point || !mc_add (point.p_point))
     return 0;
 
-  w_mc_direction = dir;
+  w_mc_direction = way;
   bp->set_modified_region (point.p_point, point.p_point + 1);
+  return 1;
+}
+
+/* POINT のカーソルを取り除く。無ければ足す。主カーソルの居場所には触らない */
+int
+Window::mc_toggle_at (point_t point)
+{
+  if (point == w_point.p_point)
+    return 0;
+
+  int i = mc_search (point);
+  if (i >= 0)
+    {
+      point_t p1, p2;
+      mc_span (w_mcursors[i], p1, p2);
+      w_bufp->set_modified_region (p1, p2);
+      mc_remove_at (i);
+      if (!w_nmcursors)
+        w_mc_direction = 0;
+      return 1;
+    }
+
+  if (!mc_add (point))
+    return 0;
+  /* 押した所を起点に伸ばし直せるよう、向きは白紙に戻す */
+  w_mc_direction = 0;
+  w_bufp->set_modified_region (point, point + 1);
   return 1;
 }
 
@@ -447,7 +483,7 @@ mc_command_execute (lisp command)
 }
 
 static lisp
-mc_extend_lines (int dir, lisp n)
+mc_extend_by (int dir, int by_line, lisp n)
 {
   Window *wp = selected_window ();
   long count = (!n || n == Qnil) ? 1 : fixnum_value (n);
@@ -457,7 +493,7 @@ mc_extend_lines (int dir, lisp n)
       dir = -dir;
     }
   long done = 0;
-  while (done < count && wp->mc_extend (dir))
+  while (done < count && wp->mc_extend (dir, by_line))
     done++;
   return done ? make_fixnum (done) : Qnil;
 }
@@ -465,13 +501,32 @@ mc_extend_lines (int dir, lisp n)
 lisp
 Fmulti_cursor_add_below (lisp n)
 {
-  return mc_extend_lines (1, n);
+  return mc_extend_by (1, 1, n);
 }
 
 lisp
 Fmulti_cursor_add_above (lisp n)
 {
-  return mc_extend_lines (-1, n);
+  return mc_extend_by (-1, 1, n);
+}
+
+lisp
+Fmulti_cursor_add_right (lisp n)
+{
+  return mc_extend_by (1, 0, n);
+}
+
+lisp
+Fmulti_cursor_add_left (lisp n)
+{
+  return mc_extend_by (-1, 0, n);
+}
+
+lisp
+Fmulti_cursor_toggle_at (lisp lpoint)
+{
+  Window *wp = selected_window ();
+  return boole (wp->mc_toggle_at (wp->w_bufp->coerce_to_restricted_point (lpoint)));
 }
 
 lisp

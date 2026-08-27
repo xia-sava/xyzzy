@@ -505,7 +505,8 @@ struct Window
   multi_cursor *w_mcursors;
   int w_nmcursors;
   int w_mcursors_size;
-  /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き (1: 下 -1: 上 0: 無し) */
+  /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き。向きは行なら 1 と -1、
+     文字なら 2 と -2 で、同じ軸を逆へ押されたときだけ畳む (0: 無し) */
   long w_mc_column;
   int w_mc_direction;
   /* 一つずつ回している間、窓の側を明け渡した主カーソルの預け先。
@@ -601,7 +602,8 @@ struct Window
   int mc_add (point_t, point_t = NO_MARK_SET);
   void mc_remove_at (int);
   void mc_merge ();
-  int mc_extend (int);
+  int mc_extend (int, int);
+  int mc_toggle_at (point_t);
   void mc_adjust_insertion (point_t, int);
   void mc_adjust_deletion (point_t, int);
 
