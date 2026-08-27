@@ -748,6 +748,39 @@ tab_bar::items_rect (int n, RECT &r) const
     }
 }
 
+HRGN
+tab_bar::items_region (int n, const RECT &lim) const
+{
+  int vert = dock_vert_p ();
+  HRGN hrgn = CreateRectRgn (0, 0, 0, 0);
+  for (int i = 0; i < n;)
+    {
+      RECT row;
+      get_item_rect (i, row);
+      LONG base = vert ? row.left : row.top;
+      for (i++; i < n; i++)
+        {
+          RECT r;
+          get_item_rect (i, r);
+          if ((vert ? r.left : r.top) != base)
+            break;
+          row.left = min (row.left, r.left);
+          row.top = min (row.top, r.top);
+          row.right = max (row.right, r.right);
+          row.bottom = max (row.bottom, r.bottom);
+        }
+      row.left = max (row.left, lim.left);
+      row.top = max (row.top, lim.top);
+      row.right = min (row.right, lim.right);
+      row.bottom = min (row.bottom, lim.bottom);
+      InflateRect (&row, -1, -1);
+      HRGN h = CreateRectRgnIndirect (&row);
+      CombineRgn (hrgn, hrgn, h, RGN_OR);
+      DeleteObject (h);
+    }
+  return hrgn;
+}
+
 void
 tab_bar::erase_bkgnd (HDC hdc)
 {
@@ -772,13 +805,7 @@ tab_bar::erase_bkgnd (HDC hdc)
   int n = item_count ();
   if (n > 0)
     {
-      RECT r;
-      items_rect (n, r);
-      r.left = max (r.left, cr.left);
-      r.top = max (r.top, cr.top);
-      r.right = min (r.right, cr.right);
-      r.bottom = min (r.bottom, cr.bottom);
-
+      RECT lim (cr);
       HWND hwnd_spin = GetDlgItem (b_hwnd, IDC_TAB_SPIN);
       if (hwnd_spin && IsWindowVisible (hwnd_spin))
         {
@@ -786,12 +813,11 @@ tab_bar::erase_bkgnd (HDC hdc)
           GetWindowRect (hwnd_spin, &spin_r);
           MapWindowPoints (HWND_DESKTOP, b_hwnd, (POINT *)&spin_r, 2);
           if (!dock_vert_p ())
-            r.right = min (r.right, spin_r.left);
+            lim.right = min (lim.right, spin_r.left);
           else
-            r.bottom = min (r.bottom, spin_r.top);
+            lim.bottom = min (lim.bottom, spin_r.top);
         }
-      InflateRect (&r, -1, -1);
-      HRGN hrgn = CreateRectRgnIndirect (&r);
+      HRGN hrgn = items_region (n, lim);
       ExtSelectClipRgn (hdc, hrgn, RGN_DIFF);
       DeleteObject (hrgn);
       fill_rect (hdc, cr, sysdep.btn_face);

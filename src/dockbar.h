@@ -308,6 +308,7 @@ protected:
 private:
   int row_top (int) const;
   void items_rect (int, RECT &) const;
+  HRGN items_region (int, const RECT &) const;
   void paint_left (HDC, const RECT &, const RECT &, int);
   void paint_top (HDC, const RECT &, const RECT &, int);
   void paint_right (HDC, const RECT &, const RECT &, int);
