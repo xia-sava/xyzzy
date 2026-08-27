@@ -2067,6 +2067,8 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
           && point.p_point < w_reverse_region.p2)
         f |= GLYPH_REVERSED;
 
+      if (mc_selection_p (point.p_point))
+        f |= GLYPH_SELECTED;
       if (mc_cursor_p (point.p_point))
         f |= GLYPH_REVERSED;
 
@@ -2806,6 +2808,12 @@ Window::reframe ()
       w_selection_marker = NO_MARK_SET;
     }
   (int &)w_selection_type &= ~Buffer::CONTINUE_PRE_SELECTION;
+
+  {
+    Region r = mc_step_pre_selection ();
+    if (r.p1 != -1)
+      set_region (modr, r.p1, r.p2);
+  }
 
   if (w_reverse_region.p1 != NO_MARK_SET)
     {

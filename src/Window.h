@@ -385,11 +385,17 @@ private:
 
 struct wheel_info;
 
-/* 主カーソル (w_point) に連れ添うカーソル。窓ごとに位置の昇順で並べる */
+/* 主カーソル (w_point) に連れ添うカーソル。窓ごとに位置の昇順で並べる。
+   窓が w_selection_* で持つものを、カーソルはそれぞれ自分の分として持つ */
 struct multi_cursor
 {
   point_t mc_point;
   point_t mc_mark;
+  /* 範囲は窓の側と同じく mc_point と mc_selection_marker から決まる */
+  Buffer::selection_type mc_selection_type;
+  point_t mc_selection_point;
+  point_t mc_selection_marker;
+  long mc_selection_column;
   /* *multi-cursor-local-variables* と同じ並びの値。まだ持たなければ nil */
   lisp mc_locals;
 };
@@ -502,10 +508,10 @@ struct Window
   /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き (1: 下 -1: 上 0: 無し) */
   long w_mc_column;
   int w_mc_direction;
-  /* 一つずつ回している間、w_point と w_mark を明け渡した主カーソルの居場所。
-     編集に連れて動く必要があるので窓に持たせる */
-  point_t w_mc_saved_point;
-  point_t w_mc_saved_mark;
+  /* 一つずつ回している間、窓の側を明け渡した主カーソルの預け先。
+     編集に連れて動く必要があるので、カーソルと同じ形で窓に持たせる */
+  multi_cursor w_mc_saved;
+  int w_mc_visiting;
 
   const COLORREF *w_colors;
   COLORREF w_colors_buf[WCOLOR_MAX];
@@ -590,6 +596,8 @@ struct Window
   void mc_discard ();
   int mc_search (point_t) const;
   int mc_cursor_p (point_t p) const {return w_nmcursors && mc_search (p) >= 0;}
+  int mc_selection_p (point_t) const;
+  Region mc_step_pre_selection ();
   int mc_add (point_t, point_t = NO_MARK_SET);
   void mc_remove_at (int);
   void mc_merge ();

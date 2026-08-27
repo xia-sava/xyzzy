@@ -1922,8 +1922,8 @@ xyzzyの終了時に実行されます。
 <package>editor</package>
 <description>
 増やしたカーソルが、それぞれ別に持つ変数のリストです。
-デフォルトでは *kill-ring* と *kill-ring-yank-pointer* と *last-command* が
-入っています。
+デフォルトでは *kill-ring* *kill-ring-yank-pointer* *last-command*
+*selection-ring* *selection-ring-yank-pointer* が入っています。
 
 カーソルごとの実行の間だけ、その値へ差し替わります。切り取ったものが
 カーソルをまたいで混ざらないのはこのためです。

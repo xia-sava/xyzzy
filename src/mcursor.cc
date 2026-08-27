@@ -1,6 +1,32 @@
 #include "stdafx.h"
 #include "ed.h"
 
+/* カーソルの選択範囲。窓の側と同じく、marker と今の位置から決まる */
+static int
+mc_selection_span (const multi_cursor &c, point_t &p1, point_t &p2)
+{
+  if ((c.mc_selection_type & Buffer::SELECTION_TYPE_MASK) == Buffer::SELECTION_VOID
+      || c.mc_selection_marker == NO_MARK_SET)
+    return 0;
+  p1 = min (c.mc_point, c.mc_selection_marker);
+  p2 = max (c.mc_point, c.mc_selection_marker);
+  return p1 != p2;
+}
+
+/* カーソルが画面で占める範囲。選択していればそこまで含む */
+static void
+mc_span (const multi_cursor &c, point_t &p1, point_t &p2)
+{
+  p1 = c.mc_point;
+  p2 = c.mc_point + 1;
+  point_t s1, s2;
+  if (mc_selection_span (c, s1, s2))
+    {
+      p1 = min (p1, s1);
+      p2 = max (p2, s2);
+    }
+}
+
 void
 Window::mc_clear ()
 {
@@ -14,8 +40,10 @@ Window::mc_discard ()
 {
   if (!w_nmcursors)
     return;
-  w_bufp->set_modified_region (w_mcursors[0].mc_point,
-                               w_mcursors[w_nmcursors - 1].mc_point + 1);
+  point_t p1, p2, t1, t2;
+  mc_span (w_mcursors[0], p1, t2);
+  mc_span (w_mcursors[w_nmcursors - 1], t1, p2);
+  w_bufp->set_modified_region (p1, p2);
   mc_clear ();
 }
 
@@ -38,6 +66,58 @@ Window::mc_search (point_t point) const
   return ~lo;
 }
 
+/* POINT がどれかのカーソルの選択の内側か */
+int
+Window::mc_selection_p (point_t point) const
+{
+  for (int i = 0; i < w_nmcursors; i++)
+    {
+      point_t p1, p2;
+      if (mc_selection_span (w_mcursors[i], p1, p2)
+          && point >= p1 && point < p2)
+        return 1;
+    }
+  return 0;
+}
+
+/* 一時の選択は、伸ばす命令が続かなければ次の描画で解ける。窓の側と同じことを
+   カーソルの分にもする。解けて描き直しの要る範囲を返す (無ければ p1 が -1) */
+Region
+Window::mc_step_pre_selection ()
+{
+  Region r;
+  r.p1 = -1;
+  r.p2 = -1;
+  for (int i = 0; i < w_nmcursors; i++)
+    {
+      multi_cursor &c = w_mcursors[i];
+      if ((c.mc_selection_type & (Buffer::CONTINUE_PRE_SELECTION
+                                  | Buffer::PRE_SELECTION))
+          == Buffer::PRE_SELECTION)
+        {
+          point_t p1, p2;
+          if (mc_selection_span (c, p1, p2))
+            {
+              if (r.p1 == -1)
+                {
+                  r.p1 = p1;
+                  r.p2 = p2;
+                }
+              else
+                {
+                  r.p1 = min (r.p1, p1);
+                  r.p2 = max (r.p2, p2);
+                }
+            }
+          c.mc_selection_type = Buffer::SELECTION_VOID;
+          c.mc_selection_point = NO_MARK_SET;
+          c.mc_selection_marker = NO_MARK_SET;
+        }
+      (int &)c.mc_selection_type &= ~Buffer::CONTINUE_PRE_SELECTION;
+    }
+  return r;
+}
+
 int
 Window::mc_add (point_t point, point_t mark)
 {
@@ -58,9 +138,14 @@ Window::mc_add (point_t point, point_t mark)
 
   memmove (w_mcursors + i + 1, w_mcursors + i,
            sizeof *w_mcursors * (w_nmcursors - i));
-  w_mcursors[i].mc_point = point;
-  w_mcursors[i].mc_mark = mark;
-  w_mcursors[i].mc_locals = Qnil;
+  multi_cursor &c = w_mcursors[i];
+  c.mc_point = point;
+  c.mc_mark = mark;
+  c.mc_selection_type = Buffer::SELECTION_VOID;
+  c.mc_selection_point = NO_MARK_SET;
+  c.mc_selection_marker = NO_MARK_SET;
+  c.mc_selection_column = 0;
+  c.mc_locals = Qnil;
   w_nmcursors++;
   return 1;
 }
@@ -71,6 +156,31 @@ Window::mc_remove_at (int i)
   memmove (w_mcursors + i, w_mcursors + i + 1,
            sizeof *w_mcursors * (w_nmcursors - i - 1));
   w_nmcursors--;
+}
+
+/* 重なったものを一つにまとめる。選択が隣に届いたときも畳む */
+void
+Window::mc_merge ()
+{
+  if (!w_nmcursors)
+    return;
+  int d = 0;
+  point_t dp1, dp2;
+  mc_span (w_mcursors[0], dp1, dp2);
+  for (int s = 1; s < w_nmcursors; s++)
+    {
+      point_t sp1, sp2;
+      mc_span (w_mcursors[s], sp1, sp2);
+      if (w_mcursors[s].mc_point == w_mcursors[d].mc_point || sp1 < dp2)
+        {
+          dp2 = max (dp2, sp2);
+          continue;
+        }
+      w_mcursors[++d] = w_mcursors[s];
+      dp1 = sp1;
+      dp2 = sp2;
+    }
+  w_nmcursors = d + 1;
 }
 
 /* DIR (1: 下 -1: 上) の端から一行先へ足す。伸ばした向きと逆なら最後の一つを畳む */
@@ -91,8 +201,9 @@ Window::mc_extend (int dir)
   if (w_mc_direction && w_mc_direction != dir)
     {
       int i = w_mc_direction > 0 ? w_nmcursors - 1 : 0;
-      bp->set_modified_region (w_mcursors[i].mc_point,
-                               w_mcursors[i].mc_point + 1);
+      point_t p1, p2;
+      mc_span (w_mcursors[i], p1, p2);
+      bp->set_modified_region (p1, p2);
       mc_remove_at (i);
       if (!w_nmcursors)
         w_mc_direction = 0;
@@ -135,51 +246,74 @@ Window::mc_extend (int dir)
   return 1;
 }
 
+static void
+mc_adjust_one_insertion (multi_cursor &c, point_t opoint, int size)
+{
+#define ADJ(P) if ((P) > opoint) (P) += size
+  ADJ (c.mc_point);
+  ADJ (c.mc_mark);
+  ADJ (c.mc_selection_point);
+  ADJ (c.mc_selection_marker);
+#undef ADJ
+}
+
+static void
+mc_adjust_one_deletion (multi_cursor &c, point_t from, int size)
+{
+#define ADJ(P) if ((P) > from) (P) = max (point_t ((P) - size), from)
+  ADJ (c.mc_point);
+  ADJ (c.mc_mark);
+  ADJ (c.mc_selection_point);
+  ADJ (c.mc_selection_marker);
+#undef ADJ
+}
+
 void
 Window::mc_adjust_insertion (point_t opoint, int size)
 {
-  for (int i = w_nmcursors - 1; i >= 0; i--)
-    {
-      if (w_mcursors[i].mc_point <= opoint)
-        break;
-      w_mcursors[i].mc_point += size;
-    }
   for (int i = 0; i < w_nmcursors; i++)
-    if (w_mcursors[i].mc_mark > opoint)
-      w_mcursors[i].mc_mark += size;
-}
-
-/* 同じ場所へ寄ったものを一つにまとめる */
-void
-Window::mc_merge ()
-{
-  int d = 0;
-  for (int s = 1; s < w_nmcursors; s++)
-    if (w_mcursors[s].mc_point != w_mcursors[d].mc_point)
-      w_mcursors[++d] = w_mcursors[s];
-  if (w_nmcursors)
-    w_nmcursors = d + 1;
+    mc_adjust_one_insertion (w_mcursors[i], opoint, size);
+  if (w_mc_visiting)
+    mc_adjust_one_insertion (w_mc_saved, opoint, size);
 }
 
 void
 Window::mc_adjust_deletion (point_t from, int size)
 {
-  for (int i = w_nmcursors - 1; i >= 0; i--)
-    {
-      if (w_mcursors[i].mc_point <= from)
-        break;
-      w_mcursors[i].mc_point = max (point_t (w_mcursors[i].mc_point - size), from);
-    }
   for (int i = 0; i < w_nmcursors; i++)
-    if (w_mcursors[i].mc_mark > from)
-      w_mcursors[i].mc_mark = max (point_t (w_mcursors[i].mc_mark - size), from);
+    mc_adjust_one_deletion (w_mcursors[i], from, size);
+  if (w_mc_visiting)
+    mc_adjust_one_deletion (w_mc_saved, from, size);
 
   /* 一つずつ回している間は添字がずれると困るので、まとめるのは回し終えてから */
-  if (w_mc_saved_point == NO_MARK_SET)
+  if (!w_mc_visiting)
     mc_merge ();
 }
 
-/* 一つのカーソルで実行する間だけ w_point と w_mark をそこへ移し、済んだら
+/* 窓が持つカーソルの一式を、カーソルの形へ写す。逆も同じ並びで */
+static void
+mc_from_window (multi_cursor &c, const Window *wp)
+{
+  c.mc_point = wp->w_point.p_point;
+  c.mc_mark = wp->w_mark;
+  c.mc_selection_type = wp->w_selection_type;
+  c.mc_selection_point = wp->w_selection_point;
+  c.mc_selection_marker = wp->w_selection_marker;
+  c.mc_selection_column = wp->w_selection_column;
+}
+
+static void
+mc_to_window (Window *wp, const multi_cursor &c)
+{
+  wp->w_mark = c.mc_mark;
+  wp->w_selection_type = c.mc_selection_type;
+  wp->w_selection_point = c.mc_selection_point;
+  wp->w_selection_marker = c.mc_selection_marker;
+  wp->w_selection_column = c.mc_selection_column;
+  wp->w_bufp->goto_char (wp->w_point, c.mc_point);
+}
+
+/* 一つのカーソルで実行する間だけ窓の側をそのカーソルのものにし、済んだら
    結果を書き戻して主カーソルへ返す。例外で抜けても返るようデストラクタに置く */
 class mc_visit
 {
@@ -188,20 +322,17 @@ class mc_visit
 public:
   mc_visit (Window *wp, int i) : v_wp (wp), v_index (i)
     {
-      v_wp->w_mc_saved_point = v_wp->w_point.p_point;
-      v_wp->w_mc_saved_mark = v_wp->w_mark;
-      v_wp->w_mark = v_wp->w_mcursors[i].mc_mark;
-      v_wp->w_bufp->goto_char (v_wp->w_point, v_wp->w_mcursors[i].mc_point);
+      mc_from_window (wp->w_mc_saved, wp);
+      wp->w_mc_visiting = 1;
+      mc_to_window (wp, wp->w_mcursors[i]);
     }
   ~mc_visit ()
     {
-      v_wp->w_mcursors[v_index].mc_point = v_wp->w_point.p_point;
-      v_wp->w_mcursors[v_index].mc_mark = v_wp->w_mark;
-      point_t point = v_wp->w_mc_saved_point;
-      v_wp->w_mark = v_wp->w_mc_saved_mark;
-      v_wp->w_mc_saved_point = NO_MARK_SET;
-      v_wp->w_mc_saved_mark = NO_MARK_SET;
-      v_wp->w_bufp->goto_char (v_wp->w_point, point);
+      multi_cursor locals = v_wp->w_mcursors[v_index];
+      mc_from_window (v_wp->w_mcursors[v_index], v_wp);
+      v_wp->w_mcursors[v_index].mc_locals = locals.mc_locals;
+      v_wp->w_mc_visiting = 0;
+      mc_to_window (v_wp, v_wp->w_mc_saved);
     }
 };
 
@@ -271,8 +402,9 @@ mc_command_execute (lisp command)
 
   Buffer *bp = wp->w_bufp;
   const long minibuf = app.minibuffer_enter_count;
-  point_t p1 = wp->w_mcursors[0].mc_point;
-  point_t p2 = wp->w_mcursors[wp->w_nmcursors - 1].mc_point + 1;
+  point_t p1, p2, t1, t2;
+  mc_span (wp->w_mcursors[0], p1, t2);
+  mc_span (wp->w_mcursors[wp->w_nmcursors - 1], t1, p2);
 
   lisp result = Fcommand_execute (command, 0);
 
@@ -304,8 +436,11 @@ mc_command_execute (lisp command)
 
   if (wp->w_nmcursors)
     {
-      p1 = min (p1, wp->w_mcursors[0].mc_point);
-      p2 = max (p2, point_t (wp->w_mcursors[wp->w_nmcursors - 1].mc_point + 1));
+      point_t q1, q2;
+      mc_span (wp->w_mcursors[0], q1, t2);
+      mc_span (wp->w_mcursors[wp->w_nmcursors - 1], t1, q2);
+      p1 = min (p1, q1);
+      p2 = max (p2, q2);
     }
   bp->set_modified_region (p1, p2);
   return result;

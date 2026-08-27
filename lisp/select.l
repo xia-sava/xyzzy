@@ -60,6 +60,11 @@
 (defvar *selection-ring-yank-pointer* nil)
 (defvar *shodat-copy-mode* nil)
 
+;;; 選択の切り貼りも、増やしたカーソルごとに別のものを持つ。
+(setq *multi-cursor-local-variables*
+      (append *multi-cursor-local-variables*
+	      '(*selection-ring* *selection-ring-yank-pointer*)))
+
 (defun get-selection-start-end ()
   (let (start end)
     (save-excursion
