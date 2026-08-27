@@ -156,6 +156,7 @@ public:
   virtual int focus () const {return 0;}
   virtual void color_changed () const {}
   virtual int set_horz_text_p (int) {return 0;}
+  virtual int set_multi_row_p (int) {return 0;}
   virtual int horz_width () const {return -1;}
   virtual void set_horz_width (int) {}
 };
@@ -268,6 +269,9 @@ protected:
   int t_horz_text;
   int t_horz_width;
   int t_horz_height;
+  int t_multi_row;
+  int t_rows;
+  int t_cursel;
 private:
   int t_erasebkgnd_called;
   int t_dots;
@@ -288,6 +292,8 @@ protected:
   void paint ();
   void erase_bkgnd (HDC);
   int inverse_p () const {return style () & TCS_BOTTOM;}
+  int multi_row_p () const {return t_multi_row && !dock_vert_p ();}
+  void check_rows ();
   virtual void dock_edge ();
   void draw_item (const draw_item_struct &, WCHAR *, int,
                   COLORREF, COLORREF) const;
@@ -301,6 +307,13 @@ protected:
   virtual int do_context_menu (const POINT *);
   virtual lisp context_menu (int) {return Qnil;}
 private:
+  int row_top (int) const;
+  void items_rect (int, RECT &) const;
+  HRGN items_region (int, const RECT &) const;
+  void fix_rows ();
+  int notify_selchange (int);
+  void click_select (int, int);
+  int key_select (int);
   void paint_left (HDC, const RECT &, const RECT &, int);
   void paint_top (HDC, const RECT &, const RECT &, int);
   void paint_right (HDC, const RECT &, const RECT &, int);
@@ -322,10 +335,8 @@ public:
   void calc_tab_height ();
   void set_font (HFONT hf)
     {sendmsg (WM_SETFONT, WPARAM (hf), 0);}
-  int insert_item (int i, const TC_ITEMW &ti)
-    {return sendmsg (TCM_INSERTITEMW, i, LPARAM (&ti));}
-  int delete_item (int i)
-    {return sendmsg (TCM_DELETEITEM, i, 0);}
+  int insert_item (int, const TC_ITEMW &);
+  int delete_item (int);
   int set_item (int i, const TC_ITEMW &ti)
     {return sendmsg (TCM_SETITEMW, i, LPARAM (&ti));}
   int get_item (int i, TC_ITEMW &ti) const
@@ -336,10 +347,14 @@ public:
     {sendmsg (TCM_ADJUSTRECT, f, LPARAM (&r));}
   int item_count () const
     {return sendmsg (TCM_GETITEMCOUNT, 0, 0);}
+  int row_count () const
+    {return sendmsg (TCM_GETROWCOUNT, 0, 0);}
   int set_cursel (int i)
     {return sendmsg (TCM_SETCURSEL, i, 0);}
   int get_cursel () const
     {return sendmsg (TCM_GETCURSEL, 0, 0);}
+  int select (int);
+  int cursel () const;
   HWND get_tooltips () const
     {return (HWND)sendmsg (TCM_GETTOOLTIPS, 0, 0);}
   int get_item_rect (int i, RECT &r) const
@@ -363,6 +378,13 @@ public:
       if (t_horz_text ? x : !x)
         return 0;
       t_horz_text = !t_horz_text;
+      return 1;
+    }
+  virtual int set_multi_row_p (int x)
+    {
+      if (t_multi_row ? x : !x)
+        return 0;
+      t_multi_row = !t_multi_row;
       return 1;
     }
   virtual int horz_width () const {return t_horz_width;}

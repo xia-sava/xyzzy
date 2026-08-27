@@ -17,7 +17,7 @@ buffer_bar::buffer_bar (dock_frame &frame)
 Buffer *
 buffer_bar::current () const
 {
-  int i = get_cursel ();
+  int i = cursel ();
   return i >= 0 ? nth (i) : 0;
 }
 
@@ -180,7 +180,7 @@ buffer_bar::insert_buffers ()
         bp->b_buffer_bar_modified &= Buffer::BUFFER_BAR_LAST_MODIFIED_FLAG;
       }
   if (current >= 0)
-    set_cursel (current);
+    select (current);
   Buffer::b_buffer_bar_modified_any = 0;
   set_redraw ();
 }
@@ -225,7 +225,7 @@ buffer_bar::delete_buffer (Buffer *bp)
         break;
     }
   if (current >= 0)
-    set_cursel (current);
+    select (current);
   if (found >= 0)
     delete_item (found);
   Buffer::b_buffer_bar_modified_any |= Buffer::BUFFER_BAR_DELETED;
@@ -345,7 +345,7 @@ buffer_bar::update_ui ()
       Buffer *bp = selected_buffer ();
       if (!bp->internal_buffer_p ())
         {
-          set_cursel (0);
+          select (0);
           delete_item (cur);
           insert (bp, 0);
           cur = 0;
@@ -358,7 +358,7 @@ buffer_bar::update_ui ()
 
   set_redraw ();
   if (cur >= -1)
-    set_cursel (cur);
+    select (cur);
 
   b_last_buffer = selected_buffer ();
   Buffer::b_buffer_bar_modified_any = 0;
@@ -446,7 +446,7 @@ buffer_bar::drag_over (int x, int y)
   if (index != b_drop_index)
     {
       KillTimer (b_hwnd, DROP_TIMER_ID);
-      if (index >= 0 && index != get_cursel ())
+      if (index >= 0 && index != cursel ())
         {
           b_drop_index = index;
           SetTimer (b_hwnd, DROP_TIMER_ID, 1000, 0);

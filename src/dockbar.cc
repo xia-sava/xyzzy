@@ -473,9 +473,10 @@ tab_bar::tab_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name,
                  new_comctl_p () ? DOCKABLE_ALL : DOCKABLE_TOP | DOCKABLE_BOTTOM),
        t_tab_height (dpi_scale (21)), t_horz_width (dpi_scale (60)),
-       t_horz_height (dpi_scale (21))
+       t_horz_height (dpi_scale (21)), t_rows (1), t_cursel (-1)
 {
   t_horz_text = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
+  t_multi_row = xsymbol_value (Vtab_bar_multi_row) != Qnil;
 }
 
 int
@@ -500,6 +501,106 @@ tab_bar::create (HWND hwnd_parent)
   return 1;
 }
 
+// 段の並びはコントロールが選択中の項目を編集領域の側へ寄せて決める。
+// 最終項目は必ず最後の段に居るので、そこへ固定すると並びが動かない。
+void
+tab_bar::fix_rows ()
+{
+  int n = item_count ();
+  if (n > 0 && get_cursel () != n - 1)
+    set_cursel (n - 1);
+}
+
+int
+tab_bar::cursel () const
+{
+  if (!multi_row_p ())
+    return get_cursel ();
+  return t_cursel < item_count () ? t_cursel : -1;
+}
+
+int
+tab_bar::select (int i)
+{
+  if (!multi_row_p ())
+    return set_cursel (i);
+  if (i >= item_count ())
+    return -1;
+  int o = cursel ();
+  t_cursel = i;
+  fix_rows ();
+  if (o != i)
+    InvalidateRect (b_hwnd, 0, 1);
+  return o;
+}
+
+int
+tab_bar::insert_item (int i, const TC_ITEMW &ti)
+{
+  int r = sendmsg (TCM_INSERTITEMW, i, LPARAM (&ti));
+  if (r >= 0 && multi_row_p ())
+    {
+      if (t_cursel >= i)
+        t_cursel++;
+      fix_rows ();
+    }
+  return r;
+}
+
+int
+tab_bar::delete_item (int i)
+{
+  int r = sendmsg (TCM_DELETEITEM, i, 0);
+  if (r && multi_row_p ())
+    {
+      if (t_cursel == i)
+        t_cursel = -1;
+      else if (t_cursel > i)
+        t_cursel--;
+      fix_rows ();
+    }
+  return r;
+}
+
+int
+tab_bar::notify_selchange (int i)
+{
+  NMHDR nm;
+  nm.hwndFrom = b_hwnd;
+  nm.idFrom = GetDlgCtrlID (b_hwnd);
+  LRESULT r = 0;
+  nm.code = TCN_SELCHANGING;
+  if (notify (&nm, r) && r)
+    return 0;
+  select (i);
+  r = 0;
+  nm.code = TCN_SELCHANGE;
+  notify (&nm, r);
+  return 1;
+}
+
+void
+tab_bar::click_select (int x, int y)
+{
+  if (!(style () & TCS_FOCUSNEVER))
+    SetFocus (b_hwnd);
+  TC_HITTESTINFO ht;
+  ht.pt.x = x;
+  ht.pt.y = y;
+  int i = hit_test (ht);
+  if (i >= 0 && i != cursel ())
+    notify_selchange (i);
+}
+
+int
+tab_bar::key_select (int d)
+{
+  int i = cursel () + d;
+  if (i < 0 || i >= item_count ())
+    return 0;
+  return notify_selchange (i);
+}
+
 DWORD
 tab_bar::nth (int i) const
 {
@@ -512,6 +613,18 @@ void
 tab_bar::dock_edge ()
 {
   dock_bar::dock_edge ();
+  int multi = multi_row_p ();
+  if (multi != ((style () & TCS_MULTILINE) != 0))
+    {
+      if (multi)
+        t_cursel = get_cursel ();
+      modify_style (TCS_MULTILINE | TCS_RAGGEDRIGHT,
+                    multi ? TCS_MULTILINE | TCS_RAGGEDRIGHT : 0);
+      if (multi)
+        fix_rows ();
+      else
+        set_cursel (t_cursel);
+    }
   if (new_comctl_p ())
     {
       switch (edge ())
@@ -601,6 +714,21 @@ tab_bar::update_ui ()
       x ^= TCS_FOCUSNEVER;
       set_style (x);
     }
+  check_rows ();
+  if (multi_row_p ())
+    fix_rows ();
+}
+
+void
+tab_bar::check_rows ()
+{
+  int rows = max (row_count (), 1);
+  if (rows == t_rows)
+    return;
+  t_rows = rows;
+  calc_tab_height ();
+  b_frame.arrange_bar (this);
+  b_frame.recalc_layout ();
 }
 
 void
@@ -609,7 +737,7 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
   if (!vert)
     {
       sz.cx = DOCK_LENGTH_INFINITE;
-      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT);
+      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT) + (t_rows - 1) * t_horz_height;
     }
   else if (t_horz_text)
     {
@@ -707,6 +835,64 @@ tab_bar::draw_item (const draw_item_struct &dis, WCHAR *s, int l,
     }
 }
 
+int
+tab_bar::row_top (int i) const
+{
+  if (i < 0)
+    return 0;
+  RECT r;
+  get_item_rect (i, r);
+  return r.top;
+}
+
+void
+tab_bar::items_rect (int n, RECT &r) const
+{
+  get_item_rect (0, r);
+  for (int i = 1; i < n; i++)
+    {
+      RECT r2;
+      get_item_rect (i, r2);
+      r.left = min (r.left, r2.left);
+      r.top = min (r.top, r2.top);
+      r.right = max (r.right, r2.right);
+      r.bottom = max (r.bottom, r2.bottom);
+    }
+}
+
+HRGN
+tab_bar::items_region (int n, const RECT &lim) const
+{
+  int vert = dock_vert_p ();
+  HRGN hrgn = CreateRectRgn (0, 0, 0, 0);
+  for (int i = 0; i < n;)
+    {
+      RECT row;
+      get_item_rect (i, row);
+      LONG base = vert ? row.left : row.top;
+      for (i++; i < n; i++)
+        {
+          RECT r;
+          get_item_rect (i, r);
+          if ((vert ? r.left : r.top) != base)
+            break;
+          row.left = min (row.left, r.left);
+          row.top = min (row.top, r.top);
+          row.right = max (row.right, r.right);
+          row.bottom = max (row.bottom, r.bottom);
+        }
+      row.left = max (row.left, lim.left);
+      row.top = max (row.top, lim.top);
+      row.right = min (row.right, lim.right);
+      row.bottom = min (row.bottom, lim.bottom);
+      InflateRect (&row, -1, -1);
+      HRGN h = CreateRectRgnIndirect (&row);
+      CombineRgn (hrgn, hrgn, h, RGN_OR);
+      DeleteObject (h);
+    }
+  return hrgn;
+}
+
 void
 tab_bar::erase_bkgnd (HDC hdc)
 {
@@ -731,22 +917,7 @@ tab_bar::erase_bkgnd (HDC hdc)
   int n = item_count ();
   if (n > 0)
     {
-      RECT r;
-      get_item_rect (0, r);
-      if (n > 1)
-        {
-          RECT r2;
-          get_item_rect (n - 1, r2);
-          r.left = min (r.left, r2.left);
-          r.top = min (r.top, r2.top);
-          r.right = max (r.right, r2.right);
-          r.bottom = max (r.bottom, r2.bottom);
-        }
-      r.left = max (r.left, cr.left);
-      r.top = max (r.top, cr.top);
-      r.right = min (r.right, cr.right);
-      r.bottom = min (r.bottom, cr.bottom);
-
+      RECT lim (cr);
       HWND hwnd_spin = GetDlgItem (b_hwnd, IDC_TAB_SPIN);
       if (hwnd_spin && IsWindowVisible (hwnd_spin))
         {
@@ -754,12 +925,11 @@ tab_bar::erase_bkgnd (HDC hdc)
           GetWindowRect (hwnd_spin, &spin_r);
           MapWindowPoints (HWND_DESKTOP, b_hwnd, (POINT *)&spin_r, 2);
           if (!dock_vert_p ())
-            r.right = min (r.right, spin_r.left);
+            lim.right = min (lim.right, spin_r.left);
           else
-            r.bottom = min (r.bottom, spin_r.top);
+            lim.bottom = min (lim.bottom, spin_r.top);
         }
-      InflateRect (&r, -1, -1);
-      HRGN hrgn = CreateRectRgnIndirect (&r);
+      HRGN hrgn = items_region (n, lim);
       ExtSelectClipRgn (hdc, hrgn, RGN_DIFF);
       DeleteObject (hrgn);
       fill_rect (hdc, cr, sysdep.btn_face);
@@ -784,7 +954,7 @@ tab_bar::paint_left (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, t_horz_text ? sysdep.ui_font () : sysdep.ui_font90 ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   for (int i = 0; i < n; i++)
     {
       RECT r;
@@ -829,12 +999,17 @@ tab_bar::paint_top (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
+  RECT ir;
+  items_rect (n, ir);
+  int dy = cr.bottom - 1 - ir.bottom;
+  int cur_row = row_top (cur);
   for (int i = 0; i < n; i++)
     {
       RECT r;
       get_item_rect (i, r);
-      r.bottom = cr.bottom - 1;
+      int same_row = cur >= 0 && r.top == cur_row;
+      r.bottom += dy;
       if (!intersect_p (r, clip))
         continue;
       dis.r = r;
@@ -854,14 +1029,14 @@ tab_bar::paint_top (HDC hdc, const RECT &cr, const RECT &clip, int n)
           dis.r.right--;
           dis.r.top++;
         }
-      if (cur < 0 || i != cur + 1)
+      if (!same_row || i != cur + 1)
         {
           draw_vline (hdc, r.top + 1, r.bottom, r.left, sysdep.btn_highlight);
           draw_hline (hdc, r.left + 1, r.right - 1, r.top, sysdep.btn_highlight);
         }
       else
         draw_hline (hdc, r.left + 2, r.right - 1, r.top, sysdep.btn_highlight);
-      if (i != cur - 1)
+      if (!same_row || i != cur - 1)
         draw_vline (hdc, r.top + 1, r.bottom, r.right - 1, sysdep.btn_shadow);
       draw_item (dis);
     }
@@ -874,7 +1049,7 @@ tab_bar::paint_right (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, t_horz_text ? sysdep.ui_font () : sysdep.ui_font270 ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
   for (int i = 0; i < n; i++)
     {
       RECT r;
@@ -919,12 +1094,17 @@ tab_bar::paint_bottom (HDC hdc, const RECT &cr, const RECT &clip, int n)
   HGDIOBJ of = SelectObject (hdc, sysdep.ui_font ());
   draw_item_struct dis;
   dis.hdc = hdc;
-  int cur = get_cursel ();
+  int cur = cursel ();
+  RECT ir;
+  items_rect (n, ir);
+  int dy = cr.top + 1 - ir.top;
+  int cur_row = row_top (cur);
   for (int i = 0; i < n; i++)
     {
       RECT r;
       get_item_rect (i, r);
-      r.top = cr.top + 1;
+      int same_row = cur >= 0 && r.top == cur_row;
+      r.top += dy;
       if (!intersect_p (r, clip))
         continue;
       dis.r = r;
@@ -944,14 +1124,14 @@ tab_bar::paint_bottom (HDC hdc, const RECT &cr, const RECT &clip, int n)
           dis.r.right--;
           dis.r.bottom--;
         }
-      if (cur < 0 || i != cur + 1)
+      if (!same_row || i != cur + 1)
         {
           draw_vline (hdc, r.top, r.bottom - 1, r.left, sysdep.btn_highlight);
           draw_hline (hdc, r.left + 1, r.right - 1, r.bottom - 1, sysdep.btn_shadow);
         }
       else
         draw_hline (hdc, r.left + 2, r.right - 1, r.bottom - 1, sysdep.btn_shadow);
-      if (i != cur - 1)
+      if (!same_row || i != cur - 1)
         draw_vline (hdc, r.top, r.bottom - 1, r.right - 1, sysdep.btn_shadow);
       draw_item (dis);
     }
@@ -1345,7 +1525,7 @@ tab_bar::move_tab (int x, int y)
   TC_HITTESTINFO htinfo;
   htinfo.pt = pt;
   int oindex = hit_test (htinfo);
-  if (oindex < 0 || oindex != get_cursel ())
+  if (oindex < 0 || oindex != cursel ())
     return 0;
 
   HCURSOR hcur_old = GetCursor ();
@@ -1406,7 +1586,7 @@ tab_bar::move_tab (int x, int y)
                 set_no_redraw ();
                 if (get_item (oindex, ti) && insert_item (index, ti) >= 0)
                   {
-                    set_cursel (index);
+                    select (index);
                     delete_item (oindex < index ? oindex : oindex + 1);
                   }
                 set_redraw ();
@@ -1448,15 +1628,34 @@ tab_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_LBUTTONDOWN:
       {
-        if (lbtn_down ((short)LOWORD (lparam), (short)HIWORD (lparam)))
+        int x = (short)LOWORD (lparam), y = (short)HIWORD (lparam);
+        if (lbtn_down (x, y))
           return 0;
         HWND hwnd_focus = GetFocus ();
-        dock_bar::wndproc (msg, wparam, lparam);
-        if (move_tab ((short)LOWORD (lparam), (short)HIWORD (lparam))
-            && hwnd_focus)
+        if (multi_row_p ())
+          click_select (x, y);
+        else
+          dock_bar::wndproc (msg, wparam, lparam);
+        if (move_tab (x, y) && hwnd_focus)
           SetFocus (hwnd_focus);
         return 0;
       }
+
+    case WM_KEYDOWN:
+      if (multi_row_p ())
+        switch (wparam)
+          {
+          case VK_LEFT:
+          case VK_UP:
+            key_select (-1);
+            return 0;
+
+          case VK_RIGHT:
+          case VK_DOWN:
+            key_select (1);
+            return 0;
+          }
+      break;
 
     case WM_NCCALCSIZE:
       return nc_calc_size (*(RECT *)lparam);
@@ -1497,7 +1696,7 @@ tab_bar::do_context_menu (const POINT *pt)
 
   if (!pt)
     {
-      i = get_cursel ();
+      i = cursel ();
       if (i >= 0)
         {
           RECT r;
@@ -2314,10 +2513,13 @@ void
 dock_frame::refresh ()
 {
   int x = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
+  int m = xsymbol_value (Vtab_bar_multi_row) != Qnil;
   for (int i = 0; i < EDGE_MAX; i++)
     for (dock_bar *bar = f_bars[i].head (); bar; bar = bar->next ())
       {
         if (bar->set_horz_text_p (x))
+          arrange_bar (bar);
+        if (bar->set_multi_row_p (m))
           arrange_bar (bar);
       }
   if (f_arrange)

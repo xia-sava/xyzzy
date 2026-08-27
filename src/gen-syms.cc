@@ -2711,6 +2711,7 @@ static symbols ed[] =
   DEFCMD3 (focus-tool-bar, 0, 0, 0, ""),
   DEFUN3 (refresh-tool-bars, 0, 0, 0),
   DEFVAR2 (*tab-bar-horizontal-text*),
+  DEFVAR2 (*tab-bar-multi-row*),
 
   /* usertab.cc */
   DEFUN3 (create-tab-bar, 2, 0, 0),

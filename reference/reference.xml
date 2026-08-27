@@ -2670,6 +2670,61 @@ select-bufferやダイアログのリストボックスで、上方向に移動�
 </chapter>
 
 <chapter>
+<title>*tab-bar-horizontal-text*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+non-nil に設定すると、左右に置いたタブバーのタブの文字を横書きにします。
+デフォルトは nil で、このときは文字も縦になります。
+変更したあとは refresh-tool-bars を呼ぶと反映されます。
+</description>
+<seealso>*tab-bar-multi-row*</seealso>
+<seealso>*tab-bar-never-focus*</seealso>
+<seealso>refresh-tool-bars</seealso>
+<link></link>
+<section>メニュー</section>
+<file></file>
+</chapter>
+
+<chapter>
+<title>*tab-bar-multi-row*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+non-nil に設定すると、上下に置いたタブバーでタブが一段に収まらないとき、
+段を重ねてすべてのタブを見せます。デフォルトは nil で、このときは収まら
+ない分が隠れ、右端のボタンで横にスクロールします。
+左右に置いたタブバーは、この設定にかかわらず一列のままです。
+変更したあとは refresh-tool-bars を呼ぶと反映されます。
+</description>
+<seealso>*tab-bar-horizontal-text*</seealso>
+<seealso>*tab-bar-never-focus*</seealso>
+<seealso>refresh-tool-bars</seealso>
+<link></link>
+<section>メニュー</section>
+<file></file>
+</chapter>
+
+<chapter>
+<title>*tab-bar-never-focus*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+non-nil に設定すると、タブバーにフォーカスが移らなくなります。
+デフォルトは nil です。
+</description>
+<seealso>*tab-bar-horizontal-text*</seealso>
+<seealso>*tab-bar-multi-row*</seealso>
+<seealso>focus-tool-bar</seealso>
+<link></link>
+<section>メニュー</section>
+<file></file>
+</chapter>
+
+<chapter>
 <title>*tail-f-mode-hook*</title>
 <type>Variable</type>
 <arguments></arguments>
