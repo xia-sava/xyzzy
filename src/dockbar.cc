@@ -473,9 +473,10 @@ tab_bar::tab_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name,
                  new_comctl_p () ? DOCKABLE_ALL : DOCKABLE_TOP | DOCKABLE_BOTTOM),
        t_tab_height (dpi_scale (21)), t_horz_width (dpi_scale (60)),
-       t_horz_height (dpi_scale (21))
+       t_horz_height (dpi_scale (21)), t_rows (1)
 {
   t_horz_text = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
+  t_multi_row = xsymbol_value (Vtab_bar_multi_row) != Qnil;
 }
 
 int
@@ -512,6 +513,8 @@ void
 tab_bar::dock_edge ()
 {
   dock_bar::dock_edge ();
+  modify_style (TCS_MULTILINE | TCS_RAGGEDRIGHT,
+                multi_row_p () ? TCS_MULTILINE | TCS_RAGGEDRIGHT : 0);
   if (new_comctl_p ())
     {
       switch (edge ())
@@ -601,6 +604,19 @@ tab_bar::update_ui ()
       x ^= TCS_FOCUSNEVER;
       set_style (x);
     }
+  check_rows ();
+}
+
+void
+tab_bar::check_rows ()
+{
+  int rows = max (row_count (), 1);
+  if (rows == t_rows)
+    return;
+  t_rows = rows;
+  calc_tab_height ();
+  b_frame.arrange_bar (this);
+  b_frame.recalc_layout ();
 }
 
 void
@@ -609,7 +625,7 @@ tab_bar::calc_client_size (SIZE &sz, int vert) const
   if (!vert)
     {
       sz.cx = DOCK_LENGTH_INFINITE;
-      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT);
+      sz.cy = dpi_scale (DOCK_BAR_CLIENT_HEIGHT) + (t_rows - 1) * t_horz_height;
     }
   else if (t_horz_text)
     {
@@ -707,6 +723,31 @@ tab_bar::draw_item (const draw_item_struct &dis, WCHAR *s, int l,
     }
 }
 
+int
+tab_bar::row_top (int i) const
+{
+  if (i < 0)
+    return 0;
+  RECT r;
+  get_item_rect (i, r);
+  return r.top;
+}
+
+void
+tab_bar::items_rect (int n, RECT &r) const
+{
+  get_item_rect (0, r);
+  for (int i = 1; i < n; i++)
+    {
+      RECT r2;
+      get_item_rect (i, r2);
+      r.left = min (r.left, r2.left);
+      r.top = min (r.top, r2.top);
+      r.right = max (r.right, r2.right);
+      r.bottom = max (r.bottom, r2.bottom);
+    }
+}
+
 void
 tab_bar::erase_bkgnd (HDC hdc)
 {
@@ -732,16 +773,7 @@ tab_bar::erase_bkgnd (HDC hdc)
   if (n > 0)
     {
       RECT r;
-      get_item_rect (0, r);
-      if (n > 1)
-        {
-          RECT r2;
-          get_item_rect (n - 1, r2);
-          r.left = min (r.left, r2.left);
-          r.top = min (r.top, r2.top);
-          r.right = max (r.right, r2.right);
-          r.bottom = max (r.bottom, r2.bottom);
-        }
+      items_rect (n, r);
       r.left = max (r.left, cr.left);
       r.top = max (r.top, cr.top);
       r.right = min (r.right, cr.right);
@@ -830,11 +862,16 @@ tab_bar::paint_top (HDC hdc, const RECT &cr, const RECT &clip, int n)
   draw_item_struct dis;
   dis.hdc = hdc;
   int cur = get_cursel ();
+  RECT ir;
+  items_rect (n, ir);
+  int dy = cr.bottom - 1 - ir.bottom;
+  int cur_row = row_top (cur);
   for (int i = 0; i < n; i++)
     {
       RECT r;
       get_item_rect (i, r);
-      r.bottom = cr.bottom - 1;
+      int same_row = cur >= 0 && r.top == cur_row;
+      r.bottom += dy;
       if (!intersect_p (r, clip))
         continue;
       dis.r = r;
@@ -854,14 +891,14 @@ tab_bar::paint_top (HDC hdc, const RECT &cr, const RECT &clip, int n)
           dis.r.right--;
           dis.r.top++;
         }
-      if (cur < 0 || i != cur + 1)
+      if (!same_row || i != cur + 1)
         {
           draw_vline (hdc, r.top + 1, r.bottom, r.left, sysdep.btn_highlight);
           draw_hline (hdc, r.left + 1, r.right - 1, r.top, sysdep.btn_highlight);
         }
       else
         draw_hline (hdc, r.left + 2, r.right - 1, r.top, sysdep.btn_highlight);
-      if (i != cur - 1)
+      if (!same_row || i != cur - 1)
         draw_vline (hdc, r.top + 1, r.bottom, r.right - 1, sysdep.btn_shadow);
       draw_item (dis);
     }
@@ -920,11 +957,16 @@ tab_bar::paint_bottom (HDC hdc, const RECT &cr, const RECT &clip, int n)
   draw_item_struct dis;
   dis.hdc = hdc;
   int cur = get_cursel ();
+  RECT ir;
+  items_rect (n, ir);
+  int dy = cr.top + 1 - ir.top;
+  int cur_row = row_top (cur);
   for (int i = 0; i < n; i++)
     {
       RECT r;
       get_item_rect (i, r);
-      r.top = cr.top + 1;
+      int same_row = cur >= 0 && r.top == cur_row;
+      r.top += dy;
       if (!intersect_p (r, clip))
         continue;
       dis.r = r;
@@ -944,14 +986,14 @@ tab_bar::paint_bottom (HDC hdc, const RECT &cr, const RECT &clip, int n)
           dis.r.right--;
           dis.r.bottom--;
         }
-      if (cur < 0 || i != cur + 1)
+      if (!same_row || i != cur + 1)
         {
           draw_vline (hdc, r.top, r.bottom - 1, r.left, sysdep.btn_highlight);
           draw_hline (hdc, r.left + 1, r.right - 1, r.bottom - 1, sysdep.btn_shadow);
         }
       else
         draw_hline (hdc, r.left + 2, r.right - 1, r.bottom - 1, sysdep.btn_shadow);
-      if (i != cur - 1)
+      if (!same_row || i != cur - 1)
         draw_vline (hdc, r.top, r.bottom - 1, r.right - 1, sysdep.btn_shadow);
       draw_item (dis);
     }
@@ -2314,10 +2356,13 @@ void
 dock_frame::refresh ()
 {
   int x = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
+  int m = xsymbol_value (Vtab_bar_multi_row) != Qnil;
   for (int i = 0; i < EDGE_MAX; i++)
     for (dock_bar *bar = f_bars[i].head (); bar; bar = bar->next ())
       {
         if (bar->set_horz_text_p (x))
+          arrange_bar (bar);
+        if (bar->set_multi_row_p (m))
           arrange_bar (bar);
       }
   if (f_arrange)

@@ -156,6 +156,7 @@ public:
   virtual int focus () const {return 0;}
   virtual void color_changed () const {}
   virtual int set_horz_text_p (int) {return 0;}
+  virtual int set_multi_row_p (int) {return 0;}
   virtual int horz_width () const {return -1;}
   virtual void set_horz_width (int) {}
 };
@@ -268,6 +269,8 @@ protected:
   int t_horz_text;
   int t_horz_width;
   int t_horz_height;
+  int t_multi_row;
+  int t_rows;
 private:
   int t_erasebkgnd_called;
   int t_dots;
@@ -288,6 +291,8 @@ protected:
   void paint ();
   void erase_bkgnd (HDC);
   int inverse_p () const {return style () & TCS_BOTTOM;}
+  int multi_row_p () const {return t_multi_row && !dock_vert_p ();}
+  void check_rows ();
   virtual void dock_edge ();
   void draw_item (const draw_item_struct &, WCHAR *, int,
                   COLORREF, COLORREF) const;
@@ -301,6 +306,8 @@ protected:
   virtual int do_context_menu (const POINT *);
   virtual lisp context_menu (int) {return Qnil;}
 private:
+  int row_top (int) const;
+  void items_rect (int, RECT &) const;
   void paint_left (HDC, const RECT &, const RECT &, int);
   void paint_top (HDC, const RECT &, const RECT &, int);
   void paint_right (HDC, const RECT &, const RECT &, int);
@@ -336,6 +343,8 @@ public:
     {sendmsg (TCM_ADJUSTRECT, f, LPARAM (&r));}
   int item_count () const
     {return sendmsg (TCM_GETITEMCOUNT, 0, 0);}
+  int row_count () const
+    {return sendmsg (TCM_GETROWCOUNT, 0, 0);}
   int set_cursel (int i)
     {return sendmsg (TCM_SETCURSEL, i, 0);}
   int get_cursel () const
@@ -363,6 +372,13 @@ public:
       if (t_horz_text ? x : !x)
         return 0;
       t_horz_text = !t_horz_text;
+      return 1;
+    }
+  virtual int set_multi_row_p (int x)
+    {
+      if (t_multi_row ? x : !x)
+        return 0;
+      t_multi_row = !t_multi_row;
       return 1;
     }
   virtual int horz_width () const {return t_horz_width;}
