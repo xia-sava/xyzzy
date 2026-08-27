@@ -14,7 +14,7 @@
 
 段 0 と段 1 の出力を `diff` して読む。
 """
-import ctypes, struct, sys, time
+import ctypes, sys, time
 import dlgtext as D
 
 u32, k32 = D.u32, D.k32
@@ -40,28 +40,7 @@ def size(h):
     return r - l, b - t
 
 
-def remote_rect(hwnd, msg, index):
-    """RECT を返す通知は相手のアドレス空間の領域を渡して読み返す。"""
-    pid = D.w.DWORD()
-    u32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-    k32.OpenProcess.restype = D.w.HANDLE
-    hp = k32.OpenProcess(0x1F0FFF, False, pid)
-    if not hp:
-        return None
-    k32.VirtualAllocEx.restype = ctypes.c_void_p
-    rem = k32.VirtualAllocEx(hp, None, 64, 0x3000, 4)
-    if not rem:
-        k32.CloseHandle(hp); return None
-    try:
-        k32.WriteProcessMemory(hp, ctypes.c_void_p(rem), b"\0" * 16, 16, None)
-        if not u32.SendMessageW(hwnd, msg, index, ctypes.c_void_p(rem)):
-            return None
-        buf = ctypes.create_string_buffer(16)
-        k32.ReadProcessMemory(hp, ctypes.c_void_p(rem), buf, 16, None)
-        return struct.unpack("<4i", buf.raw)
-    finally:
-        k32.VirtualFreeEx(hp, ctypes.c_void_p(rem), 0, 0x8000)
-        k32.CloseHandle(hp)
+remote_rect = D.remote_rect
 
 
 def show_toolbar(h):
