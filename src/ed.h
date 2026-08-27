@@ -426,6 +426,9 @@ public:
 
   ATOM atom_toplev;
   int minibuffer_prompt_column;
+  /* ミニバッファへ入った通算の回数。入って出ると深さは戻るので、
+     コマンドがミニバッファを使ったかはこちらで見る */
+  long minibuffer_enter_count;
 
   utimer user_timer;
 

@@ -148,6 +148,7 @@ read_minibuffer (const Char *prompt, long prompt_length, lisp def,
   mini->set_window ();
   mini->w_flags = 0;
   minibuffer_recursive_level++;
+  app.minibuffer_enter_count++;
 
   lisp result = Qnil;
   lisp nld_type = 0, nld_id = 0;

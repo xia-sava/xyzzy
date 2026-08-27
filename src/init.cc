@@ -36,6 +36,7 @@ Application::Application ()
      : mouse (kbdq)
 {
   default_tab_columns = 8;
+  minibuffer_enter_count = 0;
   auto_save_count = 0;
   toplevel_is_active = 0;
   ime_composition = 0;
@@ -443,6 +444,8 @@ init_symbol_value_once ()
   xsymbol_value (Vauto_fill) = Qnil;
   xsymbol_value (Vthis_command) = Qnil;
   xsymbol_value (Vlast_command) = Qnil;
+  xsymbol_value (Vmulti_cursor_no_repeat_commands) =
+    xcons (Sundo, xcons (Sredo, Qnil));
 
   xsymbol_value (Qapp_user_model_id) =
     make_string (ProgramAppUserModelId);

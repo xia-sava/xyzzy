@@ -2020,6 +2020,7 @@ static symbols ed[] =
   DEFCMD3 (multi-cursor-add-above, 0, 1, 0, "p"),
   DEFUN3 (multi-cursor-clear, 0, 0, 0),
   DEFUN3 (multi-cursor-list, 0, 0, 0),
+  DEFVAR2 (*multi-cursor-no-repeat-commands*),
 
   /* undo.cc */
   MAKE_SYMBOL2F (kept-undo-information, SFmake_buffer_local),

@@ -1916,6 +1916,24 @@ xyzzyの終了時に実行されます。
 </chapter>
 
 <chapter>
+<title>*multi-cursor-no-repeat-commands*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+カーソルを増やしていても、一度しか実行しないコマンドのリストです。
+デフォルトでは undo と redo が入っています。
+
+ここに無くても、実行した結果ウィンドウやバッファが変わったコマンドと、
+ミニバッファを使ったコマンドは、増やしたカーソルを消して一度だけの実行になります。
+</description>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<section>変数と定数</section>
+<file></file>
+</chapter>
+
+<chapter>
 <title>*next-buffer-in-tab-order*</title>
 <type>Variable</type>
 <arguments></arguments>
@@ -19257,6 +19275,9 @@ ARG が負のときは下へ伸ばします。
 
 桁は最初に伸ばしたときの桁を保ちます。行がそれより短いときは行末に置きます。
 足せた数を返します。一つも足せなければ nil を返します。
+
+カーソルが増えている間、コマンドはカーソルの数だけ実行されます。
+一度しか実行しないコマンドは *multi-cursor-no-repeat-commands* で決めます。
 </description>
 <seealso>multi-cursor-add-below</seealso>
 <seealso>multi-cursor-clear</seealso>
@@ -19279,6 +19300,9 @@ ARG が負のときは上へ伸ばします。
 
 桁は最初に伸ばしたときの桁を保ちます。行がそれより短いときは行末に置きます。
 足せた数を返します。一つも足せなければ nil を返します。
+
+カーソルが増えている間、コマンドはカーソルの数だけ実行されます。
+一度しか実行しないコマンドは *multi-cursor-no-repeat-commands* で決めます。
 </description>
 <seealso>multi-cursor-add-above</seealso>
 <seealso>multi-cursor-clear</seealso>

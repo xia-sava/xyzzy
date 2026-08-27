@@ -505,6 +505,7 @@ Window::Window (const Window &src)
   w_mcursors = 0;
   w_nmcursors = 0;
   w_mcursors_size = 0;
+  w_mc_saved_point = NO_MARK_SET;
   for (int i = 0; i < src.w_nmcursors; i++)
     mc_add (src.w_mcursors[i].mc_point, src.w_mcursors[i].mc_mark);
   init (0, 0);
@@ -551,6 +552,7 @@ Window::Window (int minibufp, int temporary)
   w_mcursors_size = 0;
   w_mc_column = 0;
   w_mc_direction = 0;
+  w_mc_saved_point = NO_MARK_SET;
 
   init (minibufp, temporary);
 }

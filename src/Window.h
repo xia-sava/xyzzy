@@ -500,6 +500,9 @@ struct Window
   /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き (1: 下 -1: 上 0: 無し) */
   long w_mc_column;
   int w_mc_direction;
+  /* 一つずつ回している間、w_point を明け渡した主カーソルの居場所。
+     編集に連れて動く必要があるので窓に持たせる */
+  point_t w_mc_saved_point;
 
   const COLORREF *w_colors;
   COLORREF w_colors_buf[WCOLOR_MAX];
@@ -581,10 +584,12 @@ struct Window
   int next_draw_point (Point &, long) const;
 
   void mc_clear ();
+  void mc_discard ();
   int mc_search (point_t) const;
   int mc_cursor_p (point_t p) const {return w_nmcursors && mc_search (p) >= 0;}
   int mc_add (point_t, point_t = NO_MARK_SET);
   void mc_remove_at (int);
+  void mc_merge ();
   int mc_extend (int);
   void mc_adjust_insertion (point_t, int);
   void mc_adjust_deletion (point_t, int);
@@ -790,6 +795,9 @@ Window::glyph_backcolor (glyph_t c) const
     }
   return w_textprop_backcolor[y >> GLYPH_TEXTPROP_BG_SHIFT_BITS];
 }
+
+/* 命令をカーソルの数だけ実行する。増やしたカーソルが無ければ一度だけ */
+lisp mc_command_execute (lisp);
 
 struct WindowConfiguration
 {

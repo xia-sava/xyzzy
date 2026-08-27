@@ -1513,7 +1513,7 @@ run_command:
   try
     {
       stack_trace trace (stack_trace::apply, Scommand_execute, command, 0);
-      result = Fcommand_execute (command, 0);
+      result = mc_command_execute (command);
     }
   catch (nonlocal_jump &)
     {

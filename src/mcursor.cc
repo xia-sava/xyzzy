@@ -1,20 +1,22 @@
 #include "stdafx.h"
 #include "ed.h"
 
-/* 副カーソルの居る範囲を描き直させる */
-static void
-mc_invalidate (Window *wp)
-{
-  if (wp->w_nmcursors)
-    wp->w_bufp->set_modified_region (wp->w_mcursors[0].mc_point,
-                                     wp->w_mcursors[wp->w_nmcursors - 1].mc_point + 1);
-}
-
 void
 Window::mc_clear ()
 {
   w_nmcursors = 0;
   w_mc_direction = 0;
+}
+
+/* 居た範囲を描き直させてから消す */
+void
+Window::mc_discard ()
+{
+  if (!w_nmcursors)
+    return;
+  w_bufp->set_modified_region (w_mcursors[0].mc_point,
+                               w_mcursors[w_nmcursors - 1].mc_point + 1);
+  mc_clear ();
 }
 
 /* POINT に居るカーソルの添字。居なければ挿入位置の補数を返す */
@@ -146,6 +148,18 @@ Window::mc_adjust_insertion (point_t opoint, int size)
       w_mcursors[i].mc_mark += size;
 }
 
+/* 同じ場所へ寄ったものを一つにまとめる */
+void
+Window::mc_merge ()
+{
+  int d = 0;
+  for (int s = 1; s < w_nmcursors; s++)
+    if (w_mcursors[s].mc_point != w_mcursors[d].mc_point)
+      w_mcursors[++d] = w_mcursors[s];
+  if (w_nmcursors)
+    w_nmcursors = d + 1;
+}
+
 void
 Window::mc_adjust_deletion (point_t from, int size)
 {
@@ -159,13 +173,74 @@ Window::mc_adjust_deletion (point_t from, int size)
     if (w_mcursors[i].mc_mark > from)
       w_mcursors[i].mc_mark = max (point_t (w_mcursors[i].mc_mark - size), from);
 
-  /* 削除で同じ場所へ寄ったものを一つにまとめる */
-  int d = 0;
-  for (int s = 1; s < w_nmcursors; s++)
-    if (w_mcursors[s].mc_point != w_mcursors[d].mc_point)
-      w_mcursors[++d] = w_mcursors[s];
-  if (w_nmcursors)
-    w_nmcursors = d + 1;
+  /* 一つずつ回している間は添字がずれると困るので、まとめるのは回し終えてから */
+  if (w_mc_saved_point == NO_MARK_SET)
+    mc_merge ();
+}
+
+/* 一つのカーソルで実行する間だけ w_point をそこへ移し、済んだら主カーソルへ戻す。
+   例外で抜けても戻るよう、後始末をデストラクタに置く */
+class mc_visit
+{
+  Window *v_wp;
+public:
+  mc_visit (Window *wp, point_t point) : v_wp (wp)
+    {
+      v_wp->w_mc_saved_point = v_wp->w_point.p_point;
+      v_wp->w_bufp->goto_char (v_wp->w_point, point);
+    }
+  ~mc_visit ()
+    {
+      point_t saved = v_wp->w_mc_saved_point;
+      v_wp->w_mc_saved_point = NO_MARK_SET;
+      v_wp->w_bufp->goto_char (v_wp->w_point, saved);
+    }
+};
+
+lisp
+mc_command_execute (lisp command)
+{
+  Window *wp = selected_window ();
+  if (!wp->w_nmcursors
+      || memq (command, xsymbol_value (Vmulti_cursor_no_repeat_commands)))
+    return Fcommand_execute (command, 0);
+
+  Buffer *bp = wp->w_bufp;
+  const long minibuf = app.minibuffer_enter_count;
+  point_t p1 = wp->w_mcursors[0].mc_point;
+  point_t p2 = wp->w_mcursors[wp->w_nmcursors - 1].mc_point + 1;
+
+  lisp result = Fcommand_execute (command, 0);
+
+  /* 主カーソルで一度実行して足場が動いたなら、残りは回さずに畳む */
+  if (selected_window () != wp
+      || wp->w_bufp != bp
+      || app.minibuffer_enter_count != minibuf)
+    {
+      wp->mc_discard ();
+      return result;
+    }
+
+  /* 後ろから回す。前のカーソルの位置は後ろでの編集に動かされない */
+  for (int i = wp->w_nmcursors - 1; i >= 0; i--)
+    {
+      mc_visit visit (wp, wp->w_mcursors[i].mc_point);
+      Fcommand_execute (command, 0);
+      wp->w_mcursors[i].mc_point = wp->w_point.p_point;
+    }
+
+  wp->mc_merge ();
+  int i = wp->mc_search (wp->w_point.p_point);
+  if (i >= 0)
+    wp->mc_remove_at (i);
+
+  if (wp->w_nmcursors)
+    {
+      p1 = min (p1, wp->w_mcursors[0].mc_point);
+      p2 = max (p2, point_t (wp->w_mcursors[wp->w_nmcursors - 1].mc_point + 1));
+    }
+  bp->set_modified_region (p1, p2);
+  return result;
 }
 
 static lisp
@@ -202,8 +277,7 @@ Fmulti_cursor_clear ()
   Window *wp = selected_window ();
   if (!wp->w_nmcursors)
     return Qnil;
-  mc_invalidate (wp);
-  wp->mc_clear ();
+  wp->mc_discard ();
   return Qt;
 }
 
