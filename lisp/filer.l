@@ -1512,6 +1512,7 @@ K:mkdir  L:ドライブ  M:移動  N:ファイル名  O:圧縮  P:DIR??"
 			(filer-goto-file string 'next t 'arg)
 			(setq reverse t))
 		       (t
+			;; isearch と違い、キーは押し戻さずここで捨てる
 			(return))))))))
     (clear-message)))
 
