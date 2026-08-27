@@ -12,6 +12,8 @@
 	  copy-region-as-kill kill-region append-next-kill
 	  copy-region-to-clipboard kill-region-to-clipboard
 	  yank-to-clipboard *sync-kill-ring-with-clipboard*
+	  *multi-cursor-clipboard*
+	  multi-cursor-clipboard-data multi-cursor-clipboard-own-data
 	  shift-region unshift-region
 	  *quotation-prefix* quote-region))
 
@@ -23,10 +25,30 @@
 
 (defvar *sync-kill-ring-with-clipboard* nil)
 
+;;; クリップボードは一つしかないので、増やしたカーソルが切り取ったものは
+;;; こちらへ控える。*multi-cursor-clipboard-stamp* にはクリップボードへ最後に
+;;; 書いたものを覚えておき、他のアプリがそれを置き換えていないかを見る。
+(defvar *multi-cursor-clipboard* nil)
+(defvar *multi-cursor-clipboard-stamp* nil)
+
 ;;; 増やしたカーソルは、これらの値をそれぞれ別に持つ。切り取ったものが
 ;;; カーソルをまたいで混ざらないようにするため。
 (setq *multi-cursor-local-variables*
-      '(*kill-ring* *kill-ring-yank-pointer* *last-command*))
+      '(*kill-ring* *kill-ring-yank-pointer* *last-command*
+        *multi-cursor-clipboard*))
+
+;;; 増やしたカーソルが自分で切り取ったもの。クリップボードが他のアプリに
+;;; 置き換えられていれば nil を返す。
+(defun multi-cursor-clipboard-own-data ()
+  (and (multi-cursor-list)
+       *multi-cursor-clipboard*
+       (equal (get-clipboard-data) *multi-cursor-clipboard-stamp*)
+       *multi-cursor-clipboard*))
+
+;;; クリップボードから貼るときの中身。
+(defun multi-cursor-clipboard-data ()
+  (or (multi-cursor-clipboard-own-data)
+      (get-clipboard-data)))
 
 (defun push-kill-ring (x ring max)
   (push x ring)
@@ -136,7 +158,10 @@
 
 (defun copy-region-to-clipboard (from to)
   (interactive "r")
-  (copy-to-clipboard (buffer-substring from to)))
+  (let ((s (buffer-substring from to)))
+    (setq *multi-cursor-clipboard* s)
+    (setq *multi-cursor-clipboard-stamp* s)
+    (copy-to-clipboard s)))
 
 (defun kill-region-to-clipboard (from to)
   (interactive "*r")
@@ -217,12 +242,18 @@
 	      *kill-ring-newer-than-clipboard-p* nil)))))
 
 (defun sync-clipboard-to-kill-ring ()
-  (when *clipboard-newer-than-kill-ring-p*
-    (let ((x (get-clipboard-data)))
-      (when (and x (string/= x (current-kill-ring-data)))
-	(kill-new x)
-	(setq *clipboard-newer-than-kill-ring-p* nil
-	      *kill-ring-newer-than-clipboard-p* nil)))))
+  ;; クリップボードが変わったかを知らせる合図は窓口へ後から届くので、命令の
+  ;; さなかには間に合わない。増やしたカーソルは自分の控えを直に見る。
+  (let ((own (multi-cursor-clipboard-own-data)))
+    (if own
+	(when (string/= own (or (current-kill-ring-data) ""))
+	  (kill-new own))
+      (when *clipboard-newer-than-kill-ring-p*
+	(let ((x (get-clipboard-data)))
+	  (when (and x (string/= x (current-kill-ring-data)))
+	    (kill-new x)
+	    (setq *clipboard-newer-than-kill-ring-p* nil
+		  *kill-ring-newer-than-clipboard-p* nil)))))))
 
 (defun sync-kill-ring-to-clipboard-hook ()
   (when *sync-kill-ring-with-clipboard*

@@ -379,7 +379,7 @@
 
 (defun paste-from-clipboard ()
   (interactive "*")
-  (let ((string (get-clipboard-data)))
+  (let ((string (multi-cursor-clipboard-data)))
     (when string
       (selection-start-end (start end)
 	(delete-region start end))
