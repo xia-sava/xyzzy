@@ -9,6 +9,9 @@
 ;;;   未設定  一段のまま。スピンが出る
 ;;;   1       多段にする
 ;;;   off     多段にしてから一段へ戻す
+;;;
+;;; `XYZZY_TAB_SELECT` にバッファ名を渡すと最後にそれを選ぶ。多段では選んだ
+;;; タブの段が編集領域の側へ移るので、段の並び替わりを見るのに使う。
 
 (ignore-errors
   (progn
@@ -22,4 +25,9 @@
         (refresh-tool-bars)
         (when (equal m "off")
           (setq *tab-bar-multi-row* nil)
-          (refresh-tool-bars))))))
+          (refresh-tool-bars))))
+    (let ((b (si:getenv "XYZZY_TAB_SELECT")))
+      (when b
+        (let ((bp (find-buffer b)))
+          (when bp
+            (set-buffer bp)))))))
