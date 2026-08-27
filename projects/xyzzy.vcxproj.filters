@@ -330,6 +330,9 @@
     <ClCompile Include="..\src\ipc.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\mcursor.cc">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\md5c.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

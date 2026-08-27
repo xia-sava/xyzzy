@@ -851,6 +851,7 @@
 
 (defun quit ()
   (interactive)
+  (multi-cursor-clear)
   (error 'quit))
 
 (defun what-cursor-position ()
@@ -996,6 +997,8 @@
 (global-set-key #\C-Right 'end-of-line)
 (global-set-key #\S-C-Down 'scroll-up-both-window)
 (global-set-key #\S-C-Up 'scroll-down-both-window)
+(global-set-key #\M-S-Down 'multi-cursor-add-below)
+(global-set-key #\M-S-Up 'multi-cursor-add-above)
 (global-set-key #\Insert 'toggle-over)
 
 (define-key esc-map #\C-o 'split-line)

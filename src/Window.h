@@ -385,6 +385,13 @@ private:
 
 struct wheel_info;
 
+/* 主カーソル (w_point) に連れ添うカーソル。窓ごとに位置の昇順で並べる */
+struct multi_cursor
+{
+  point_t mc_point;
+  point_t mc_mark;
+};
+
 struct Window
 {
   static wcolor_index forecolor_indexes[GLYPH_NFOREGROUND_COLORS];
@@ -486,6 +493,14 @@ struct Window
   Buffer::selection_type w_reverse_temp;
   Region w_reverse_region;
 
+  enum {MC_MAX_CURSORS = 1000};
+  multi_cursor *w_mcursors;
+  int w_nmcursors;
+  int w_mcursors_size;
+  /* 上下へ伸ばすときに保つ桁と、最後に伸ばした向き (1: 下 -1: 上 0: 無し) */
+  long w_mc_column;
+  int w_mc_direction;
+
   const COLORREF *w_colors;
   COLORREF w_colors_buf[WCOLOR_MAX];
 
@@ -564,6 +579,16 @@ struct Window
   int redraw_line (glyph_data *, Point &, long, long, int, lisp,
                    syntax_info *, textprop *&, class regexp_kwd &) const;
   int next_draw_point (Point &, long) const;
+
+  void mc_clear ();
+  int mc_search (point_t) const;
+  int mc_cursor_p (point_t p) const {return w_nmcursors && mc_search (p) >= 0;}
+  int mc_add (point_t, point_t = NO_MARK_SET);
+  void mc_remove_at (int);
+  int mc_extend (int);
+  void mc_adjust_insertion (point_t, int);
+  void mc_adjust_deletion (point_t, int);
+
   void scroll_lines (int);
   int refresh (int);
   void pending_refresh ();

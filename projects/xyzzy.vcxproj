@@ -203,6 +203,7 @@
     <ClCompile Include="..\src\listen.cc" />
     <ClCompile Include="..\src\lprint.cc" />
     <ClCompile Include="..\src\lread.cc" />
+    <ClCompile Include="..\src\mcursor.cc" />
     <ClCompile Include="..\src\md5c.cc" />
     <ClCompile Include="..\src\menu.cc" />
     <ClCompile Include="..\src\minibuf.cc" />

@@ -2067,6 +2067,9 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
           && point.p_point < w_reverse_region.p2)
         f |= GLYPH_REVERSED;
 
+      if (mc_cursor_p (point.p_point))
+        f |= GLYPH_REVERSED;
+
       int kwdf = 0;
       if (psi)
         {

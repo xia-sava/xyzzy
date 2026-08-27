@@ -499,7 +499,14 @@ Window::Window (const Window &src)
   CP (w_reverse_region);
   CP (w_selection_column);
   CP (w_selection_region);
+  CP (w_mc_column);
+  CP (w_mc_direction);
 #undef CP
+  w_mcursors = 0;
+  w_nmcursors = 0;
+  w_mcursors_size = 0;
+  for (int i = 0; i < src.w_nmcursors; i++)
+    mc_add (src.w_mcursors[i].mc_point, src.w_mcursors[i].mc_mark);
   init (0, 0);
 }
 
@@ -539,6 +546,11 @@ Window::Window (int minibufp, int temporary)
   w_reverse_temp = Buffer::SELECTION_VOID;
   w_reverse_region.p1 = NO_MARK_SET;
   w_reverse_region.p2 = NO_MARK_SET;
+  w_mcursors = 0;
+  w_nmcursors = 0;
+  w_mcursors_size = 0;
+  w_mc_column = 0;
+  w_mc_direction = 0;
 
   init (minibufp, temporary);
 }
@@ -554,6 +566,7 @@ Window::~Window ()
     DestroyWindow (w_hwnd);
   if (IsWindow (w_hwnd_ml))
     DestroyWindow (w_hwnd_ml);
+  free (w_mcursors);
 }
 
 void
@@ -621,6 +634,7 @@ Window::set_buffer_params (Buffer *bp)
   w_disp = bp->b_disp;
   w_last_disp = w_disp;
   w_goal_column = 0;
+  mc_clear ();
   w_disp_flags |= WDF_WINDOW | WDF_MODELINE | WDF_GOAL_COLUMN;
   change_color ();
 }

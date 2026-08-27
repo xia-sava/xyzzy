@@ -19244,6 +19244,85 @@ modify-text-attributes で :strike-out t としても、
 </chapter>
 
 <chapter>
+<title>multi-cursor-add-above</title>
+<type>Function</type>
+<arguments>multi-cursor-add-above &amp;optional (ARG 1)</arguments>
+<package>editor</package>
+<description>
+カーソルの並びを一行上へ伸ばします。
+[M-S-Up]
+
+伸ばした向きと逆へ呼ぶと、最後に足したカーソルを取り除きます。
+ARG が負のときは下へ伸ばします。
+
+桁は最初に伸ばしたときの桁を保ちます。行がそれより短いときは行末に置きます。
+足せた数を返します。一つも足せなければ nil を返します。
+</description>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<seealso>multi-cursor-list</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>multi-cursor-add-below</title>
+<type>Function</type>
+<arguments>multi-cursor-add-below &amp;optional (ARG 1)</arguments>
+<package>editor</package>
+<description>
+カーソルの並びを一行下へ伸ばします。
+[M-S-Down]
+
+伸ばした向きと逆へ呼ぶと、最後に足したカーソルを取り除きます。
+ARG が負のときは上へ伸ばします。
+
+桁は最初に伸ばしたときの桁を保ちます。行がそれより短いときは行末に置きます。
+足せた数を返します。一つも足せなければ nil を返します。
+</description>
+<seealso>multi-cursor-add-above</seealso>
+<seealso>multi-cursor-clear</seealso>
+<seealso>multi-cursor-list</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>multi-cursor-clear</title>
+<type>Function</type>
+<arguments>multi-cursor-clear</arguments>
+<package>editor</package>
+<description>
+増やしたカーソルを全て取り除きます。
+[C-g]
+
+取り除くものがあれば t、無ければ nil を返します。
+別のバッファへ移ったときも取り除かれます。
+</description>
+<seealso>multi-cursor-add-above</seealso>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-list</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>multi-cursor-list</title>
+<type>Function</type>
+<arguments>multi-cursor-list</arguments>
+<package>editor</package>
+<description>
+増やしたカーソルの位置を、前から順に並べたリストで返します。
+point が返すカーソルは含みません。
+</description>
+<seealso>multi-cursor-add-above</seealso>
+<seealso>multi-cursor-add-below</seealso>
+<seealso>multi-cursor-clear</seealso>
+<section>ポジション</section>
+<file>builtin.l</file>
+</chapter>
+
+<chapter>
 <title>multiple-value-bind</title>
 <type>Special Form</type>
 <arguments>multiple-value-bind ({VAR}*) VALUES-FORM {declaration}* {FORM}*</arguments>

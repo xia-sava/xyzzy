@@ -413,6 +413,7 @@ Buffer::adjust_insertion (const Point &point, int size)
         ADJINS (wp->w_reverse_region.p2);
         ADJINS (wp->w_disp);
         ADJINS (wp->w_last_disp);
+        wp->mc_adjust_insertion (opoint, size);
       }
 
   for (WindowConfiguration *wc = WindowConfiguration::wc_chain;
@@ -869,6 +870,7 @@ Buffer::adjust_deletion (const Point &point, int size)
         ADJDEL (wp->w_reverse_region.p2);
         ADJDEL (wp->w_disp);
         ADJDEL (wp->w_last_disp);
+        wp->mc_adjust_deletion (from, size);
       }
 
   for (WindowConfiguration *wc = WindowConfiguration::wc_chain;

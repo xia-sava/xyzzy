@@ -2015,6 +2015,12 @@ static symbols ed[] =
   DEFUN3 (char-columns, 1, 0, 0),
   DEFUN3 (extended-alphabet-char-p, 1, 0, 0),
 
+  /* mcursor.cc */
+  DEFCMD3 (multi-cursor-add-below, 0, 1, 0, "p"),
+  DEFCMD3 (multi-cursor-add-above, 0, 1, 0, "p"),
+  DEFUN3 (multi-cursor-clear, 0, 0, 0),
+  DEFUN3 (multi-cursor-list, 0, 0, 0),
+
   /* undo.cc */
   MAKE_SYMBOL2F (kept-undo-information, SFmake_buffer_local),
   DEFUN3 (undo-boundary, 0, 0, 0),
