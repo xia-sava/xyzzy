@@ -271,6 +271,7 @@ protected:
   int t_horz_height;
   int t_multi_row;
   int t_rows;
+  int t_cursel;
 private:
   int t_erasebkgnd_called;
   int t_dots;
@@ -309,6 +310,10 @@ private:
   int row_top (int) const;
   void items_rect (int, RECT &) const;
   HRGN items_region (int, const RECT &) const;
+  void fix_rows ();
+  int notify_selchange (int);
+  void click_select (int, int);
+  int key_select (int);
   void paint_left (HDC, const RECT &, const RECT &, int);
   void paint_top (HDC, const RECT &, const RECT &, int);
   void paint_right (HDC, const RECT &, const RECT &, int);
@@ -330,10 +335,8 @@ public:
   void calc_tab_height ();
   void set_font (HFONT hf)
     {sendmsg (WM_SETFONT, WPARAM (hf), 0);}
-  int insert_item (int i, const TC_ITEMW &ti)
-    {return sendmsg (TCM_INSERTITEMW, i, LPARAM (&ti));}
-  int delete_item (int i)
-    {return sendmsg (TCM_DELETEITEM, i, 0);}
+  int insert_item (int, const TC_ITEMW &);
+  int delete_item (int);
   int set_item (int i, const TC_ITEMW &ti)
     {return sendmsg (TCM_SETITEMW, i, LPARAM (&ti));}
   int get_item (int i, TC_ITEMW &ti) const
@@ -350,8 +353,8 @@ public:
     {return sendmsg (TCM_SETCURSEL, i, 0);}
   int get_cursel () const
     {return sendmsg (TCM_GETCURSEL, 0, 0);}
-  int select (int i) {return set_cursel (i);}
-  int cursel () const {return get_cursel ();}
+  int select (int);
+  int cursel () const;
   HWND get_tooltips () const
     {return (HWND)sendmsg (TCM_GETTOOLTIPS, 0, 0);}
   int get_item_rect (int i, RECT &r) const

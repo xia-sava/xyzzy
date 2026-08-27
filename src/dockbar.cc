@@ -473,7 +473,7 @@ tab_bar::tab_bar (dock_frame &frame, lisp name)
      : dock_bar (frame, name,
                  new_comctl_p () ? DOCKABLE_ALL : DOCKABLE_TOP | DOCKABLE_BOTTOM),
        t_tab_height (dpi_scale (21)), t_horz_width (dpi_scale (60)),
-       t_horz_height (dpi_scale (21)), t_rows (1)
+       t_horz_height (dpi_scale (21)), t_rows (1), t_cursel (-1)
 {
   t_horz_text = xsymbol_value (Vtab_bar_horizontal_text) != Qnil;
   t_multi_row = xsymbol_value (Vtab_bar_multi_row) != Qnil;
@@ -501,6 +501,106 @@ tab_bar::create (HWND hwnd_parent)
   return 1;
 }
 
+// 段の並びはコントロールが選択中の項目を編集領域の側へ寄せて決める。
+// 最終項目は必ず最後の段に居るので、そこへ固定すると並びが動かない。
+void
+tab_bar::fix_rows ()
+{
+  int n = item_count ();
+  if (n > 0 && get_cursel () != n - 1)
+    set_cursel (n - 1);
+}
+
+int
+tab_bar::cursel () const
+{
+  if (!multi_row_p ())
+    return get_cursel ();
+  return t_cursel < item_count () ? t_cursel : -1;
+}
+
+int
+tab_bar::select (int i)
+{
+  if (!multi_row_p ())
+    return set_cursel (i);
+  if (i >= item_count ())
+    return -1;
+  int o = cursel ();
+  t_cursel = i;
+  fix_rows ();
+  if (o != i)
+    InvalidateRect (b_hwnd, 0, 1);
+  return o;
+}
+
+int
+tab_bar::insert_item (int i, const TC_ITEMW &ti)
+{
+  int r = sendmsg (TCM_INSERTITEMW, i, LPARAM (&ti));
+  if (r >= 0 && multi_row_p ())
+    {
+      if (t_cursel >= i)
+        t_cursel++;
+      fix_rows ();
+    }
+  return r;
+}
+
+int
+tab_bar::delete_item (int i)
+{
+  int r = sendmsg (TCM_DELETEITEM, i, 0);
+  if (r && multi_row_p ())
+    {
+      if (t_cursel == i)
+        t_cursel = -1;
+      else if (t_cursel > i)
+        t_cursel--;
+      fix_rows ();
+    }
+  return r;
+}
+
+int
+tab_bar::notify_selchange (int i)
+{
+  NMHDR nm;
+  nm.hwndFrom = b_hwnd;
+  nm.idFrom = GetDlgCtrlID (b_hwnd);
+  LRESULT r = 0;
+  nm.code = TCN_SELCHANGING;
+  if (notify (&nm, r) && r)
+    return 0;
+  select (i);
+  r = 0;
+  nm.code = TCN_SELCHANGE;
+  notify (&nm, r);
+  return 1;
+}
+
+void
+tab_bar::click_select (int x, int y)
+{
+  if (!(style () & TCS_FOCUSNEVER))
+    SetFocus (b_hwnd);
+  TC_HITTESTINFO ht;
+  ht.pt.x = x;
+  ht.pt.y = y;
+  int i = hit_test (ht);
+  if (i >= 0 && i != cursel ())
+    notify_selchange (i);
+}
+
+int
+tab_bar::key_select (int d)
+{
+  int i = cursel () + d;
+  if (i < 0 || i >= item_count ())
+    return 0;
+  return notify_selchange (i);
+}
+
 DWORD
 tab_bar::nth (int i) const
 {
@@ -513,8 +613,18 @@ void
 tab_bar::dock_edge ()
 {
   dock_bar::dock_edge ();
-  modify_style (TCS_MULTILINE | TCS_RAGGEDRIGHT,
-                multi_row_p () ? TCS_MULTILINE | TCS_RAGGEDRIGHT : 0);
+  int multi = multi_row_p ();
+  if (multi != ((style () & TCS_MULTILINE) != 0))
+    {
+      if (multi)
+        t_cursel = get_cursel ();
+      modify_style (TCS_MULTILINE | TCS_RAGGEDRIGHT,
+                    multi ? TCS_MULTILINE | TCS_RAGGEDRIGHT : 0);
+      if (multi)
+        fix_rows ();
+      else
+        set_cursel (t_cursel);
+    }
   if (new_comctl_p ())
     {
       switch (edge ())
@@ -605,6 +715,8 @@ tab_bar::update_ui ()
       set_style (x);
     }
   check_rows ();
+  if (multi_row_p ())
+    fix_rows ();
 }
 
 void
@@ -1516,15 +1628,34 @@ tab_bar::wndproc (UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_LBUTTONDOWN:
       {
-        if (lbtn_down ((short)LOWORD (lparam), (short)HIWORD (lparam)))
+        int x = (short)LOWORD (lparam), y = (short)HIWORD (lparam);
+        if (lbtn_down (x, y))
           return 0;
         HWND hwnd_focus = GetFocus ();
-        dock_bar::wndproc (msg, wparam, lparam);
-        if (move_tab ((short)LOWORD (lparam), (short)HIWORD (lparam))
-            && hwnd_focus)
+        if (multi_row_p ())
+          click_select (x, y);
+        else
+          dock_bar::wndproc (msg, wparam, lparam);
+        if (move_tab (x, y) && hwnd_focus)
           SetFocus (hwnd_focus);
         return 0;
       }
+
+    case WM_KEYDOWN:
+      if (multi_row_p ())
+        switch (wparam)
+          {
+          case VK_LEFT:
+          case VK_UP:
+            key_select (-1);
+            return 0;
+
+          case VK_RIGHT:
+          case VK_DOWN:
+            key_select (1);
+            return 0;
+          }
+      break;
 
     case WM_NCCALCSIZE:
       return nc_calc_size (*(RECT *)lparam);
