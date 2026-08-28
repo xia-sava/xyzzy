@@ -619,8 +619,10 @@ Window::paint_glyphs (HDC hdc, HDC hdcmem, const glyph_t *gstart, const glyph_t 
       glyph_t c = *g++;
       gsum |= c;
       *be++ = char (c);
-      c &= GLYPH_COLOR_MASK | GLYPH_FONT_MASK;
-      while (g < ge && (*g & (GLYPH_COLOR_MASK | GLYPH_FONT_MASK)) == c)
+      /* 同じ色と書体の升目を束ねて描く。カーソルの印も色を決めるので加える */
+      c &= GLYPH_COLOR_MASK | GLYPH_FONT_MASK | GLYPH_MULTI_CURSOR;
+      while (g < ge
+             && (*g & (GLYPH_COLOR_MASK | GLYPH_FONT_MASK | GLYPH_MULTI_CURSOR)) == c)
         {
           gsum |= *g;
           *be++ = char (*g++);
@@ -2050,7 +2052,8 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
       if (point.p_point == limit)
         break;
 
-      int f = 0;
+      /* 升目の上位まで印を立てるので glyph_t で組む */
+      glyph_t f = 0;
       if (point.p_point < w_bufp->b_contents.p1
           || point.p_point >= w_bufp->b_contents.p2)
         f |= GLYPH_HIDDEN;
@@ -2069,8 +2072,10 @@ Window::redraw_line (glyph_data *gd, Point &point, long vlinenum, long plinenum,
 
       if (mc_selection_p (point.p_point))
         f |= GLYPH_SELECTED;
+      /* 文字の升目はキャレットの色で塗る。改行などの絵はその色を通さないので、
+         反転も併せて立てて見えるようにする */
       if (mc_cursor_p (point.p_point))
-        f |= GLYPH_REVERSED;
+        f |= GLYPH_MULTI_CURSOR | GLYPH_REVERSED;
 
       int kwdf = 0;
       if (psi)

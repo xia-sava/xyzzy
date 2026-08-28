@@ -131,6 +131,10 @@ typedef unsigned long long glyph_t;
 # define GLYPH_CHAR(G) \
    (ucs4_t ((G) >> GLYPH_CHAR_SHIFT) & ((1 << GLYPH_CHAR_BITS) - 1))
 
+/* 増やしたカーソルの居る升目。文字の上に空いている桁を使い、キャレットと
+   同じ色で塗る。主カーソルは窓に一つしか置けないキャレットが受け持つ */
+# define GLYPH_MULTI_CURSOR (glyph_t (1) << (GLYPH_CHAR_SHIFT + GLYPH_CHAR_BITS))
+
 # define GLYPH_MAX_KEYWORDS      6
 
 static inline void
@@ -786,6 +790,8 @@ Window::paint_window (HDC hdc) const
 inline COLORREF
 Window::glyph_forecolor (glyph_t c) const
 {
+  if (c & GLYPH_MULTI_CURSOR)
+    return w_colors[WCOLOR_BACK];
   u_int y = c & ((GLYPH_TEXTPROP_NCOLORS - 1) << GLYPH_TEXTPROP_FG_SHIFT_BITS);
   return (c & GLYPH_TEXTPROP_FG_BIT
           ? w_textprop_forecolor[(c & ((GLYPH_TEXTPROP_NCOLORS - 1)
@@ -798,6 +804,8 @@ Window::glyph_forecolor (glyph_t c) const
 inline COLORREF
 Window::glyph_backcolor (glyph_t c) const
 {
+  if (c & GLYPH_MULTI_CURSOR)
+    return w_colors[WCOLOR_CARET];
   u_int y = c & ((GLYPH_TEXTPROP_NCOLORS - 1) << GLYPH_TEXTPROP_BG_SHIFT_BITS);
   if ((c & GLYPH_BACKGROUND_MASK) || !y)
     {

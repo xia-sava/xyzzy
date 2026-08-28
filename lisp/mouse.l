@@ -272,6 +272,9 @@
 (or (boundp 'mouse-wheel-handler)
     (setq-default mouse-wheel-handler #'mouse-wheel-scroll))
 
+;;; カーソルを足す命令そのものは、カーソルの数だけ繰り返しては困る。
+(pushnew 'mouse-toggle-multi-cursor *multi-cursor-no-repeat-commands*)
+
 (defun mouse-toggle-multi-cursor ()
   (interactive)
   (if (eq (selected-window) *last-mouse-window*)

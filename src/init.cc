@@ -444,8 +444,15 @@ init_symbol_value_once ()
   xsymbol_value (Vauto_fill) = Qnil;
   xsymbol_value (Vthis_command) = Qnil;
   xsymbol_value (Vlast_command) = Qnil;
+  /* カーソルを増やす命令そのものは、数だけ繰り返しては困る */
   xsymbol_value (Vmulti_cursor_no_repeat_commands) =
-    xcons (Sundo, xcons (Sredo, Qnil));
+    xcons (Sundo,
+           xcons (Sredo,
+                  xcons (Smulti_cursor_add_below,
+                         xcons (Smulti_cursor_add_above,
+                                xcons (Smulti_cursor_add_right,
+                                       xcons (Smulti_cursor_add_left,
+                                              xcons (Smulti_cursor_clear, Qnil)))))));
   xsymbol_value (Vmulti_cursor_local_variables) = Qnil;
 
   xsymbol_value (Qapp_user_model_id) =

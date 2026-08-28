@@ -418,6 +418,22 @@ mc_store_locals (lisp old)
   return Fnreverse (r);
 }
 
+/* BEFORE を取ったときから、カーソルごとに持つ変数が動いたか。
+   切り取りや複写は中身も位置も変えないので、これで見分ける */
+static int
+mc_locals_changed (lisp before)
+{
+  lisp vars = xsymbol_value (Vmulti_cursor_local_variables);
+  lisp p = before;
+  for (; consp (vars) && consp (p); vars = xcdr (vars), p = xcdr (p))
+    {
+      lisp sym = xcar (vars);
+      if (symbolp (sym) && xsymbol_value (sym) != xcar (p))
+        return 1;
+    }
+  return 0;
+}
+
 /* 回している間に触った変数を、済んだら主カーソルのものへ戻す */
 class mc_locals_guard
 {
@@ -438,6 +454,12 @@ mc_command_execute (lisp command)
 
   Buffer *bp = wp->w_bufp;
   const long minibuf = app.minibuffer_enter_count;
+  const long omodified = bp->b_modified_count;
+  const point_t opoint = wp->w_point.p_point;
+  const point_t omark = wp->w_mark;
+  const Buffer::selection_type oselection = wp->w_selection_type;
+  lisp obefore = mc_store_locals (Qnil);
+  protect_gc gcpro (obefore);
   point_t p1, p2, t1, t2;
   mc_span (wp->w_mcursors[0], p1, t2);
   mc_span (wp->w_mcursors[wp->w_nmcursors - 1], t1, p2);
@@ -452,6 +474,16 @@ mc_command_execute (lisp command)
       wp->mc_discard ();
       return result;
     }
+
+  /* 中身も居場所も掴んでいる範囲も、カーソルごとに持つ値も変えなかった命令は、
+     数だけ繰り返しても同じことが起きるだけ。設定の窓を開く類や、状態を切り替える
+     だけの命令はここで一度きりになる */
+  if (bp->b_modified_count == omodified
+      && wp->w_point.p_point == opoint
+      && wp->w_mark == omark
+      && wp->w_selection_type == oselection
+      && !mc_locals_changed (obefore))
+    return result;
 
   /* 後ろから回す。前のカーソルの位置は後ろでの編集に動かされない */
   {
