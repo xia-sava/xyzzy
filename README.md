@@ -79,27 +79,16 @@ Lisp の動作は 0.2.2.235 と互換であることを原則にしています�
 
 ## ビルド方法
 
-### 環境
+Visual Studio Build Tools 2022 が要ります。
 
-  * Visual Studio 2022 または Build Tools for Visual Studio 2022
-    * <https://visualstudio.microsoft.com/ja/downloads/>
-    * 「C++ によるデスクトップ開発」ワークロードを入れる
-    * `build.bat` が vswhere.exe を使って自動的に見つける
-  * Git for Windows
-    * <https://gitforwindows.org/>
-  * 7zip
-    * <http://www.7-zip.org/>
-    * リリース作業時のみ
-    * 7za.exe をパスの通ったところに置く
+```bash
+misc/dev.sh all      # ビルド → バイトコンパイル → テスト
+```
 
-### 手順
+バイトコンパイルとテストは xyzzy を起動しますが、別デスクトップで走るので画面には
+出ません。道具立ての詳細、踏みやすい罠、CI との関係は
+[docs/development.md](docs/development.md) に書いてあります。
 
- 1. build.bat
-    * デバッグ版は build.bat Debug
- 2. bytecompile.bat
- 3. ぽけーと待つ
- 4. できあがり
- 5. run-tests.bat でユニットテストを実行
 
 ----
 
