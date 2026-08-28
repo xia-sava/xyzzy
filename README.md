@@ -66,6 +66,10 @@ Lisp の動作は 0.2.2.235 と互換であることを原則にしています�
   * 版番号は 0.2.2.253 の後ろにもう一桁足した `0.2.2.253.x` で、
     リリースのたびに末尾を 1 ずつ増やします
   * タグを打つと CI が配布物を組んで公開します
+  * 派生してからの変更点は [docs/RELEASE.md](docs/RELEASE.md) にまとめています。
+    Lisp から見える動作の非互換は
+    [docs/incompatible-changes.md](docs/incompatible-changes.md) に移行方法とともに
+    記載しています
 
 
 ----
