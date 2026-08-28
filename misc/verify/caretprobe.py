@@ -48,21 +48,32 @@ SCRIPT = """\
   (insert (code-char #xD83C))
   (insert (code-char #xDF63))
   (insert (code-char #x63))
+  (insert (code-char #xD7))
   (goto-char %d)
   (set-buffer-modified-p nil))
+;; The caret exists from the moment the frame appears, so reading it too early
+;; measures the scratch buffer instead. Say when the line is really in place.
+(with-open-file (o "%s" :direction :output :if-exists :supersede)
+  (princ "ok" o))
 """
 
-# (label, point) -- slots are a(0) U+3042(1) b(2) high(3) low(4) c(5)
+# (label, point) -- slots are a(0) U+3042(1) b(2) high(3) low(4) c(5) U+00D7(6)
 SPOTS = [
     ("on an ascii letter", 0, 1),
     ("on a full width character", 1, 2),
     ("on a surrogate pair", 3, 2),
+    # U+00D7 is below U+0100 yet the japanese font draws it full width, so the
+    # caret must follow the columns on screen, not the value of the code point.
+    ("on an ambiguous width character", 6, 2),
 ]
 
 
 def caret_width(exe, point, cfg):
     script = WORK / ("caret-%d.l" % point)
-    script.write_text(SCRIPT % point, encoding="ascii")
+    ready = WORK / ("caret-%d.ready" % point)
+    if ready.exists():
+        ready.unlink()
+    script.write_text(SCRIPT % (point, ready.as_posix()), encoding="ascii")
 
     hdesk = u32.CreateDesktopW(D.DESKTOP_NAME, None, None, 0, D.GENERIC_ALL, None)
     # GetGUIThreadInfo only answers about threads on our own desktop.
@@ -79,10 +90,17 @@ def caret_width(exe, point, cfg):
         return None
     k32.ResumeThread(pi.hThread)
     try:
+        for _ in range(60):
+            time.sleep(0.5)
+            if ready.exists():
+                break
+        else:
+            return None
+
         gti = GUITHREADINFO()
         gti.cbSize = ctypes.sizeof(gti)
-        for _ in range(40):
-            time.sleep(0.5)
+        for _ in range(20):
+            time.sleep(0.2)
             if u32.GetGUIThreadInfo(pi.dwThreadId, ctypes.byref(gti)) \
                and gti.hwndCaret:
                 r = gti.rcCaret

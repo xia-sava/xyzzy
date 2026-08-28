@@ -180,7 +180,6 @@ Window::caret_size (SIZE &size) const
   calc_caret_shape (size,
                     symbol_value (Voverwrite_mode, w_bufp) != Qnil,
                     (w_point.p_offset != w_point.p_chunk->c_used
-                     && w_point.ch () >= 256
                      && wide_char_p (w_point.ch ())),
                     ((w_selection_type != Buffer::SELECTION_VOID
                       && (w_selection_point == NO_MARK_SET
