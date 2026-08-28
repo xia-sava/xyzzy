@@ -1724,3 +1724,23 @@
   => nil
   => nil
   => nil)
+
+(deftest quit-stops-selection ()
+  "quit が永続の選択範囲も取り消すこと"
+  (with-temp-buffer
+    (insert "abcdef")
+    (goto-char 1)
+    (start-selection 2 nil)
+    (goto-char 4)
+    (let ((before (get-selection-type)))
+      (handler-case (quit) (quit () nil))
+      (values before (get-selection-type))))
+  => 2
+  => nil)
+
+(deftest quit-signals-quit ()
+  "quit が中止を知らせること自体は変わらないこと"
+  (with-temp-buffer
+    (handler-case (progn (quit) :not-signaled)
+      (quit () :signaled)))
+  => :signaled)

@@ -35666,6 +35666,7 @@ mc-load-library と違い、*load-path* にないファイルも読み込めま�
 コマンドの実行などを中止します。[C-g]
 
 実行に時間がかかりすぎる場合や無限ループに陥ったときなどに使われます。
+増やしたカーソルと選択範囲も、あわせて取り消します。
 </description>
 <seealso>error</seealso>
 <link></link>

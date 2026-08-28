@@ -295,3 +295,21 @@ Shift_JIS と Big5 では、2 バイト目を次の文字として読み直す�
 
 **移行方法**: 通常は不要です。キーを表す文字にも `t` が返ることを当てにしていた
 場合は、`(< (char-code c) char-code-limit)` を明示的に書いてください。
+
+## quit が選択範囲も取り消すようになった
+
+**変更点**: `quit`（[C-g]）が、中止するときに `stop-selection` を呼ぶようになりました。
+
+```lisp
+(progn (start-selection 2 nil) (goto-char (+ (point) 3))
+       (ignore-errors (quit))
+       (get-selection-type))   ; 変更前 2  →  変更後 nil
+```
+
+**影響**: `quit` を呼んだあとも選択範囲が残ることを当てにしているコードが影響を
+受けます。xyzzy の選択はほとんどが一時的なもの（`start-selection` の第 2 引数が
+`t`）で、これは命令を挟むと消えるため、[C-g] で消えるように見えていました。
+消えないのは永続の選択だけで、[C-g] の振る舞いが選択の種類で割れていました。
+
+**移行方法**: 中止したあとも範囲が要る場合は、`quit` の前に
+`(selection-mark)` と `(selection-point)` を控えてください。

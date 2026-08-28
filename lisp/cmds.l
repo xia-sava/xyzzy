@@ -852,6 +852,7 @@
 (defun quit ()
   (interactive)
   (multi-cursor-clear)
+  (stop-selection)
   (error 'quit))
 
 (defun what-cursor-position ()
