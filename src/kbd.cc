@@ -9,7 +9,7 @@ kbd_queue::kbd_queue ()
      : head (0), tail (0), pending (lChar_EOF), last_ime_status (-1),
        current_mode (im_normal), kbd_macro (0), delayed_activate (0), in_hook (0),
        last_command_key_index (0), command_key_keeped (0), st_timeout (-1),
-       reconv (0), putc_pending (-1), ime_prop (0), unicode_kbd (0), gc_timer (0)
+       reconv (0), ime_prop (0), unicode_kbd (0), gc_timer (0)
 {
   GetKeyboardLayout =
     (GETKEYBOARDLAYOUT)GetProcAddress (GetModuleHandleW (L"USER32"),
@@ -54,45 +54,15 @@ kbd_queue::putraw (lChar c)
   return 1;
 }
 
+// 窓はすべて Unicode 窓なので、鍵盤も IME も符号位置で届く。バイト列で来るのは
+// A 系の IME の確定文字列だけで、そちらは puts が符号化を解く
 int
 kbd_queue::putc (lChar c)
 {
-  if (c >= 256)
-    return putraw (c);
-
-  if (putc_pending >= 0)
-    {
-      char b[2];
-      b[0] = char (putc_pending);
-      b[1] = char (c);
-      putc_pending = -1;
-      return puts (b, 2);
-    }
-
-  if (c < 128)
-    return putraw (c);
-
-  if (kbd_mblead_p (c))
-    {
-      putc_pending = c;
-      return 1;
-    }
-
-  char cc = char (c);
-  return puts (&cc, 1);
+  return putraw (c);
 }
 
-int
-kbd_queue::putw (int w)
-{
-  if (w < 256)
-    return putc (w);
-  char b[2];
-  b[0] = w >> 8;
-  b[1] = w;
-  return puts (b, 2);
-}
-
+// 外部形式のバイト列から積む。文字符号は担当の鍵盤配列に従う
 int
 kbd_queue::puts (const char *string, int l)
 {
@@ -958,23 +928,6 @@ kbd_queue::documentfeed (RECONVERTSTRING *rsbuf, int unicode_p)
       return 0;
     }
   return 0;
-}
-
-int
-kbd_queue::kbd_mblead_p (int c) const
-{
-  switch (PRIMARYLANGID (kbd_langid ()))
-    {
-    case LANG_JAPANESE:
-      return SJISP (c);
-
-    case LANG_KOREAN:
-    case LANG_CHINESE:
-      return c >= 0x80;
-
-    default:
-      return 0;
-    }
 }
 
 HKL

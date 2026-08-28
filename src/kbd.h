@@ -22,7 +22,6 @@ class kbd_queue
   enum {ACTIVATE = 1, DEACTIVATE = 2, LAST_ACTIVE = 4};
   int delayed_activate;
   int in_hook;
-  int putc_pending;
   typedef HKL (WINAPI *GETKEYBOARDLAYOUT)(DWORD);
   GETKEYBOARDLAYOUT GetKeyboardLayout;
 
@@ -100,7 +99,6 @@ public:
   kbd_queue ();
   ~kbd_queue ();
   int putc (lChar);
-  int putw (int);
   int puts (const char *, int);
   lChar peek (int);
   lChar fetch (int, int);
@@ -126,7 +124,6 @@ public:
   LANGID kbd_langid () const {return input_langid;}
   void init_kbd_encoding () {init_kbd_encoding (get_kbd_langid ());}
   void init_kbd_encoding (LANGID);
-  int kbd_mblead_p (int) const;
   static const class FontObject &kbd_encoding_font ();
   LANGID get_kbd_langid () const
     {return LANGID (reinterpret_cast <UINT_PTR> (get_kbd_layout ()) & 0xffff);}

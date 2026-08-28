@@ -813,7 +813,8 @@ toplevel_wndproc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_IME_CHAR:
       if (xsymbol_value (Vno_input_language_change_notification) != Qnil)
         app.kbdq.init_kbd_encoding ();
-      app.kbdq.putw (wparam);
+      // Unicode 窓なので wparam は符号単位ひとつ。DBCS の対では来ない
+      app.kbdq.putc (wparam);
       return 0;
 
     case WM_IME_COMPOSITION:

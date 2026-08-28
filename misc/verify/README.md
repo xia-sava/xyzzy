@@ -69,6 +69,7 @@ Lisp 側が書き出す報告は xyzzy の既定の符号なので、CP932 と�
 | `cmdlinecheck.py` | 非 ASCII の名前をコマンドラインから開けるか。`CreateProcessW` で直接渡す |
 | `ccscheck.l` | どの文字集合でその字を書けるか（`parse-char-encoding-*`） |
 | `tabclick.py` | 多段のタブを押す・矢印を送る。段の並びが動かないか。選ばれたバッファ名は `barsmulti.l` が `tabclick.txt` へ書く |
+| `wcharprobe.py` | 鍵盤から届いた符号がそのまま入るか。`WM_CHAR` を送り、入った符号位置を `wcharprobe.l` が `wcharprobe.txt` へ書く。U+0080〜U+00FF は一バイトの外部形式と値が重なるので、そこを狙う |
 
 ### 窓の中を読むもの
 
