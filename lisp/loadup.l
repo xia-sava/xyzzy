@@ -36,6 +36,7 @@
 (si:*load-library "rectangl") (gc)
 (si:*load-library "paragrph") (gc)
 (si:*load-library "sexp") (gc)
+(si:*load-library "expand-region") (gc)
 (si:*load-library "fill") (gc)
 (si:*load-library "files") (gc)
 (si:*load-library "complete") (gc)

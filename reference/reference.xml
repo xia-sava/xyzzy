@@ -856,6 +856,20 @@ first-error/next-errorで使用するエラー発生位置の表記形式を変�
 </chapter>
 
 <chapter>
+<title>*expand-region-max-list-depth*</title>
+<type>Variable</type>
+<arguments></arguments>
+<package>editor</package>
+<description>
+expand-region が括弧の候補を何段まで外へ辿るかです。
+デフォルトは 20 です。
+</description>
+<seealso>expand-region</seealso>
+<section>変数と定数</section>
+<file></file>
+</chapter>
+
+<chapter>
 <title>*filer-chdir-hook*</title>
 <type>Variable</type>
 <arguments></arguments>
@@ -7957,6 +7971,21 @@ popup-stringで前回表示した内容を再度表示します。
 </chapter>
 
 <chapter>
+<title>contract-region</title>
+<type>Function</type>
+<arguments>contract-region</arguments>
+<package>editor</package>
+<description>
+expand-region で広げた選択範囲を一段階戻します。[C-.] で広げた分を [C-,] で戻します。
+
+expand-region が置いた範囲から動いていると、戻る先が分からないので何もしません。
+</description>
+<seealso>expand-region</seealso>
+<section>リージョン</section>
+<file>expand-region.l</file>
+</chapter>
+
+<chapter>
 <title>copy-alist</title>
 <type>Function</type>
 <arguments>copy-alist LIST</arguments>
@@ -11820,6 +11849,32 @@ call-processとは違って標準出力をバッファに出力します。出�
 <seealso></seealso>
 <section>数値</section>
 <file>builtin.l</file>
+</chapter>
+
+<chapter>
+<title>expand-region</title>
+<type>Function</type>
+<arguments>expand-region</arguments>
+<package>editor</package>
+<description>
+選択範囲を意味のある単位で一段階広げます。[C-.]
+選択していないときはカーソルの位置から始めます。
+
+  単語 → シンボル → 引用符の中 → 引用符ごと
+       → 括弧の中 → 括弧ごと（外側の括弧へ、以下同様）
+       → 行 → 関数定義 → バッファ全体
+
+その位置で成り立たない段階は飛ばします。括弧を何段まで辿るかは
+*expand-region-max-list-depth* で決めます。
+
+広げた分は contract-region で戻せます。カーソルを増やしているときは、
+それぞれのカーソルが自分の選択を広げます。
+</description>
+<seealso>contract-region</seealso>
+<seealso>*expand-region-max-list-depth*</seealso>
+<seealso>mark-sexp</seealso>
+<section>リージョン</section>
+<file>expand-region.l</file>
 </chapter>
 
 <chapter>

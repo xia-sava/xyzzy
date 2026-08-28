@@ -1,6 +1,6 @@
 # 変数と定数 (variables)
 
-reference/reference.xml から作った 136 エントリ。
+reference/reference.xml から作った 137 エントリ。
 ここを直しても次の生成で消える。直すなら reference/reference.xml を直す。
 
 ## `*activate-hook*`
@@ -240,6 +240,17 @@ D&D時に実行されます。デフォルトでは、D&D先がミニバッフ�
 ```
 
 関連: `etc-path`
+
+## `*expand-region-max-list-depth*`
+
+- Variable / package: editor
+
+```text
+expand-region が括弧の候補を何段まで外へ辿るかです。
+デフォルトは 20 です。
+```
+
+関連: `expand-region`
 
 ## `*find-buffer-package-hook*`
 

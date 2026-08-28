@@ -1,6 +1,6 @@
 # リージョン (regions)
 
-reference/reference.xml から作った 95 エントリ。
+reference/reference.xml から作った 97 エントリ。
 ここを直しても次の生成で消える。直すなら reference/reference.xml を直す。
 
 ## `*kill-ring*`
@@ -175,6 +175,19 @@ reverse-regionで反転表示した部分を元に戻します。
 
 関連: `reverse-region`
 
+## `contract-region`
+
+- Function / package: editor / 定義: expand-region.l
+- 呼び出し: `contract-region`
+
+```text
+expand-region で広げた選択範囲を一段階戻します。[C-.] で広げた分を [C-,] で戻します。
+
+expand-region が置いた範囲から動いていると、戻る先が分からないので何もしません。
+```
+
+関連: `expand-region`
+
 ## `copy-rectangle`
 
 - Function / package: editor / 定義: rectangl.l
@@ -348,6 +361,28 @@ P1 と P2 で指定される矩形領域を削除します。
 ```
 
 関連: `downcase-word`, `capitalize-region`, `upcase-region`
+
+## `expand-region`
+
+- Function / package: editor / 定義: expand-region.l
+- 呼び出し: `expand-region`
+
+```text
+選択範囲を意味のある単位で一段階広げます。[C-.]
+選択していないときはカーソルの位置から始めます。
+
+  単語 → シンボル → 引用符の中 → 引用符ごと
+       → 括弧の中 → 括弧ごと（外側の括弧へ、以下同様）
+       → 行 → 関数定義 → バッファ全体
+
+その位置で成り立たない段階は飛ばします。括弧を何段まで辿るかは
+*expand-region-max-list-depth* で決めます。
+
+広げた分は contract-region で戻せます。カーソルを増やしているときは、
+それぞれのカーソルが自分の選択を広げます。
+```
+
+関連: `contract-region`, `*expand-region-max-list-depth*`, `mark-sexp`
 
 ## `fill-region`
 

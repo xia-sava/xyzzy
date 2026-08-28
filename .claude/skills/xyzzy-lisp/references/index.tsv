@@ -56,6 +56,7 @@
 *etc-path*	Variable	editor	variables	-
 *executing-macro*	Variable	editor	macros	-
 *exit-minibuffer-hook*	Variable	editor	minibuffer	-
+*expand-region-max-list-depth*	Variable	editor	variables	-
 *features*	Variable	lisp	system	-
 *filer-chdir-hook*	Variable	editor	filer	-
 *filer-chdir-primary-p*	Variable	editor	filer	-
@@ -448,6 +449,7 @@ cons	Function	lisp	lists	cons X Y
 consp	Function	lisp	datatypes	consp OBJECT
 constantp	Function	lisp	variables	constantp OBJECT
 continue-popup	Function	editor	misc	continue-popup
+contract-region	Function	editor	regions	contract-region
 convert-encoding-from-internal	Function	editor	misc	convert-encoding-from-internal ENCODING INPUT-STRING-OR-STREAM &optional OUTPUT-STREAM
 convert-encoding-to-internal	Function	editor	misc	convert-encoding-to-internal ENCODING INPUT-STRING-OR-STREAM &optional OUTPUT-STREAM
 copy-alist	Function	lisp	lists	copy-alist LIST
@@ -662,6 +664,7 @@ execute-shell-command	Function	editor	processes	execute-shell-command COMMAND &o
 execute-subprocess	Function	editor	processes	execute-subprocess CMD &optional ARG BUFNAME ENVIRON DIRECTORY
 exp	Function	lisp	numbers	exp NUMBER
 expand-abbrev	Function	editor	text	expand-abbrev
+expand-region	Function	editor	regions	expand-region
 export	Function	lisp	packages	export SYMBOLS &optional PACKAGE
 expt	Function	lisp	numbers	expt BASE-NUMBER POWER-NUMBER
 extended-alphabet-char-p	Function	editor	datatypes	extended-alphabet-char-p CHAR
