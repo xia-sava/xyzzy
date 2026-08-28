@@ -4,6 +4,7 @@
 #   misc/dev.sh build [Release|Debug] [Build|Rebuild]
 #   misc/dev.sh bytecompile
 #   misc/dev.sh test [visible [all]]
+#   misc/dev.sh reference
 #   misc/dev.sh all
 #
 # この環境固有の事情を吸収するのがこのスクリプトの目的:
@@ -186,10 +187,15 @@ EOF
   fi
 }
 
+do_reference () {
+  python "$REPO_WIN/misc/gen-reference-skill.py" --check
+}
+
 case "${1:-all}" in
   build)       shift; do_build "$@" ;;
   bytecompile) do_bytecompile ;;
   test)        shift; do_test "$@" ;;
-  all)         do_build && do_bytecompile && do_test ;;
-  *)           echo "usage: $0 {build|bytecompile|test|all}" >&2; exit 2 ;;
+  reference)   do_reference ;;
+  all)         do_build && do_bytecompile && do_test && do_reference ;;
+  *)           echo "usage: $0 {build|bytecompile|test|reference|all}" >&2; exit 2 ;;
 esac
