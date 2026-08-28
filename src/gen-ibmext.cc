@@ -1,4 +1,5 @@
 #include "gen-stdafx.h"
+#include "ucs2tab.h"
 
 /* http://www.opengroup.or.jp/jvc/cde/ibmext-table.html */
 static const struct {int sjis, eucjp;} sjis2eucjp[] =

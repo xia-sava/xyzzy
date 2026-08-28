@@ -2,9 +2,11 @@
 #include "cdecl.h"
 #include "charset.h"
 #include "ucs2tab.h"
-#include "char-width.h"
+#include "east-asian-width.h"
 
+u_char char_width_table[CHAR_WIDTH_TABLE_SIZE];
 u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
+u_char char_wide_glyph_table[CHAR_WIDTH_TABLE_SIZE];
 
 wc2int_hash wc2int_iso8859_1_hash;
 wc2int_hash wc2int_iso8859_2_hash;
@@ -431,13 +433,14 @@ test_cns_table ()
 }
 #endif
 
+// 同じ字が二桁の文字集合にもあるときは、一桁で持つ専用の内部コードを選ぶ
 static void
 init_unicode (int min, int max, int off)
 {
   for (int i = min; i <= max; i++)
     {
       Char c = wc2internal_table[i];
-      if (c == CHAR_INVALID || charset_width (c) == 2)
+      if (c == CHAR_INVALID || ccs_2byte_charset_p (code_charset (c)))
         wc2internal_table[i] = i + off;
     }
 }
@@ -512,30 +515,22 @@ init_charset_category ()
 #endif
 }
 
-// 桁数の表は文字集合ごとの内部コードで並んでいる。バッファが Unicode を持つように
-// なったので、写し先の符号位置で引けるように組み替える
-// 同じ字が一桁の文字集合と二桁の文字集合の両方にあるとき（ラテン文字は
-// ISO 8859 にも JIS X 0212 にもある）は、一桁として扱う
+// 升目をふたつ占める字を決める。East Asian Width が W か F のものがこれにあたる。
+// 曖昧 (A) の字は一桁の升目に置き、担当のフォントが全角の字形で描くものだけを
+// FontSet が実測して二桁へ繰り上げる
 static void
 init_char_width ()
 {
-  u_char legacy[CHAR_WIDTH_TABLE_SIZE];
-  memcpy (legacy, char_width_table, sizeof legacy);
   memset (char_width_table, 0, sizeof char_width_table);
-  for (int cc = 0; cc < CHAR_LIMIT; cc++)
-    if (legacy[cc >> 3] & (1 << (cc & 7)))
-      {
-        ucs2_t wc = i2w (Char (cc));
-        if (wc != CHAR_INVALID)
-          char_width_table[wc >> 3] |= 1 << (wc & 7);
-      }
-  for (int cc = 0; cc < CHAR_LIMIT; cc++)
-    if (!(legacy[cc >> 3] & (1 << (cc & 7))))
-      {
-        ucs2_t wc = i2w (Char (cc));
-        if (wc != CHAR_INVALID)
-          char_width_table[wc >> 3] &= ~(1 << (wc & 7));
-      }
+  for (int i = 0; i < numberof (east_asian_wide_range); i++)
+    for (int wc = east_asian_wide_range[i].from;
+         wc <= east_asian_wide_range[i].to; wc++)
+      char_width_table[wc >> 3] |= 1 << (wc & 7);
+
+  // CP932 の外字を写した区画。字形は外字フォントから来るので担当のフォントでは
+  // 測れないが、全角に作られている
+  for (int wc = UNICODE_CP932_UDC_MIN; wc <= UNICODE_CP932_UDC_MAX; wc++)
+    char_width_table[wc >> 3] |= 1 << (wc & 7);
 }
 
 void

@@ -12,10 +12,9 @@ protected:
   POINT fo_offset;
   SIZE fo_size;
   int fo_ascent;
-  int fo_columns;
   LOGFONTW fo_logfont;
 public:
-  FontObject () : fo_hfont (0), fo_columns (1) {}
+  FontObject () : fo_hfont (0) {}
   ~FontObject () {if (fo_hfont) DeleteObject (fo_hfont);}
   int create (const LOGFONTW &);
   int create (const WCHAR *, int, int);
@@ -23,10 +22,8 @@ public:
   const HFONT hfont () const {return fo_hfont;}
   void get_metrics ();
   void get_metrics (HDC);
-  void measure_columns (HDC, ucs2_t sample, int cellw);
   void calc_offset (const SIZE &);
   const SIZE &size () const {return fo_size;}
-  int columns () const {return fo_columns;}
   const POINT &offset () const {return fo_offset;}
   int ascent () const {return fo_ascent;}
   const LOGFONTW &logfont () const {return fo_logfont;}
@@ -95,6 +92,7 @@ protected:
   void paint_fold_bitmap (HDC);
   void save_params (const FontSetParam &);
   void load_params (FontSetParam &);
+  void measure_wide_glyphs () const;
   void update_char_columns () const;
 
   static const UINT fs_lang_id[];
@@ -104,7 +102,6 @@ protected:
   // フォントが違うため
   struct fontface {const WCHAR *disp, *alt, *print; int charset;};
   static const fontface fs_default_face[];
-  static const ucs2_t fs_sample_char[];
 public:
   enum
     {
@@ -156,10 +153,6 @@ public:
   int recommend_size_p () const {return fs_recommend_size;}
   int size_pixel_p () const {return fs_size_pixel;}
   int ambiguous_width () const {return fs_ambiguous_width;}
-  // 半角として並べている文字を、担当のフォントが全角の字形で描くか
-  int full_width_p (Char cc) const;
-  // その枠のフォントが、半角の升目に並べる文字を全角の字形で描くか
-  int full_width_slot_p (int slot) const;
 
   static const WCHAR *regent (int n) {return fs_regent[n];}
   static const WCHAR *default_face (int n, int print);

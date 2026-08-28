@@ -13,9 +13,6 @@
     <ClCompile Include="..\src\dpp.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\gen-char-width.cc">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gen-ctab.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -44,9 +41,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gen-lucida-width.cc">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gen-jisx0212-width.cc">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gen-ucs2tab.cc">

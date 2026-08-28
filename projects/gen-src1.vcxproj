@@ -93,10 +93,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="..\src\gen-char-width.cc">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="..\src\gen-ctab.cc">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
@@ -110,10 +106,6 @@
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\gen-iso2022state.cc">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="..\src\gen-jisx0212-width.cc">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>gen-stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -167,13 +159,6 @@
     <Exec Command="&quot;$(TargetPath)&quot; dpp ../src/num-arith.d &quot;$(DppOutput)&quot;" />
   </Target>
   <PropertyGroup>
-    <GenCharWidthInputs>..\src\gen-char-width.cc;..\src\cdecl.h;..\src\charset.h</GenCharWidthInputs>
-    <GenCharWidthOutput>$(GenerateDir)char-width.h</GenCharWidthOutput>
-  </PropertyGroup>
-  <Target Name="GenCharWidth" Inputs="$(GenCharWidthInputs)" Outputs="$(GenCharWidthOutput)" DependsOnTargets="PrepareGenerate">
-    <Exec Command="&quot;$(TargetPath)&quot; gen-char-width &gt; &quot;$(GenCharWidthOutput)&quot;" WorkingDirectory="$(GenerateWorkingDirectory)" />
-  </Target>
-  <PropertyGroup>
     <GenCtabInputs>..\src\gen-ctab.cc;..\src\cdecl.h;..\src\chtype.h</GenCtabInputs>
     <GenCtabOutput>$(GenerateDir)chtab.cc</GenCtabOutput>
   </PropertyGroup>
@@ -220,7 +205,6 @@
   </Target>
   <Target Name="AfterBuild">
     <CallTarget Targets="Dpp" />
-    <CallTarget Targets="GenCharWidth" />
     <CallTarget Targets="GenCtab" />
     <CallTarget Targets="GenIbmExt" />
     <CallTarget Targets="GenIso2022State" />
@@ -230,7 +214,6 @@
   </Target>
   <Target Name="BeforeClean">
     <Delete Files="$(DppOutput)" />
-    <Delete Files="$(GenCharWidthOutput)" />
     <Delete Files="$(GenCtabOutput)" />
     <Delete Files="$(GenIbmExtOutput)" />
     <Delete Files="$(GenIso2022StateOutputs)" />

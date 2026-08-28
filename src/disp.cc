@@ -491,7 +491,8 @@ static inline void
 paint_narrowed_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                       const glyph_t *g, int len, const FontObject &f)
 {
-  const int n = f.columns ();
+  // 全角の字形を一桁へ収めるので、横を半分にする
+  const int n = 2;
   int omode = SetGraphicsMode (hdc, GM_ADVANCED);
   XFORM oxf;
   GetWorldTransform (hdc, &oxf);
@@ -557,6 +558,14 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
              glyph_t font, const glyph_t *g, const char *string, int len,
              const INT *padding)
 {
+  if (font & GLYPH_FONT_NARROW)
+    {
+      int slot = int ((font & ~GLYPH_FONT_NARROW) >> GLYPH_FONT_SHIFT_BIT);
+      paint_narrowed_chars (hdc, x, y, flags, r, g, len,
+                            app.text_font.font (slot));
+      return;
+    }
+
   switch (font)
     {
     case GLYPH_FONT_ASCII:
@@ -587,15 +596,8 @@ paint_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       break;
 
     default:
-      {
-        int slot = int (font >> GLYPH_FONT_SHIFT_BIT);
-        const FontObject &f = app.text_font.font (slot);
-        if (len && !glyph_lead_p (*g) && app.text_font.full_width_slot_p (slot))
-          // 一桁に並べているが、フォントは全角の字形しか持たない
-          paint_narrowed_chars (hdc, x, y, flags, r, g, len, f);
-        else
-          paint_cell_chars (hdc, x, y, flags, r, g, len, f);
-      }
+      paint_cell_chars (hdc, x, y, flags, r, g, len,
+                        app.text_font.font (int (font >> GLYPH_FONT_SHIFT_BIT)));
       break;
     }
 }
@@ -1414,7 +1416,12 @@ glyph_sbchar (glyph_t *g, const glyph_t *g0, Char cc, glyph_t f, int flags, int 
       font = GLYPH_FONT_REPLACEMENT;
     }
   else
-    font = MAKE_GLYPH_FONT (font_slot_of (cc, lang));
+    {
+      font = MAKE_GLYPH_FONT (font_slot_of (cc, lang));
+      // 一桁の升目に置くが、担当のフォントは全角の字形しか持たない
+      if (wide_glyph_p (cc))
+        font |= GLYPH_FONT_NARROW;
+    }
 
   *g++ = f | font | MAKE_GLYPH_CHAR (cc);
   return g;

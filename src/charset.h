@@ -121,6 +121,9 @@
 #define UNICODE_GEORGIAN_MAX 0x10f0
 #define UNICODE_HALFWIDTH_KANA_MIN 0xff61
 #define UNICODE_HALFWIDTH_KANA_MAX 0xff9f
+// CP932 の外字 (0xf040-0xf9fc) を写した私用領域
+#define UNICODE_CP932_UDC_MIN 0xe000
+#define UNICODE_CP932_UDC_MAX 0xe757
 
 #define ccsf_iso8859_1              (1 << ccs_iso8859_1)
 #define ccsf_iso8859_2              (1 << ccs_iso8859_2)
@@ -366,10 +369,12 @@ mule_b2g (int &ccs, int &c1, int &c2)
 
 #define CHAR_WIDTH_TABLE_SIZE (65536 / 8)
 
-// 内部コードが半角の区画と全角の区画のどちらにあるか
+// 升目をふたつ占める字。East Asian Width の W と F にあたる
 extern u_char char_width_table[CHAR_WIDTH_TABLE_SIZE];
 // 画面で占める桁数。担当するフォントの実測に合わせて書き換わる
 extern u_char char_columns_table[CHAR_WIDTH_TABLE_SIZE];
+// 一桁の升目に置く字のうち、担当のフォントが全角の字形で描くもの
+extern u_char char_wide_glyph_table[CHAR_WIDTH_TABLE_SIZE];
 
 // 半角のカタカナ。折り返しや文字種の判定で、全角のかなと区別する
 static inline int
@@ -392,6 +397,15 @@ char_width (Char cc)
 {
   return (cc < CHAR_LIMIT
           && (char_columns_table[cc >> 3] & (1 << (cc & 7)))) ? 2 : 1;
+}
+
+// 一桁の升目に置く字を、担当のフォントが全角の字形で描くか。桁数を繰り上げるか、
+// 字形を横へ縮めるかの判断に使う
+static inline int
+wide_glyph_p (Char cc)
+{
+  return (cc < CHAR_LIMIT
+          && (char_wide_glyph_table[cc >> 3] & (1 << (cc & 7)))) ? 1 : 0;
 }
 
 static inline const ucs2_t &

@@ -41,21 +41,6 @@ const WCHAR *const FontSet::fs_regent[] =
   L"Georgian",
 };
 
-// 各スロットの送り幅を測るための文字。受け持つ文字体系の中から、その体系を
-// 収めたフォントならまず持っている字を選ぶ
-const ucs2_t FontSet::fs_sample_char[] =
-{
-  'A',
-  0x3042,  // あ
-  0x00e0,  // à
-  0x0430,  // а
-  0x03b1,  // α
-  0x4e2d,  // 中
-  0x4e2d,  // 中
-  0xac00,  // 가
-  0x10d0,  // ა
-};
-
 const FontSet::fontface FontSet::fs_default_face[] =
 {
   {L"BIZ UDGothic", L"ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
@@ -106,6 +91,28 @@ han_font_slot (int lang)
     }
 }
 
+// ラテン補助に混じっている記号。CP932 にもあり、日本語のフォントでは全角に
+// 作られている。ラテン文字と同じ枠に入れると半角の字形で描かれてしまう
+static int
+latin_symbol_p (Char cc)
+{
+  switch (cc)
+    {
+    case 0x00a7:  // §
+    case 0x00a8:  // ¨
+    case 0x00b0:  // °
+    case 0x00b1:  // ±
+    case 0x00b4:  // ´
+    case 0x00b6:  // ¶
+    case 0x00d7:  // ×
+    case 0x00f7:  // ÷
+      return 1;
+
+    default:
+      return 0;
+    }
+}
+
 // 符号位置がどの文字体系に属するかでフォントの枠を決める。画面・印刷・入力の
 // いずれもここを通す
 int
@@ -115,7 +122,7 @@ font_slot_of (Char cc, int lang)
     return FONT_ASCII;
 
   if (cc < 0x0250)              // ラテン補助・ラテン拡張 A/B
-    return FONT_LATIN;
+    return latin_symbol_p (cc) ? FONT_JP : FONT_LATIN;
   if (cc < 0x0370)              // IPA 拡張・修飾文字・結合分音記号
     return FONT_JP;
   if (cc < 0x0400)              // ギリシャ
@@ -225,27 +232,6 @@ FontObject::get_metrics (HDC hdc)
   fo_size.cx = tm.tmAveCharWidth;
   fo_size.cy = tm.tmAscent + tm.tmDescent;
   fo_ascent = tm.tmAscent;
-  SelectObject (hdc, of);
-}
-
-// 受け持つ文字体系の代表の字を実測して、升目いくつぶんの送りになるかを決める。
-// フォント自身がその字を持っていないときは測らない。GDI がフォントリンクで
-// 選んだ別のフォントの寸法になり、このフォントの幅にならないため
-void
-FontObject::measure_columns (HDC hdc, ucs2_t sample, int cellw)
-{
-  fo_columns = 1;
-  if (cellw <= 0)
-    return;
-
-  HGDIOBJ of = SelectObject (hdc, fo_hfont);
-  WORD gi;
-  SIZE sz;
-  if (GetGlyphIndicesW (hdc, LPCWSTR (&sample), 1, &gi,
-                        GGI_MARK_NONEXISTING_GLYPHS) != GDI_ERROR
-      && gi != 0xffff
-      && GetTextExtentPoint32W (hdc, LPCWSTR (&sample), 1, &sz))
-    fo_columns = min (2, max (1, int ((sz.cx * 2 + cellw) / (cellw * 2))));
   SelectObject (hdc, of);
 }
 
@@ -528,9 +514,6 @@ FontSet::create (const FontSetParam &param)
         fs_font[i].get_metrics (hdc);
       }
 
-  for (int i = 0; i < FONT_MAX; i++)
-    fs_font[i].measure_columns (hdc, fs_sample_char[i], fs_size.cx);
-
   ReleaseDC (0, hdc);
 
   fs_cell.cx = fs_size.cx;
@@ -543,45 +526,94 @@ FontSet::create (const FontSetParam &param)
   for (int i = 0; i < FONT_MAX; i++)
     fs_font[i].calc_offset (fs_size);
 
+  measure_wide_glyphs ();
   update_char_columns ();
   create_bitmap ();
   save_params (param);
   return 1;
 }
 
-// 半角の升目に並べているが、フォントによっては全角の字形しか持たない文字体系。
-// ラテン・キリル・ギリシャ・グルジアは、日本語のフォントでは全角に作られている
+// 字形が升目に収まらないか。送り幅が升目の一倍半を超えていれば全角とみなす
+static inline int
+wide_glyph_width_p (int cx, int cellw)
+{
+  return cx * 2 >= cellw * 3;
+}
+
+// 幅を測る相手か。ふたつの升目を占める字はそもそも全角で、専用のフォントで描く
+// 字は担当のフォントでは測れない
 static int
-ambiguous_width_slot_p (int slot)
+measurable_p (Char cc)
+{
+  return (charset_width (cc) == 1
+          && !utf16_surrogate_high_p (cc) && !utf16_surrogate_low_p (cc)
+          && !(cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
+          && cc != UNICODE_REPLACEMENT_CHAR);
+}
+
+// 担当のフォントが、一桁の升目に置く字を全角の字形で描くかを字ごとに測る。
+// 日本語のフォントは半角と全角の字形を混ぜて持つので、文字体系の単位では決まらない。
+// フォント自身が字形を持たないものは測らない。GDI がフォントリンクで選んだ別の
+// フォントの寸法になり、このフォントの幅にならないため
+void
+FontSet::measure_wide_glyphs () const
+{
+  memset (char_wide_glyph_table, 0, sizeof char_wide_glyph_table);
+  if (fs_size.cx <= 0)
+    return;
+
+  enum {max_run = 512};
+  WCHAR w[max_run];
+  WORD gi[max_run];
+  INT cx[max_run];
+
+  HDC hdc = GetDC (0);
+  for (Char cc = 0x80; cc < CHAR_LIMIT;)
+    {
+      if (!measurable_p (cc))
+        {
+          cc++;
+          continue;
+        }
+
+      const Char from = cc;
+      const int slot = font_slot_of (cc);
+      int n = 0;
+      while (n < max_run && cc < CHAR_LIMIT
+             && measurable_p (cc) && font_slot_of (cc) == slot)
+        w[n++] = WCHAR (cc++);
+
+      HGDIOBJ of = SelectObject (hdc, fs_font[slot]);
+      if (GetGlyphIndicesW (hdc, w, n, gi, GGI_MARK_NONEXISTING_GLYPHS) != GDI_ERROR
+          && GetCharWidth32W (hdc, from, from + n - 1, cx))
+        for (int i = 0; i < n; i++)
+          if (gi[i] != 0xffff && wide_glyph_width_p (cx[i], fs_size.cx))
+            char_wide_glyph_table[w[i] >> 3] |= 1 << (w[i] & 7);
+      SelectObject (hdc, of);
+    }
+  ReleaseDC (0, hdc);
+}
+
+// 半角の升目に並べている文字体系。日本語のフォントではこれらも全角に作られて
+// いるため、「曖昧な文字幅を半角に固定」はこの枠にだけ効かせる
+static int
+half_width_slot_p (int slot)
 {
   return (slot == FONT_LATIN || slot == FONT_CYRILLIC
           || slot == FONT_GREEK || slot == FONT_GEORGIAN);
 }
 
-int
-FontSet::full_width_slot_p (int slot) const
-{
-  return ambiguous_width_slot_p (slot) && fs_font[slot].columns () == 2;
-}
-
-int
-FontSet::full_width_p (Char cc) const
-{
-  return charset_width (cc) == 1 && full_width_slot_p (font_slot_of (cc));
-}
-
-// 半角として並べている文字を、担当のフォントが全角で描くなら二桁として扱う。
-// 一桁の升目に押し込むと字形の右半分が切れて読めなくなる
+// 一桁の升目に置く字を担当のフォントが全角で描くなら、二桁として扱う。
+// 一桁に押し込むと字形の右半分が切れて読めなくなる
 void
 FontSet::update_char_columns () const
 {
   memcpy (char_columns_table, char_width_table, sizeof char_width_table);
-  if (fs_ambiguous_width != AMBIGUOUS_WIDTH_AUTO)
-    return;
-
-  for (int i = 0; i <= 0xffff; i++)
-    if (full_width_p (Char (i)))
-      char_columns_table[i >> 3] |= 1 << (i & 7);
+  for (Char cc = 0x80; cc < CHAR_LIMIT; cc++)
+    if (wide_glyph_p (cc)
+        && (fs_ambiguous_width == AMBIGUOUS_WIDTH_AUTO
+            || !half_width_slot_p (font_slot_of (cc))))
+      char_columns_table[cc >> 3] |= 1 << (cc & 7);
 }
 
 // フォントの寸法はピクセルで記録されるため画面の DPI に依存する。DPI ごとに

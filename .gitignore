@@ -49,7 +49,6 @@ misc/words.sjis.txt
 misc/words.utf8.txt
 
 ## Ignore Makefile temporary files, build results.
-char-width.h
 fns-decl.h
 ibmext.h
 iso2022state.h

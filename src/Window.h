@@ -112,7 +112,10 @@ typedef unsigned long long glyph_t;
 # define GLYPH_FONT_SURROGATE_HIGH   MAKE_GLYPH_FONT (FONT_MAX + 2)
 // 置換文字。日本語のフォントは字形を持たないので、持つフォントで描く
 # define GLYPH_FONT_REPLACEMENT      MAKE_GLYPH_FONT (FONT_MAX + 3)
-# if FONT_MAX + 3 > 31
+/* 一桁の升目に置くが、担当のフォントは全角の字形しか持たない。枠の値へ重ねて
+   立て、字形を横へ縮めて描くことを表す */
+# define GLYPH_FONT_NARROW           MAKE_GLYPH_FONT (16)
+# if FONT_MAX + 3 >= 16
 #  error "wrong GLYPH_FONT_MASK"
 # endif
 
