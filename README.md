@@ -46,15 +46,8 @@ Lisp の動作は 0.2.2.235 と互換であることを原則にしています�
     * Git 流 (メールみたいなやつ) に従うが日本語で良い
     * エンコーディングは UTF-8 で
   * コーディングルール
-    * 基本的には元々の亀井さんのコードに合わせます
+    * 元々の亀井さんのコードに合わせます
       * misc/mode-settings.l を読み込んでおいてください
-    * ただし、以下の点は変えます
-      * ヘッダファイルのプロトタイプ宣言で引数名はちゃんと書く
-      * C++ スタイルのキャストを利用 (static_cast, const_cast, reinterpret_cast, dynamic_cast)
-        * <http://msdn.microsoft.com/ja-jp/library/cc440191(v=vs.71).aspx>
-        * <http://msdn.microsoft.com/ja-jp/library/cc440192(v=vs.71).aspx>
-      * XML ドキュメントを記述
-        * <http://msdn.microsoft.com/ja-jp/library/ms177227.aspx>
   * .gitconfig に以下を設定しておく
 
     ```ini
