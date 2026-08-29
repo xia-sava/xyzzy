@@ -547,7 +547,7 @@ print_engine::init_font (HDC hdc)
 
   TEXTMETRIC tm;
   GetTextMetrics (hdc, &tm);
-  pe_cell.cx = tm.tmAveCharWidth;
+  pe_cell.cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
   pe_cell.cy = tm.tmHeight;
 
   pe_print_cell = pe_cell;
@@ -567,8 +567,9 @@ print_engine::init_font (HDC hdc)
     {
       SelectObject (hdc, pe_hfonts[i]);
       GetTextMetrics (hdc, &tm);
-      pe_offset[i].x = (pe_cell.cx - tm.tmAveCharWidth) / 2;
-      pe_offset2x[i] = pe_cell.cx - tm.tmAveCharWidth;
+      int cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
+      pe_offset[i].x = (pe_cell.cx - cx) / 2;
+      pe_offset2x[i] = pe_cell.cx - cx;
       pe_offset[i].y = (pe_cell.cy - tm.tmHeight) / 2;
       if (tm.tmPitchAndFamily & TMPF_FIXED_PITCH)
         pe_fixed_pitch = 0;

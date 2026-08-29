@@ -296,7 +296,7 @@ FontObject::get_metrics ()
    送りに近い値を返すことがあり、游ゴシックや Noto Sans JP では高さとほぼ同じに
    なる。それを幅とみなすと、升目に収めようとして字が潰れる。ASCII の送りを
    実測して平均を取る。等幅のフォントでは tmAveCharWidth と一致する */
-static int
+int
 ascii_mean_width (HDC hdc, int fallback)
 {
   enum {from = 0x20, to = 0x7e, n = to - from + 1};

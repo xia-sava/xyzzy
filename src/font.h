@@ -190,6 +190,10 @@ HFONT create_surrogate_font (const SIZE &cell);
 // 置換文字を描くフォント。字送りが一桁に収まるよう高さを抑える
 HFONT create_replacement_font (const SIZE &cell);
 
+// hdc に選ばれているフォントの半角の送り。升目の幅はこれで決まる。tmAveCharWidth は
+// 和文のフォントで全角の送りに近い値を返すことがあるので、それには頼れない
+int ascii_mean_width (HDC hdc, int fallback);
+
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const WCHAR *face, BYTE charset);
 
