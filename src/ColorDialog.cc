@@ -647,6 +647,11 @@ ChooseFontPage::get_result ()
       cfp_param.fs_size_pixel = cfp_font.cf_param.fs_size_pixel;
       ccp_modified = 1;
     }
+  if (cfp_font.cf_param.fs_show_proportional != cfp_param.fs_show_proportional)
+    {
+      cfp_param.fs_show_proportional = cfp_font.cf_param.fs_show_proportional;
+      ccp_modified = 1;
+    }
 
   ChangeColorsPageP::get_result ();
 
@@ -693,6 +698,7 @@ ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
   cfp_param.fs_use_backsl = app.text_font.use_backsl_p ();
   cfp_param.fs_recommend_size = app.text_font.recommend_size_p ();
   cfp_param.fs_size_pixel = app.text_font.size_pixel_p ();
+  cfp_param.fs_show_proportional = app.text_font.show_proportional_p ();
   cfp_param.fs_ambiguous_width = app.text_font.ambiguous_width ();
   cfp_font.cf_param = cfp_param;
   cfp_font.cf_fg = Window::default_xcolors[WCOLOR_TEXT];

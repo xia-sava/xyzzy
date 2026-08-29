@@ -70,29 +70,59 @@ ChooseFontP::add_slot_list (HWND hwnd)
   update_slot_list (hwnd);
 }
 
+// 数え上げの宛先と、固定ピッチを名乗らないものも並べるかどうか
+struct font_name_arg
+{
+  HWND list;
+  int proportional;
+};
+
 int CALLBACK
 ChooseFontP::enum_font_name_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type, LPARAM lparam)
 {
+  const font_name_arg &arg = *(font_name_arg *)lparam;
   if (*elf->elfLogFont.lfFaceName != '@'
-      && (elf->elfLogFont.lfPitchAndFamily & 3) == FIXED_PITCH)
+      && (arg.proportional
+          || (elf->elfLogFont.lfPitchAndFamily & 3) == FIXED_PITCH))
     {
-      HWND hwnd = HWND (lparam);
-      if (SendMessageW (hwnd, LB_FINDSTRINGEXACT, WPARAM (-1),
+      if (SendMessageW (arg.list, LB_FINDSTRINGEXACT, WPARAM (-1),
                         LPARAM (elf->elfLogFont.lfFaceName)) == LB_ERR)
         {
-          int i = SendMessageW (hwnd, LB_ADDSTRING, 0,
+          int i = SendMessageW (arg.list, LB_ADDSTRING, 0,
                                 LPARAM (elf->elfLogFont.lfFaceName));
-          SendMessage (hwnd, LB_SETITEMDATA, i, (elf->elfLogFont.lfCharSet << 8) | type);
+          SendMessage (arg.list, LB_SETITEMDATA, i,
+                       (elf->elfLogFont.lfCharSet << 8) | type);
         }
     }
   return 1;
 }
 
+/* 漢字やハングルのフォントは、欧字がプロポーショナルなので固定ピッチを名乗らない。
+   既定に据えているものも含めて一覧から漏れるため、並べるかを選べるようにする */
 void
 ChooseFontP::add_font_name (HWND hwnd, HDC hdc)
 {
-  EnumFontFamiliesExW (hdc, 0, FONTENUMPROCW (enum_font_name_proc),
-                       LPARAM (GetDlgItem (hwnd, IDC_NAMELIST)), 0);
+  font_name_arg arg;
+  arg.list = GetDlgItem (hwnd, IDC_NAMELIST);
+  arg.proportional = cf_param.fs_show_proportional;
+  LOGFONTW lf;
+  bzero (&lf, sizeof lf);
+  lf.lfCharSet = DEFAULT_CHARSET;
+  EnumFontFamiliesExW (hdc, &lf, FONTENUMPROCW (enum_font_name_proc),
+                       LPARAM (&arg), 0);
+}
+
+void
+ChooseFontP::reload_font_name (HWND hwnd)
+{
+  HWND list = GetDlgItem (hwnd, IDC_NAMELIST);
+  SendMessage (list, WM_SETREDRAW, 0, 0);
+  SendMessage (list, LB_RESETCONTENT, 0, 0);
+  HDC hdc = GetDC (hwnd);
+  add_font_name (hwnd, hdc);
+  ReleaseDC (hwnd, hdc);
+  SendMessage (list, WM_SETREDRAW, 1, 0);
+  InvalidateRect (list, 0, 0);
 }
 
 int CALLBACK
@@ -418,6 +448,8 @@ ChooseFontP::slot_font_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
         SendDlgItemMessage (hwnd, IDC_SLOT_DEFAULT, BM_SETCHECK,
                             arg->specified ? 0 : 1, 0);
+        SendDlgItemMessage (hwnd, IDC_PROPORTIONAL, BM_SETCHECK,
+                            arg->cf->cf_param.fs_show_proportional ? 1 : 0, 0);
         int i = LB_ERR;
         if (arg->specified)
           i = SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
@@ -453,6 +485,18 @@ ChooseFontP::slot_font_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
           }
           return 1;
 
+        case IDC_PROPORTIONAL:
+          {
+            arg->cf->cf_param.fs_show_proportional =
+              SendDlgItemMessage (hwnd, IDC_PROPORTIONAL, BM_GETCHECK, 0, 0) ? 1 : 0;
+            arg->cf->reload_font_name (hwnd);
+            int i = SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
+                                         WPARAM (-1), LPARAM (arg->lf.lfFaceName));
+            SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_SETCURSEL,
+                                i == LB_ERR ? 0 : i, 0);
+          }
+          return 1;
+
         case IDOK:
           if (SendDlgItemMessage (hwnd, IDC_SLOT_DEFAULT, BM_GETCHECK, 0, 0))
             *arg->lf.lfFaceName = 0;
@@ -481,6 +525,16 @@ ChooseFontP::slot_font_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     default:
       return 0;
     }
+}
+
+void
+ChooseFontP::notify_proportional (HWND hwnd)
+{
+  cf_param.fs_show_proportional =
+    SendDlgItemMessage (hwnd, IDC_PROPORTIONAL, BM_GETCHECK, 0, 0) ? 1 : 0;
+  reload_font_name (hwnd);
+  select_primary (hwnd);
+  update_slot_list (hwnd);
 }
 
 void
@@ -535,6 +589,8 @@ ChooseFontP::init_dialog (HWND hwnd)
 
   SendDlgItemMessage (hwnd, IDC_SIZE_PIXEL, BM_SETCHECK,
                       cf_param.fs_size_pixel ? 1 : 0, 0);
+  SendDlgItemMessage (hwnd, IDC_PROPORTIONAL, BM_SETCHECK,
+                      cf_param.fs_show_proportional ? 1 : 0, 0);
 
   add_slot_list (hwnd);
   select_primary (hwnd);
@@ -565,6 +621,11 @@ ChooseFontP::do_command (HWND hwnd, int id, int code)
 
     case IDC_SIZE_PIXEL:
       notify_size_pixel (hwnd, code);
+      return 1;
+
+    case IDC_PROPORTIONAL:
+      if (code == BN_CLICKED)
+        notify_proportional (hwnd);
       return 1;
 
     default:

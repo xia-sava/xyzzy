@@ -554,6 +554,7 @@ FontSet::create (const FontSetParam &param)
   fs_recommend_size = param.fs_recommend_size;
   fs_size_pixel = param.fs_size_pixel;
   fs_ambiguous_width = param.fs_ambiguous_width;
+  fs_show_proportional = param.fs_show_proportional;
 
   fs_primary = param.fs_primary;
   LOGFONTW logfont[FONT_MAX];
@@ -751,6 +752,7 @@ FontSet::save_params (const FontSetParam &param)
   write_conf (cfgFont, cfgRecommendSize, param.fs_recommend_size);
   write_conf (cfgFont, cfgSizePixel, param.fs_size_pixel);
   write_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width);
+  write_conf (cfgFont, cfgShowProportional, param.fs_show_proportional);
   flush_conf ();
 }
 
@@ -789,6 +791,8 @@ FontSet::load_params (FontSetParam &param)
     param.fs_size_pixel = 0;
   if (!read_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width))
     param.fs_ambiguous_width = AMBIGUOUS_WIDTH_AUTO;
+  if (!read_conf (cfgFont, cfgShowProportional, param.fs_show_proportional))
+    param.fs_show_proportional = 0;
   for (int i = 0; i < FONT_MAX; i++)
     if (!read_font_conf (regent (i), param.fs_logfont[i]))
       *param.fs_logfont[i].lfFaceName = 0;

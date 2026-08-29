@@ -78,6 +78,8 @@ struct FontSetParam
   int fs_recommend_size;
   int fs_size_pixel;
   int fs_ambiguous_width;
+  // フォントを選ぶ一覧に、固定ピッチを名乗らないものも並べる
+  int fs_show_proportional;
 };
 
 class FontSet
@@ -143,6 +145,7 @@ protected:
   int fs_recommend_size;
   int fs_size_pixel;
   int fs_ambiguous_width;
+  int fs_show_proportional;
 
 public:
   FontSet () : fs_hbm (0) {}
@@ -167,6 +170,7 @@ public:
   int recommend_size_p () const {return fs_recommend_size;}
   int size_pixel_p () const {return fs_size_pixel;}
   int ambiguous_width () const {return fs_ambiguous_width;}
+  int show_proportional_p () const {return fs_show_proportional;}
 
   static const WCHAR *regent (int n) {return fs_regent[n];}
   static const WCHAR *default_face (int n, int print);
