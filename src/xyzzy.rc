@@ -422,7 +422,7 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,13,141,90,10
 END
 
-IDD_FONT DIALOG DISCARDABLE  0, 0, 239, 223
+IDD_FONT DIALOG DISCARDABLE  0, 0, 239, 228
 STYLE WS_CHILD | WS_CAPTION
 CAPTION "フォント"
 FONT 9, "ＭＳ Ｐゴシック"
@@ -441,17 +441,18 @@ BEGIN
     LISTBOX         IDC_SLOTLIST,10,106,125,42,LBS_NOINTEGRALHEIGHT |
                     LBS_USETABSTOPS | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "変更(&G)...",IDC_SET_SLOT_FONT,95,150,40,12
-    CONTROL         "欧文以外のサイズはお任せ(&R)",IDC_RECOMMEND_SIZE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,166,117,10
     CONTROL         "サイズはピクセルで(&P)",IDC_SIZE_PIXEL,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,7,177,87,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,166,87,10
     CONTROL         "\\をバックスラッシュに変換(&B)",IDC_BACKSL,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,7,188,111,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,177,111,10
     CONTROL         "曖昧な文字幅を半角に固定(&W)",IDC_AMBIGUOUS_WIDTH,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,199,113,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,188,113,10
     CONTROL         "プロポーショナルフォントも選べるようにする(&O)",
                     IDC_PROPORTIONAL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
-                    7,210,226,10
+                    7,199,226,10
+    LTEXT           "ASCII の幅に収まらない字(&R):",IDC_STATIC,7,213,116,8
+    COMBOBOX        IDC_FIT_MODE,127,211,105,60,CBS_DROPDOWNLIST |
+                    WS_VSCROLL | WS_TABSTOP
     LTEXT           "行間(&I):",IDC_STATIC,145,9,30,8
     EDITTEXT        IDC_LSP,174,6,34,14,ES_RIGHT | ES_MULTILINE |
                     ES_AUTOHSCROLL
@@ -899,6 +900,8 @@ BEGIN
     IDS_LANG_CN_TRADITIONAL "繁体字"
     IDS_FONT_UNSPECIFIED    "未指定(%s)"
     IDS_FONT_MISSING        "%s(見つかりません)"
+    IDS_FIT_CONDENSE        "横に潰して収める"
+    IDS_FIT_SHRINK          "小さくして収める"
 END
 
 STRINGTABLE DISCARDABLE 

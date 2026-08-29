@@ -130,6 +130,8 @@
 #define IDC_MOVELR                      149
 #define IDS_FONT_UNSPECIFIED            150
 #define IDS_FONT_MISSING                151
+#define IDS_FIT_CONDENSE                152
+#define IDS_FIT_SHRINK                  153
 #define IDM_PRINTFMT                    150
 #define psh1                            0x0400
 #define psh2                            0x0401
@@ -421,6 +423,7 @@
 #define IDC_SLOTLIST                    2142
 #define IDC_SET_SLOT_FONT               2143
 #define IDC_SLOT_DEFAULT                2144
+#define IDC_FIT_MODE                    2145
 #define IDC_COPY                        40001
 #define IDC_MOVE                        40002
 #define IDC_LINK                        40003

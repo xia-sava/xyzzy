@@ -614,7 +614,7 @@ ChooseFontPage::get_result ()
       ccp_modified = 1;
     }
 
-  i = SendDlgItemMessage (ccp_hwnd, IDC_RECOMMEND_SIZE, BM_GETCHECK, 0, 0);
+  i = SendDlgItemMessage (ccp_hwnd, IDC_FIT_MODE, CB_GETCURSEL, 0, 0) == 1;
   if (i != cfp_param.fs_recommend_size)
     {
       cfp_param.fs_recommend_size = i;
@@ -673,7 +673,16 @@ ChooseFontPage::init_dialog ()
 
   SendDlgItemMessage (ccp_hwnd, IDC_BACKSL, BM_SETCHECK,
                       cfp_param.fs_use_backsl ? 1 : 0, 0);
-  SendDlgItemMessage (ccp_hwnd, IDC_RECOMMEND_SIZE, BM_SETCHECK,
+  /* 升目に収まらない字をどう収めるか。並びは fs_recommend_size の値の順 */
+  static const UINT fit_mode[] = {IDS_FIT_CONDENSE, IDS_FIT_SHRINK};
+  for (int i = 0; i < numberof (fit_mode); i++)
+    {
+      WCHAR b[128];
+      *b = 0;
+      LoadStringW (app.hinst, fit_mode[i], b, numberof (b));
+      SendDlgItemMessageW (ccp_hwnd, IDC_FIT_MODE, CB_ADDSTRING, 0, LPARAM (b));
+    }
+  SendDlgItemMessage (ccp_hwnd, IDC_FIT_MODE, CB_SETCURSEL,
                       cfp_param.fs_recommend_size ? 1 : 0, 0);
   SendDlgItemMessage (ccp_hwnd, IDC_AMBIGUOUS_WIDTH, BM_SETCHECK,
                       cfp_param.fs_ambiguous_width == AMBIGUOUS_WIDTH_HALF ? 1 : 0, 0);
