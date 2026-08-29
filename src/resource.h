@@ -128,6 +128,7 @@
 #define IDC_WHEEL_D                     147
 #define IDC_MOVEUD                      148
 #define IDC_MOVELR                      149
+#define IDS_FONT_UNSPECIFIED            150
 #define IDM_PRINTFMT                    150
 #define psh1                            0x0400
 #define psh2                            0x0401
@@ -291,6 +292,7 @@
 #define IDD_COLOR2                      1543
 #define IDD_FILER_DUAL_MODELESS         1543
 #define IDD_FONT2                       1544
+#define IDD_SLOT_FONT                   1545
 #define IDC_LIST1                       2000
 #define IDC_NAMELIST                    2000
 #define IDC_TOPIC                       2001
@@ -415,6 +417,9 @@
 #define IDC_FOOTER_POPUP                2139
 #define IDC_STD                         2140
 #define IDC_AMBIGUOUS_WIDTH             2141
+#define IDC_SLOTLIST                    2142
+#define IDC_SET_SLOT_FONT               2143
+#define IDC_SLOT_DEFAULT                2144
 #define IDC_COPY                        40001
 #define IDC_MOVE                        40002
 #define IDC_LINK                        40003
@@ -455,9 +460,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        151
+#define _APS_NEXT_RESOURCE_VALUE        152
 #define _APS_NEXT_COMMAND_VALUE         40035
-#define _APS_NEXT_CONTROL_VALUE         2142
+#define _APS_NEXT_CONTROL_VALUE         2145
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

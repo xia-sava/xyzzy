@@ -69,6 +69,9 @@ enum
 
 struct FontSetParam
 {
+  // 代表フォント。枠に指定が無ければここから決める
+  LOGFONTW fs_primary;
+  // 枠ごとの上書き。面が空なら指定が無い
   LOGFONTW fs_logfont[FONT_MAX];
   int fs_use_backsl;
   int fs_line_spacing;
@@ -127,6 +130,9 @@ public:
 
 protected:
   FontObject fs_font[FONT_MAX];
+  LOGFONTW fs_primary;
+  // 指定されたとおりの枠ごとの上書き。面が空なら指定が無い
+  LOGFONTW fs_logfont[FONT_MAX];
   HBITMAP fs_hbm;
   SIZE fs_size;
   SIZE fs_cell;
@@ -146,6 +152,12 @@ public:
   lisp make_alist () const;
   const bool update (FontSetParam &param, const lisp lfontset) const;
   const FontObject &font (int n) const {return fs_font[n];}
+  const LOGFONTW &primary () const {return fs_primary;}
+  const LOGFONTW &slot_logfont (int n) const {return fs_logfont[n];}
+  int specified_p (int n) const {return *fs_logfont[n].lfFaceName != 0;}
+  // 指定の無い枠に使うフォントを決める。代表フォントがその枠の字形を持っていれば
+  // 代表を、持っていなければ枠ごとの既定のフォントを充てる
+  static void resolve_logfont (LOGFONTW &lf, const FontSetParam &param, int slot);
   const HBITMAP &hbm () const {return fs_hbm;}
   const SIZE &size () const {return fs_size;}
   const SIZE &cell () const {return fs_cell;}

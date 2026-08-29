@@ -21,14 +21,17 @@ protected:
 
   static int CALLBACK enum_font_name_proc (ENUMLOGFONTW *, NEWTEXTMETRICW *, int, LPARAM);
   static int CALLBACK enum_font_size_proc (ENUMLOGFONTW *, NEWTEXTMETRICW *, int, LPARAM);
-  void add_lang (HWND);
+  static INT_PTR CALLBACK slot_font_proc (HWND, UINT, WPARAM, LPARAM);
   void add_font_name (HWND, HDC);
   void add_font_size (HWND, int);
   void change_font_size (HWND, int);
-  void notify_lang (HWND, int);
+  void select_primary (HWND);
+  void add_slot_list (HWND);
+  void update_slot_list (HWND);
   void notify_font_name (HWND, int);
   void notify_font_size (HWND, int);
   void notify_size_pixel (HWND, int);
+  void notify_set_slot_font (HWND);
   void draw_font_list (HWND, DRAWITEMSTRUCT *);
   void draw_sample (HWND, DRAWITEMSTRUCT *);
 

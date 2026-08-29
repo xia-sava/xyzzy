@@ -15,17 +15,45 @@ ChooseFontP::~ChooseFontP ()
     ImageList_Destroy (cf_hil);
 }
 
+// 枠ごとの一覧。指定が無い枠は、実際に使うことになるフォントを添える
 void
-ChooseFontP::add_lang (HWND hwnd)
+ChooseFontP::update_slot_list (HWND hwnd)
 {
+  HWND list = GetDlgItem (hwnd, IDC_SLOTLIST);
+  int sel = SendMessage (list, LB_GETCURSEL, 0, 0);
+  SendMessage (list, WM_SETREDRAW, 0, 0);
+  SendMessage (list, LB_RESETCONTENT, 0, 0);
   for (int i = 0; i < FONT_MAX; i++)
     {
-      WCHAR buf[128];
-      *buf = 0;
-      LoadStringW (app.hinst, FontSet::lang_id (i), buf, numberof (buf));
-      int idx = SendDlgItemMessageW (hwnd, IDC_LANG, CB_ADDSTRING, 0, LPARAM (buf));
-      SendDlgItemMessageW (hwnd, IDC_LANG, CB_SETITEMDATA, idx, i);
+      WCHAR name[128], fmt[128], face[128], buf[256];
+      *name = 0;
+      LoadStringW (app.hinst, FontSet::lang_id (i), name, numberof (name));
+      if (*cf_param.fs_logfont[i].lfFaceName)
+        wcscpy (face, cf_param.fs_logfont[i].lfFaceName);
+      else
+        {
+          LOGFONTW lf;
+          FontSet::resolve_logfont (lf, cf_param, i);
+          *fmt = 0;
+          LoadStringW (app.hinst, IDS_FONT_UNSPECIFIED, fmt, numberof (fmt));
+          _snwprintf_s (face, numberof (face), _TRUNCATE, fmt, lf.lfFaceName);
+        }
+      _snwprintf_s (buf, numberof (buf), _TRUNCATE, L"%s\t%s", name, face);
+      int idx = SendMessageW (list, LB_ADDSTRING, 0, LPARAM (buf));
+      SendMessage (list, LB_SETITEMDATA, idx, i);
     }
+  SendMessage (list, LB_SETCURSEL, sel == LB_ERR ? 0 : sel, 0);
+  SendMessage (list, WM_SETREDRAW, 1, 0);
+  InvalidateRect (list, 0, 0);
+}
+
+void
+ChooseFontP::add_slot_list (HWND hwnd)
+{
+  // タブ位置はリストボックスの文字幅を単位とする。DPI には追随しなくてよい
+  int tab = 28;
+  SendDlgItemMessage (hwnd, IDC_SLOTLIST, LB_SETTABSTOPS, 1, LPARAM (&tab));
+  update_slot_list (hwnd);
 }
 
 int CALLBACK
@@ -164,27 +192,18 @@ ChooseFontP::change_font_size (HWND hwnd, int size)
 }
 
 void
-ChooseFontP::notify_lang (HWND hwnd, int code)
+ChooseFontP::select_primary (HWND hwnd)
 {
-  if (code != CBN_SELCHANGE)
-    return;
-  int i = SendDlgItemMessage (hwnd, IDC_LANG, CB_GETCURSEL, 0, 0);
-  if (i == LB_ERR)
-    return;
-  i = SendDlgItemMessage (hwnd, IDC_LANG, CB_GETITEMDATA, i, 0);
-  if (i < 0 || i >= FONT_MAX)
-    return;
-
   int j = SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
-                               WPARAM (-1), LPARAM (cf_param.fs_logfont[i].lfFaceName));
+                               WPARAM (-1), LPARAM (cf_param.fs_primary.lfFaceName));
   if (j == LB_ERR)
     j = 0;
   SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_SETCURSEL, j, 0);
 
   change_font_size (hwnd,
                     (cf_param.fs_size_pixel
-                     ? cf_param.fs_logfont[i].lfHeight
-                     : MulDiv (cf_param.fs_logfont[i].lfHeight, 72, cf_dpi)));
+                     ? cf_param.fs_primary.lfHeight
+                     : MulDiv (cf_param.fs_primary.lfHeight, 72, cf_dpi)));
 }
 
 void
@@ -205,13 +224,6 @@ void
 ChooseFontP::notify_font_size (HWND hwnd, int code)
 {
   if (code != LBN_SELCHANGE)
-    return;
-
-  int lang = SendDlgItemMessage (hwnd, IDC_LANG, CB_GETCURSEL, 0, 0);
-  if (lang == LB_ERR)
-    return;
-  lang = SendDlgItemMessage (hwnd, IDC_LANG, CB_GETITEMDATA, lang, 0);
-  if (lang < 0 || lang >= FONT_MAX)
     return;
 
   int i = SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETCURSEL, 0, 0);
@@ -235,7 +247,8 @@ ChooseFontP::notify_font_size (HWND hwnd, int code)
   lf.lfCharSet = charset;
   wcscpy (lf.lfFaceName, name);
 
-  cf_param.fs_logfont[lang] = lf;
+  cf_param.fs_primary = lf;
+  update_slot_list (hwnd);
 
   HFONT hfont = CreateFontIndirectW (&lf);
   HFONT hfdlg = HFONT (SendMessage (hwnd, WM_GETFONT, 0, 0));
@@ -276,14 +289,15 @@ ChooseFontP::draw_font_list (HWND, DRAWITEMSTRUCT *dis)
 {
   COLORREF ofg, obg;
 
-  if (dis->itemState & ODS_SELECTED)
+  const int enabled = IsWindowEnabled (dis->hwndItem);
+  if (dis->itemState & ODS_SELECTED && enabled)
     {
       ofg = SetTextColor (dis->hDC, sysdep.highlight_text);
       obg = SetBkColor (dis->hDC, sysdep.highlight);
     }
   else
     {
-      ofg = SetTextColor (dis->hDC, sysdep.window_text);
+      ofg = SetTextColor (dis->hDC, enabled ? sysdep.window_text : sysdep.gray_text);
       obg = SetBkColor (dis->hDC, sysdep.window);
     }
 
@@ -364,6 +378,121 @@ ChooseFontP::draw_sample (HWND hwnd, DRAWITEMSTRUCT *dis)
   paint_button_on (dis->hDC, r);
 }
 
+// 枠ごとのフォントを選ぶ。指定を外して代表フォントに任せることもできる
+struct slot_font_arg
+{
+  ChooseFontP *cf;
+  int specified;
+  LOGFONTW lf;
+};
+
+INT_PTR CALLBACK
+ChooseFontP::slot_font_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
+  slot_font_arg *arg = (slot_font_arg *)GetWindowLongPtrW (hwnd, DWLP_USER);
+
+  switch (msg)
+    {
+    case WM_INITDIALOG:
+      {
+        arg = (slot_font_arg *)lparam;
+        SetWindowLongPtrW (hwnd, DWLP_USER, LONG_PTR (arg));
+
+        HDC hdc = GetDC (hwnd);
+        arg->cf->add_font_name (hwnd, hdc);
+        ReleaseDC (hwnd, hdc);
+
+        SendDlgItemMessage (hwnd, IDC_SLOT_DEFAULT, BM_SETCHECK,
+                            arg->specified ? 0 : 1, 0);
+        int i = LB_ERR;
+        if (arg->specified)
+          i = SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_FINDSTRINGEXACT,
+                                   WPARAM (-1), LPARAM (arg->lf.lfFaceName));
+        SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_SETCURSEL, i == LB_ERR ? 0 : i, 0);
+        EnableWindow (GetDlgItem (hwnd, IDC_NAMELIST), arg->specified);
+        return 1;
+      }
+
+    case WM_MEASUREITEM:
+      // 行の高さは、フォント名に添える画像より低くしない
+      ((MEASUREITEMSTRUCT *)lparam)->itemHeight = max (get_font_height (hwnd),
+                                                       dpi_scale (18));
+      return 1;
+
+    case WM_DRAWITEM:
+      if (wparam != IDC_NAMELIST || !arg)
+        return 0;
+      arg->cf->draw_font_list (hwnd, (DRAWITEMSTRUCT *)lparam);
+      return 1;
+
+    case WM_COMMAND:
+      if (!arg)
+        return 0;
+      switch (LOWORD (wparam))
+        {
+        case IDC_SLOT_DEFAULT:
+          {
+            HWND list = GetDlgItem (hwnd, IDC_NAMELIST);
+            EnableWindow (list,
+                          !SendDlgItemMessage (hwnd, IDC_SLOT_DEFAULT, BM_GETCHECK, 0, 0));
+            InvalidateRect (list, 0, 0);
+          }
+          return 1;
+
+        case IDOK:
+          if (SendDlgItemMessage (hwnd, IDC_SLOT_DEFAULT, BM_GETCHECK, 0, 0))
+            *arg->lf.lfFaceName = 0;
+          else
+            {
+              int i = SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETCURSEL, 0, 0);
+              if (i == LB_ERR)
+                return 1;
+              WCHAR face[LF_FACESIZE];
+              if (SendDlgItemMessageW (hwnd, IDC_NAMELIST, LB_GETTEXT,
+                                       i, LPARAM (face)) == LB_ERR)
+                return 1;
+              wcscpy (arg->lf.lfFaceName, face);
+              arg->lf.lfCharSet =
+                BYTE (SendDlgItemMessage (hwnd, IDC_NAMELIST, LB_GETITEMDATA, i, 0) >> 8);
+            }
+          EndDialog (hwnd, IDOK);
+          return 1;
+
+        case IDCANCEL:
+          EndDialog (hwnd, IDCANCEL);
+          return 1;
+        }
+      return 0;
+
+    default:
+      return 0;
+    }
+}
+
+void
+ChooseFontP::notify_set_slot_font (HWND hwnd)
+{
+  int i = SendDlgItemMessage (hwnd, IDC_SLOTLIST, LB_GETCURSEL, 0, 0);
+  if (i == LB_ERR)
+    return;
+  int slot = SendDlgItemMessage (hwnd, IDC_SLOTLIST, LB_GETITEMDATA, i, 0);
+  if (slot < 0 || slot >= FONT_MAX)
+    return;
+
+  slot_font_arg arg;
+  arg.cf = this;
+  arg.specified = *cf_param.fs_logfont[slot].lfFaceName != 0;
+  // 指定が無かった枠に面を与えるときは、大きさを代表フォントから引き継ぐ
+  arg.lf = arg.specified ? cf_param.fs_logfont[slot] : cf_param.fs_primary;
+
+  if (DialogBoxParamW (app.hinst, MAKEINTRESOURCEW (IDD_SLOT_FONT), hwnd,
+                       slot_font_proc, LPARAM (&arg)) != IDOK)
+    return;
+
+  cf_param.fs_logfont[slot] = arg.lf;
+  update_slot_list (hwnd);
+}
+
 int
 ChooseFontP::draw_item (HWND hwnd, int id, DRAWITEMSTRUCT *dis)
 {
@@ -385,9 +514,6 @@ ChooseFontP::draw_item (HWND hwnd, int id, DRAWITEMSTRUCT *dis)
 void
 ChooseFontP::init_dialog (HWND hwnd)
 {
-  add_lang (hwnd);
-  SendDlgItemMessage (hwnd, IDC_LANG, CB_SETCURSEL, 0, 0);
-
   HDC hdc = GetDC (hwnd);
   cf_dpi = GetDeviceCaps (hdc, LOGPIXELSY);
   add_font_name (hwnd, hdc);
@@ -396,7 +522,8 @@ ChooseFontP::init_dialog (HWND hwnd)
   SendDlgItemMessage (hwnd, IDC_SIZE_PIXEL, BM_SETCHECK,
                       cf_param.fs_size_pixel ? 1 : 0, 0);
 
-  notify_lang (hwnd, LBN_SELCHANGE);
+  add_slot_list (hwnd);
+  select_primary (hwnd);
 }
 
 int
@@ -404,8 +531,14 @@ ChooseFontP::do_command (HWND hwnd, int id, int code)
 {
   switch (id)
     {
-    case IDC_LANG:
-      notify_lang (hwnd, code);
+    case IDC_SET_SLOT_FONT:
+      if (code == BN_CLICKED)
+        notify_set_slot_font (hwnd);
+      return 1;
+
+    case IDC_SLOTLIST:
+      if (code == LBN_DBLCLK)
+        notify_set_slot_font (hwnd);
       return 1;
 
     case IDC_NAMELIST:

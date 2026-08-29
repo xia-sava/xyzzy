@@ -80,6 +80,7 @@ DECLARE_CONF (cfgPrintPreview, "PrintPreview");
 DECLARE_CONF (cfgMisc, "Misc");
 DECLARE_CONF (cfgBufferSelector, "BufferSelector");
 DECLARE_CONF (cfgFont, "Font");
+DECLARE_CONF (cfgPrimaryFont, "Primary");
 DECLARE_CONF (cfgPrint, "Print");
 DECLARE_CONF (cfgSystemRoot, "systemRoot");
 DECLARE_CONF (cfgLinenum, "linenum");

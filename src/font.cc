@@ -51,6 +51,9 @@ const FontSet::fontface FontSet::fs_default_face[] =
   {L"Malgun Gothic", L"ＭＳ ゴシック", 0, HANGEUL_CHARSET},
 };
 
+// 挙げたどれも入っていないときの受け皿
+static const WCHAR fallback_face[] = L"ＭＳ ゴシック";
+
 // 挙げた順に、実際に入っているものを使う
 const WCHAR *
 FontSet::default_face (int n, int print)
@@ -61,9 +64,70 @@ FontSet::default_face (int n, int print)
   if (!f.alt)
     return f.disp;
   HDC hdc = GetDC (0);
-  const WCHAR *face = font_exist_p (hdc, f.disp, f.charset) ? f.disp : f.alt;
+  const WCHAR *face = f.disp;
+  if (!font_exist_p (hdc, f.disp, f.charset))
+    face = font_exist_p (hdc, f.alt, f.charset) ? f.alt : fallback_face;
   ReleaseDC (0, hdc);
   return face;
+}
+
+// 枠が受け持つ字形をフォントが持っているかを見るための符号位置
+static const WCHAR slot_probe[FONT_MAX][3] =
+{
+  {0, 0, 0},                    // 欧文は代表フォントそのものが受け持つ
+  {0x3042, 0x6f22, 0xff21},     // 仮名・漢字・全角形
+  {0x4e2d, 0x6c49, 0},          // 簡体字
+  {0x4e2d, 0x3105, 0},          // 繁体字と注音符号
+  {0xd55c, 0x3131, 0xffa1},     // ハングルの音節・互換字母・半角形
+};
+
+static bool
+font_has_glyphs_p (HDC hdc, const LOGFONTW &lf, const WCHAR *probe)
+{
+  HFONT hfont = CreateFontIndirectW (&lf);
+  if (!hfont)
+    return false;
+  HGDIOBJ of = SelectObject (hdc, hfont);
+  bool covers = true;
+  for (int i = 0; i < 3 && probe[i]; i++)
+    {
+      WORD gi;
+      if (GetGlyphIndicesW (hdc, probe + i, 1, &gi, GGI_MARK_NONEXISTING_GLYPHS) == GDI_ERROR
+          || gi == 0xffff)
+        {
+          covers = false;
+          break;
+        }
+    }
+  SelectObject (hdc, of);
+  DeleteObject (hfont);
+  return covers;
+}
+
+// フォントリンクで代わりに描かれる字形の送り幅は GetCharWidth32W に現れないので、
+// 字形を持たないフォントを枠に充てると升目が崩れる。代表フォントを充てるのは
+// その枠の字形を持っているときだけにする
+void
+FontSet::resolve_logfont (LOGFONTW &lf, const FontSetParam &param, int slot)
+{
+  if (*param.fs_logfont[slot].lfFaceName)
+    {
+      lf = param.fs_logfont[slot];
+      return;
+    }
+
+  lf = param.fs_primary;
+  if (slot == FONT_ASCII)
+    return;
+
+  HDC hdc = GetDC (0);
+  const bool covers = font_has_glyphs_p (hdc, lf, slot_probe[slot]);
+  ReleaseDC (0, hdc);
+  if (covers)
+    return;
+
+  wcscpy (lf.lfFaceName, default_face (slot, 0));
+  lf.lfCharSet = BYTE (default_charset (slot));
 }
 
 int
@@ -281,7 +345,16 @@ FontObject::update (LOGFONTW &lf, const lisp keys, const bool recommend_size_p)
         }
     }
 
-  if (lface != Qnil)
+  // :default は枠の指定を外し、代表フォントに任せることを表す
+  if (lface == Kdefault)
+    {
+      if (*lf.lfFaceName)
+        {
+          *lf.lfFaceName = 0;
+          update = true;
+        }
+    }
+  else if (lface != Qnil)
     {
       check_string (lface);
       WCHAR *face = (WCHAR *)alloca (sizeof (WCHAR) * (w2ul (lface) + 1));
@@ -482,23 +555,31 @@ FontSet::create (const FontSetParam &param)
   fs_size_pixel = param.fs_size_pixel;
   fs_ambiguous_width = param.fs_ambiguous_width;
 
+  fs_primary = param.fs_primary;
+  LOGFONTW logfont[FONT_MAX];
+  for (int i = 0; i < FONT_MAX; i++)
+    {
+      fs_logfont[i] = param.fs_logfont[i];
+      resolve_logfont (logfont[i], param, i);
+    }
+
   if (!fs_recommend_size)
     {
       for (int i = 0; i < FONT_MAX; i++)
-        fs_font[i].create (param.fs_logfont[i]);
+        fs_font[i].create (logfont[i]);
 
       for (int i = 0; i < FONT_MAX; i++)
         fs_font[i].get_metrics (hdc);
     }
   else
     {
-      fs_font[FONT_ASCII].create (param.fs_logfont[FONT_ASCII]);
+      fs_font[FONT_ASCII].create (logfont[FONT_ASCII]);
       fs_font[FONT_ASCII].get_metrics (hdc);
 
       for (int i = 1; i < FONT_MAX; i++)
         for (int h = fs_font[FONT_ASCII].size ().cy; h > 0; h--)
           {
-            LOGFONTW lf (param.fs_logfont[i]);
+            LOGFONTW lf (logfont[i]);
             lf.lfHeight = h;
             lf.lfWidth = 0;
             fs_font[i].create (lf);
@@ -513,7 +594,7 @@ FontSet::create (const FontSetParam &param)
   for (int i = 0; i < FONT_MAX; i++)
     if (fs_font[i].size ().cx > fs_size.cx)
       {
-        LOGFONTW lf (param.fs_logfont[i]);
+        LOGFONTW lf (logfont[i]);
         lf.lfWidth = fs_size.cx;
         fs_font[i].create (lf);
         fs_font[i].get_metrics (hdc);
@@ -658,6 +739,7 @@ read_font_conf (const WCHAR *name, int &value)
 void
 FontSet::save_params (const FontSetParam &param)
 {
+  write_conf (font_conf_section (), cfgPrimaryFont, param.fs_primary);
   for (int i = 0; i < FONT_MAX; i++)
     write_conf (font_conf_section (), regent (i), param.fs_logfont[i]);
   write_conf (font_conf_section (), cfgLineSpacing, param.fs_line_spacing);
@@ -674,12 +756,15 @@ fix_charset_proc (ENUMLOGFONTW *elf, NEWTEXTMETRICW *, int type, LPARAM lparam)
   HDC hdc = GetDC (0);
   FontSetParam &param = *(FontSetParam *)lparam;
   if (*elf->elfLogFont.lfFaceName != '@')
-    for (int i = 0; i < FONT_MAX; i++)
+    for (int i = -1; i < FONT_MAX; i++)
       {
-        if (font_exist_p (hdc, param.fs_logfont[i].lfFaceName, param.fs_logfont[i].lfCharSet))
+        LOGFONTW &lf = i < 0 ? param.fs_primary : param.fs_logfont[i];
+        if (!*lf.lfFaceName)
           continue;
-        if (!wcscmp (elf->elfLogFont.lfFaceName, param.fs_logfont[i].lfFaceName))
-          param.fs_logfont[i].lfCharSet = elf->elfLogFont.lfCharSet;
+        if (font_exist_p (hdc, lf.lfFaceName, lf.lfCharSet))
+          continue;
+        if (!wcscmp (elf->elfLogFont.lfFaceName, lf.lfFaceName))
+          lf.lfCharSet = elf->elfLogFont.lfCharSet;
       }
   ReleaseDC (0, hdc);
   return 1;
@@ -704,22 +789,29 @@ FontSet::load_params (FontSetParam &param)
     if (!read_font_conf (regent (i), param.fs_logfont[i]))
       *param.fs_logfont[i].lfFaceName = 0;
 
-  for (int i = 0; i < FONT_MAX; i++)
+  // 代表フォントの記録が無ければ、欧文の枠に書かれているものを引き継ぐ。用字ごとに
+  // フォントを分けていた頃の設定は、これで見た目が変わらないまま読める
+  if (!read_font_conf (cfgPrimaryFont, param.fs_primary))
     {
-      if (!*param.fs_logfont[i].lfFaceName)
+      if (*param.fs_logfont[FONT_ASCII].lfFaceName)
+        param.fs_primary = param.fs_logfont[FONT_ASCII];
+      else
         {
-          wcscpy (param.fs_logfont[i].lfFaceName, default_face (i, 0));
-          if (!i)
-            {
-              LOGFONTW lf;
-              GetObjectW (GetStockObject (SYSTEM_FIXED_FONT), sizeof lf, &lf);
-              param.fs_logfont[0].lfHeight = dpi_scale (lf.lfHeight);
-            }
-          else
-            param.fs_logfont[i].lfHeight = param.fs_logfont[0].lfHeight;
+          LOGFONTW lf;
+          GetObjectW (GetStockObject (SYSTEM_FIXED_FONT), sizeof lf, &lf);
+          wcscpy (param.fs_primary.lfFaceName, default_face (FONT_ASCII, 0));
+          param.fs_primary.lfCharSet = BYTE (default_charset (FONT_ASCII));
+          param.fs_primary.lfHeight = dpi_scale (lf.lfHeight);
         }
-      param.fs_logfont[i].lfPitchAndFamily &= ~3;
-      param.fs_logfont[i].lfPitchAndFamily |= FIXED_PITCH;
+    }
+
+  for (int i = -1; i < FONT_MAX; i++)
+    {
+      LOGFONTW &lf = i < 0 ? param.fs_primary : param.fs_logfont[i];
+      if (!*lf.lfFaceName)
+        continue;
+      lf.lfPitchAndFamily &= ~3;
+      lf.lfPitchAndFamily |= FIXED_PITCH;
     }
 
   HDC hdc = GetDC (0);
@@ -735,17 +827,18 @@ FontSet::init ()
   create (param);
 }
 
+// 枠ごとの面は、指定が無い枠については実際に使っているものを返す
 lisp
 FontSet::make_alist () const
 {
   lisp r = Qnil;
-  for (int i = 0; i < FONT_MAX; i++)
+  for (int i = -1; i < FONT_MAX; i++)
     {
-      LOGFONTW lf = font (i).logfont ();
+      LOGFONTW lf = i < 0 ? primary () : font (i).logfont ();
       int size = lf.lfHeight;
       if (!size_pixel_p ())
         size = FontObject::pixel_to_point (size);
-      r = xcons (make_list (FontSet::lang_key (i),
+      r = xcons (make_list (i < 0 ? Kdefault : FontSet::lang_key (i),
                             Kface, make_string (lf.lfFaceName),
                             Ksize, make_fixnum (size),
                             Ksize_pixel_p, boole (size_pixel_p ()),
@@ -765,8 +858,9 @@ FontSet::update (FontSetParam &param, const lisp lfontset) const
   param.fs_recommend_size = recommend_size_p ();
   param.fs_size_pixel = size_pixel_p ();
   param.fs_ambiguous_width = ambiguous_width ();
+  param.fs_primary = primary ();
   for (int i = 0; i < FONT_MAX; i++)
-    param.fs_logfont[i] = font (i).logfont ();
+    param.fs_logfont[i] = slot_logfont (i);
 
   // Update FontSetParam.fs_logfont by lfontset;
   bool update = false;
@@ -775,6 +869,16 @@ FontSet::update (FontSetParam &param, const lisp lfontset) const
       check_cons (xcar (x));
       lisp llang = Fcaar (x);
       lisp keys = Fcdar (x);
+
+      if (llang == Kdefault)
+        {
+          // 代表フォントは必ず面を持つ。指定を外せるのは枠だけ
+          if (find_keyword (Kface, keys) == Kdefault)
+            FEtype_error (Kdefault, Qstring);
+          if (FontObject::update (param.fs_primary, keys, false))
+            update = true;
+          continue;
+        }
 
       int n = FontSet::lang_key_index (llang);
       if (n < 0)

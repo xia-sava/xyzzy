@@ -629,14 +629,19 @@ ChooseFontPage::get_result ()
       ccp_modified = 1;
     }
 
-  for (i = 0; i < FONT_MAX; i++)
-    if (cfp_font.cf_param.fs_logfont[i].lfHeight != cfp_param.fs_logfont[i].lfHeight
-        || cfp_font.cf_param.fs_logfont[i].lfCharSet != cfp_param.fs_logfont[i].lfCharSet
-        || wcscmp (cfp_font.cf_param.fs_logfont[i].lfFaceName, cfp_param.fs_logfont[i].lfFaceName))
-      {
-        cfp_param.fs_logfont[i] = cfp_font.cf_param.fs_logfont[i];
-        ccp_modified = 1;
-      }
+  for (i = -1; i < FONT_MAX; i++)
+    {
+      const LOGFONTW &from = (i < 0 ? cfp_font.cf_param.fs_primary
+                              : cfp_font.cf_param.fs_logfont[i]);
+      LOGFONTW &to = i < 0 ? cfp_param.fs_primary : cfp_param.fs_logfont[i];
+      if (from.lfHeight != to.lfHeight
+          || from.lfCharSet != to.lfCharSet
+          || wcscmp (from.lfFaceName, to.lfFaceName))
+        {
+          to = from;
+          ccp_modified = 1;
+        }
+    }
   if (cfp_font.cf_param.fs_size_pixel != cfp_param.fs_size_pixel)
     {
       cfp_param.fs_size_pixel = cfp_font.cf_param.fs_size_pixel;
@@ -681,9 +686,9 @@ ChooseFontPage::init_page (PropSheet *sheet, int page_no, PROPSHEETPAGEW *psp)
 {
   ChangeColorsPageP::init_page (IDD_FONT, sheet, page_no, psp);
 
+  cfp_param.fs_primary = app.text_font.primary ();
   for (int i = 0; i < FONT_MAX; i++)
-    GetObjectW (app.text_font.font (i), sizeof cfp_param.fs_logfont[i],
-               &cfp_param.fs_logfont[i]);
+    cfp_param.fs_logfont[i] = app.text_font.slot_logfont (i);
   cfp_param.fs_line_spacing = app.text_font.line_spacing ();
   cfp_param.fs_use_backsl = app.text_font.use_backsl_p ();
   cfp_param.fs_recommend_size = app.text_font.recommend_size_p ();
