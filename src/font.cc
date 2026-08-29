@@ -815,7 +815,7 @@ FontSet::load_params (FontSetParam &param)
   if (!read_conf (cfgFont, cfgBackslash, param.fs_use_backsl))
     param.fs_use_backsl = 0;
   if (!read_conf (cfgFont, cfgRecommendSize, param.fs_recommend_size))
-    param.fs_recommend_size = 0;
+    param.fs_recommend_size = 1;
   if (!read_conf (cfgFont, cfgSizePixel, param.fs_size_pixel))
     param.fs_size_pixel = 0;
   if (!read_conf (cfgFont, cfgAmbiguousWidth, param.fs_ambiguous_width))
