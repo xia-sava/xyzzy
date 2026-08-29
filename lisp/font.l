@@ -18,10 +18,20 @@
 (defconstant +font-size-min-pixel+ 8)
 (defconstant +font-size-max-pixel+ 48)
 
+;; 用字ごとにフォントを分けていた頃の鍵。set-text-fontset は自身で解決するが、
+;; get-text-fontset が返すのは今の枠だけなので、引く側で写す
+(defconstant +text-font-lang-alias+
+  '((:latin . :ascii)
+    (:cyrillic . :ascii)
+    (:greek . :ascii)
+    (:georgian . :ascii)
+    (:ksc5601 . :hangul)))
+
 
 (defun get-text-font (lang)
-  (or (cdr (assoc lang (get-text-fontset)))
-      (error "不正な文字セットです: ~S" lang)))
+  (let ((key (or (cdr (assoc lang +text-font-lang-alias+)) lang)))
+    (or (cdr (assoc key (get-text-fontset)))
+        (error "不正な文字セットです: ~S" lang))))
 
 (defun set-text-font (lang &key face size size-pixel-p)
   (let ((font (get-text-font lang)))
