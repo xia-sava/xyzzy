@@ -441,7 +441,7 @@ BEGIN
     LISTBOX         IDC_SLOTLIST,10,106,125,42,LBS_NOINTEGRALHEIGHT |
                     LBS_USETABSTOPS | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "変更(&G)...",IDC_SET_SLOT_FONT,95,150,40,12
-    CONTROL         "代表フォント以外のサイズはお任せ(&R)",IDC_RECOMMEND_SIZE,
+    CONTROL         "欧文以外のサイズはお任せ(&R)",IDC_RECOMMEND_SIZE,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,166,117,10
     CONTROL         "サイズはピクセルで(&P)",IDC_SIZE_PIXEL,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,177,87,10

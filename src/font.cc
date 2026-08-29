@@ -591,6 +591,9 @@ FontSet::create (const FontSetParam &param)
     }
   else
     {
+      /* 升目の幅は ASCII を描くフォントで決まるので、大きさを任せる基準も欧文の
+         枠にする。代表フォントではない。欧文の枠に指定が無ければ代表フォントが
+         そこへ入るので、そのときは代表フォントが基準になる */
       fs_font[FONT_ASCII].create (logfont[FONT_ASCII]);
       fs_font[FONT_ASCII].get_metrics (hdc);
 
