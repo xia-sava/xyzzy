@@ -129,6 +129,7 @@
 #define IDC_MOVEUD                      148
 #define IDC_MOVELR                      149
 #define IDS_FONT_UNSPECIFIED            150
+#define IDS_FONT_MISSING                151
 #define IDM_PRINTFMT                    150
 #define psh1                            0x0400
 #define psh2                            0x0401
@@ -460,7 +461,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        152
+#define _APS_NEXT_RESOURCE_VALUE        153
 #define _APS_NEXT_COMMAND_VALUE         40035
 #define _APS_NEXT_CONTROL_VALUE         2145
 #define _APS_NEXT_SYMED_VALUE           101

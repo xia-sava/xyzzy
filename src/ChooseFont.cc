@@ -23,25 +23,39 @@ ChooseFontP::update_slot_list (HWND hwnd)
   int sel = SendMessage (list, LB_GETCURSEL, 0, 0);
   SendMessage (list, WM_SETREDRAW, 0, 0);
   SendMessage (list, LB_RESETCONTENT, 0, 0);
+  HDC hdc = GetDC (hwnd);
   for (int i = 0; i < FONT_MAX; i++)
     {
       WCHAR name[128], fmt[128], face[128], buf[256];
       *name = 0;
       LoadStringW (app.hinst, FontSet::lang_id (i), name, numberof (name));
+
+      LOGFONTW lf;
+      FontSet::resolve_logfont (lf, cf_param, i);
       if (*cf_param.fs_logfont[i].lfFaceName)
-        wcscpy (face, cf_param.fs_logfont[i].lfFaceName);
+        wcscpy (face, lf.lfFaceName);
       else
         {
-          LOGFONTW lf;
-          FontSet::resolve_logfont (lf, cf_param, i);
           *fmt = 0;
           LoadStringW (app.hinst, IDS_FONT_UNSPECIFIED, fmt, numberof (fmt));
           _snwprintf_s (face, numberof (face), _TRUNCATE, fmt, lf.lfFaceName);
         }
+
+      // 導入されていないフォントは、指定しても別のもので描かれる
+      if (!font_exist_p (hdc, lf.lfFaceName, lf.lfCharSet))
+        {
+          WCHAR shown[128];
+          wcscpy (shown, face);
+          *fmt = 0;
+          LoadStringW (app.hinst, IDS_FONT_MISSING, fmt, numberof (fmt));
+          _snwprintf_s (face, numberof (face), _TRUNCATE, fmt, shown);
+        }
+
       _snwprintf_s (buf, numberof (buf), _TRUNCATE, L"%s\t%s", name, face);
       int idx = SendMessageW (list, LB_ADDSTRING, 0, LPARAM (buf));
       SendMessage (list, LB_SETITEMDATA, idx, i);
     }
+  ReleaseDC (hwnd, hdc);
   SendMessage (list, LB_SETCURSEL, sel == LB_ERR ? 0 : sel, 0);
   SendMessage (list, WM_SETREDRAW, 1, 0);
   InvalidateRect (list, 0, 0);

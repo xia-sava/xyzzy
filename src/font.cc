@@ -717,8 +717,12 @@ font_conf_section ()
 int
 read_font_conf (const WCHAR *name, LOGFONTW &lf)
 {
-  if (read_conf (font_conf_section (), name, lf))
-    return 1;
+  /* DPI ごとの節に記載があれば、面が読めなくてもそれが答え。指定の無い枠は面が
+     空で記録されるので、ここで [Font] 節へ落とすと古い記載が生き返り、しかも
+     DPI に合わせて換算されて大きさが変わる */
+  WCHAR buf[128];
+  if (read_conf (font_conf_section (), name, buf, numberof (buf)))
+    return read_conf (font_conf_section (), name, lf);
   if (!read_conf (cfgFont, name, lf))
     return 0;
   lf.lfHeight = dpi_scale (lf.lfHeight);
@@ -791,7 +795,8 @@ FontSet::load_params (FontSetParam &param)
 
   // 代表フォントの記録が無ければ、欧文の枠に書かれているものを引き継ぐ。用字ごとに
   // フォントを分けていた頃の設定は、これで見た目が変わらないまま読める
-  if (!read_font_conf (cfgPrimaryFont, param.fs_primary))
+  const bool inherited = !read_font_conf (cfgPrimaryFont, param.fs_primary);
+  if (inherited)
     {
       if (*param.fs_logfont[FONT_ASCII].lfFaceName)
         param.fs_primary = param.fs_logfont[FONT_ASCII];
@@ -803,6 +808,18 @@ FontSet::load_params (FontSetParam &param)
           param.fs_primary.lfCharSet = BYTE (default_charset (FONT_ASCII));
           param.fs_primary.lfHeight = dpi_scale (lf.lfHeight);
         }
+
+      // 代表フォントと同じものを指している枠は、指定を外して代表に従わせる。用字
+      // ごとにフォントを分けていた頃の設定は五つの枠が全て埋まっているため、その
+      // ままでは代表フォントを変えても何も追随しない。同じフォントなので見た目は
+      // 変わらない。大きさは、お任せのときは枠ごとに決め直すので見ない
+      for (int i = 0; i < FONT_MAX; i++)
+        if (*param.fs_logfont[i].lfFaceName
+            && !wcscmp (param.fs_logfont[i].lfFaceName, param.fs_primary.lfFaceName)
+            && param.fs_logfont[i].lfCharSet == param.fs_primary.lfCharSet
+            && (param.fs_recommend_size
+                || param.fs_logfont[i].lfHeight == param.fs_primary.lfHeight))
+          *param.fs_logfont[i].lfFaceName = 0;
     }
 
   for (int i = -1; i < FONT_MAX; i++)
