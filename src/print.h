@@ -98,15 +98,14 @@ public:
   int ps_footer_on;
   int ps_collate;
   int ps_ncopies;
-  int ps_recommend_size;
-  int ps_show_proportional;
   int ps_use_bitmap;
 
   print_range ps_print_range;
   long ps_range_start;
   long ps_range_end;
 
-  PRLOGFONT ps_font[FONT_MAX];
+  // この印刷で使う代表フォント。用字ごとの指定は画面の設定と共通
+  PRLOGFONT ps_primary;
 
   RECT ps_text_margin_pxl;
   LONG ps_header_offset_pxl;
@@ -115,19 +114,18 @@ public:
   LONG ps_line_spacing_pxl;
 
 private:
-  static int CALLBACK check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
-                                        DWORD, LPARAM);
+  void resolve_font (LOGFONTW &, int) const;
 
 public:
   print_settings ();
-  void init_faces ();
+  void init_face ();
   void load_conf ();
   void save_conf ();
   void calc_pxl (const printer_device &);
   // width に 0 以外を渡すと、字がその平均幅に収まるよう横に潰される
-  HFONT make_font (HDC, int, int, int = 0) const;
-  HFONT make_font (HDC hdc, const printer_device &dev, int charset, int width = 0) const
-    {return make_font (hdc, charset, -dev.pt2ypxl (ps_font[charset].point), width);}
+  HFONT make_font (int, int, int = 0) const;
+  HFONT make_font (const printer_device &dev, int slot, int width = 0) const
+    {return make_font (slot, -dev.pt2ypxl (ps_primary.point), width);}
 };
 
 struct PaintCtx;

@@ -317,7 +317,6 @@
 #define IDC_SCALE                       2021
 #define IDC_COMBO                       2021
 #define IDC_CHAR_ENCODING               2021
-#define IDC_LANG                        2021
 #define IDC_EOL_CODE                    2022
 #define IDC_PREVIEW                     2024
 #define IDC_PRINT_SETUP                 2025
@@ -401,7 +400,6 @@
 #define IDC_RANGE_SELECT                2118
 #define IDC_RANGE_PAGE                  2119
 #define IDC_FACE                        2120
-#define IDC_RECOMMEND_SIZE              2121
 #define IDC_PRINT                       2122
 #define IDC_TEST                        2123
 #define IDC_COLLATE                     2124

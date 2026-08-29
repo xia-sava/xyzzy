@@ -260,15 +260,11 @@ BEGIN
                     UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,255,114,9,
                     14
     GROUPBOX        "フォント",IDC_STATIC,7,134,130,87
-    LTEXT           "文字の種類(&K):",IDC_STATIC,13,147,46,8
-    COMBOBOX        IDC_LANG,59,145,74,119,CBS_DROPDOWNLIST | WS_VSCROLL | 
-                    WS_TABSTOP
-    EDITTEXT        IDC_FACE,13,167,83,14,ES_AUTOHSCROLL | ES_READONLY
-    PUSHBUTTON      "変更(&F)...",IDC_FONT,99,167,33,14
-    CONTROL         "欧文以外のサイズはお任せ(&J)",IDC_RECOMMEND_SIZE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,192,106,10
-    CONTROL         "プロポーショナルフォントも表示(&@)",IDC_PROPORTIONAL,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,205,112,10
+    LTEXT           "この印刷で使うフォント(&K):",IDC_STATIC,13,148,110,8
+    EDITTEXT        IDC_FACE,13,160,83,14,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "変更(&F)...",IDC_FONT,99,160,33,14
+    LTEXT           "用字ごとのフォントと、升目に収まらない字の扱いは、共通設定の「フォント」に従います",
+                    IDC_STATIC,13,183,116,32
     LTEXT           "一行の文字数(&M):",IDC_FOLD_STATIC,145,140,59,8
     EDITTEXT        IDC_FOLD,212,137,44,14,ES_RIGHT | ES_MULTILINE | 
                     ES_AUTOHSCROLL

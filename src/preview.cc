@@ -48,7 +48,7 @@ preview_page_window::preview_page_window (const printer_device &dev,
   hsinfo.nPage = UINT (-1);
   hsinfo.nPos = -1;
 
-  p_font_height = MulDiv (p_settings.ps_font[FONT_ASCII].point, p_dev.ydpi (), 720);
+  p_font_height = MulDiv (p_settings.ps_primary.point, p_dev.ydpi (), 720);
 
   //  p_total_pages = engine.count_total_pages ();
 }
@@ -477,7 +477,7 @@ preview_page_window::paint_paper (HDC hdc) const
   SelectObject (hdc, obj);
   DeleteObject (hpen);
 
-  HFONT hfont = p_settings.make_font (p_dev, FONT_ASCII, -d_font_height);
+  HFONT hfont = p_settings.make_font (FONT_ASCII, -d_font_height);
   HGDIOBJ ofont = SelectObject (hdc, hfont);
   TEXTMETRIC tm;
   GetTextMetrics (hdc, &tm);

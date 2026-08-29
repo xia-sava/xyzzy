@@ -202,21 +202,6 @@ print_dialog::update_ncopies () const
     }
 }
 
-void
-print_dialog::add_lang () const
-{
-  for (int i = 0; i < FONT_MAX; i++)
-    {
-      WCHAR buf[128];
-      *buf = 0;
-      LoadStringW (app.hinst, FontSet::lang_id (i), buf, numberof (buf));
-      int idx = SendDlgItemMessageW (m_hwnd, IDC_LANG, CB_ADDSTRING, 0, LPARAM (buf));
-      SendDlgItemMessageW (m_hwnd, IDC_LANG, CB_SETITEMDATA, idx, i);
-    }
-  SendDlgItemMessage (m_hwnd, IDC_LANG, CB_SETCURSEL, FONT_ASCII, 0);
-  set_font_face (FONT_ASCII);
-}
-
 int
 print_dialog::get_int (UINT id, BOOL *f, BOOL sign, int defalt) const
 {
@@ -300,13 +285,11 @@ print_dialog::get_result (int save)
     m_settings.ps_print_range = print_settings::RANGE_SELECTION;
 
   m_settings.ps_print_linenum = IsDlgButtonChecked (m_hwnd, IDC_LINE_NUMBER) == 1;
-  update_font_size ();
 
   if (!get_copies ())
     return 0;
   m_dev.set_dev_copies (m_settings);
 
-  m_settings.ps_show_proportional = IsDlgButtonChecked (m_hwnd, IDC_PROPORTIONAL) == 1;
   m_settings.ps_use_bitmap = IsDlgButtonChecked (m_hwnd, IDC_USE_BITMAP) == 1;
 
   m_settings.ps_multi_column = GetDlgItemInt (m_hwnd, IDC_MULTI_COLUMN, &f, 0);
@@ -444,16 +427,12 @@ print_dialog::init_dialog (HWND)
                       m_settings.ps_footer_on ? 1 : 0, 0);
 
   init_margin (1);
-  add_lang ();
+  set_font_face ();
 
   set_margin (IDC_LINE_SPACING, IDC_LINE_SPACING_SPIN,
               m_settings.ps_line_spacing_pt, 0, MAX_LINE_SPACING,
               1, unit_pt);
 
-  SendDlgItemMessage (m_hwnd, IDC_RECOMMEND_SIZE, BM_SETCHECK,
-                      m_settings.ps_recommend_size ? 1 : 0, 0);
-  SendDlgItemMessage (m_hwnd, IDC_PROPORTIONAL, BM_SETCHECK,
-                      m_settings.ps_show_proportional ? 1 : 0, 0);
   SendDlgItemMessage (m_hwnd, IDC_USE_BITMAP, BM_SETCHECK,
                       m_settings.ps_use_bitmap ? 1 : 0, 0);
 
@@ -581,83 +560,33 @@ print_dialog::range_command (UINT id, int code, UINT spin,
   return 1;
 }
 
-int
-print_dialog::current_lang () const
-{
-  int i = SendDlgItemMessage (m_hwnd, IDC_LANG, CB_GETCURSEL, 0, 0);
-  if (i == CB_ERR)
-    return -1;
-  i = SendDlgItemMessage (m_hwnd, IDC_LANG, CB_GETITEMDATA, i, 0);
-  return i >= 0 && i < FONT_MAX ? i : -1;
-}
-
 void
-print_dialog::set_font_face (int lang) const
+print_dialog::set_font_face () const
 {
   WCHAR buf[LF_FACESIZE + 32];
   WCHAR point[32];
-  if (m_settings.ps_font[lang].point % 10)
+  if (m_settings.ps_primary.point % 10)
     wsprintfW (point, L"%d.%d",
-               m_settings.ps_font[lang].point / 10,
-               m_settings.ps_font[lang].point % 10);
+               m_settings.ps_primary.point / 10,
+               m_settings.ps_primary.point % 10);
   else
-    wsprintfW (point, L"%d", m_settings.ps_font[lang].point / 10);
-  wsprintfW (buf, L"%s, %s",
-             m_settings.ps_font[lang].face,
-             point);
+    wsprintfW (point, L"%d", m_settings.ps_primary.point / 10);
+  wsprintfW (buf, L"%s, %s", m_settings.ps_primary.face, point);
   SetDlgItemTextW (m_hwnd, IDC_FACE, buf);
-}
-
-int
-print_dialog::lang_command (int code) const
-{
-  if (code != CBN_SELCHANGE)
-    return 0;
-  int lang = current_lang ();
-  if (lang < 0)
-    return 0;
-  set_font_face (lang);
-  return 0;
-}
-
-void
-print_dialog::update_font_size ()
-{
-  m_settings.ps_recommend_size = IsDlgButtonChecked (m_hwnd, IDC_RECOMMEND_SIZE) == 1;
-  m_settings.ps_show_proportional = IsDlgButtonChecked (m_hwnd, IDC_PROPORTIONAL) == 1;
-  if (m_settings.ps_recommend_size)
-    for (int i = 0; i < FONT_MAX; i++)
-      m_settings.ps_font[i].point = m_settings.ps_font[FONT_ASCII].point;
-}
-
-int
-print_dialog::recommend_size ()
-{
-  update_font_size ();
-  int lang = current_lang ();
-  if (lang >= 0)
-    set_font_face (lang);
-  return 0;
 }
 
 BOOL
 print_dialog::set_font ()
 {
-  int lang = current_lang ();
-  if (lang < 0)
-    return 0;
-
-  update_font_size ();
-
   LOGFONTW lf;
   bzero (&lf, sizeof lf);
-  wcscpy (lf.lfFaceName, m_settings.ps_font[lang].face);
+  wcscpy (lf.lfFaceName, m_settings.ps_primary.face);
   HDC hdc = GetDC (m_hwnd);
-  lf.lfHeight = MulDiv (m_settings.ps_font[lang].point, GetDeviceCaps (hdc, LOGPIXELSY), 720);
+  lf.lfHeight = MulDiv (m_settings.ps_primary.point, GetDeviceCaps (hdc, LOGPIXELSY), 720);
   ReleaseDC (m_hwnd, hdc);
-  lf.lfCharSet = m_settings.ps_font[lang].charset;
-  lf.lfItalic = m_settings.ps_font[lang].italic;
-  if (m_settings.ps_font[lang].bold)
+  lf.lfCharSet = m_settings.ps_primary.charset;
+  lf.lfItalic = m_settings.ps_primary.italic;
+  if (m_settings.ps_primary.bold)
     lf.lfWeight = 700;
 
   CHOOSEFONTW cf;
@@ -670,20 +599,20 @@ print_dialog::set_font ()
               | CF_INITTOLOGFONTSTRUCT | CF_LIMITSIZE
               | CF_NOSIMULATIONS | CF_NOVECTORFONTS
               | CF_PRINTERFONTS);
-  if (!m_settings.ps_show_proportional)
+  // 固定ピッチだけに絞るかは画面の設定に従う
+  if (!app.text_font.show_proportional_p ())
     cf.Flags |= CF_FIXEDPITCHONLY;
 
   cf.nSizeMin = 5;
   cf.nSizeMax = 72;
   if (ChooseFontW (&cf))
     {
-      wcscpy (m_settings.ps_font[lang].face, lf.lfFaceName);
-      m_settings.ps_font[lang].charset = lf.lfCharSet;
-      m_settings.ps_font[lang].point = cf.iPointSize;
-      m_settings.ps_font[lang].italic = lf.lfItalic;
-      m_settings.ps_font[lang].bold = lf.lfWeight >= 700;
-      update_font_size ();
-      set_font_face (lang);
+      wcscpy (m_settings.ps_primary.face, lf.lfFaceName);
+      m_settings.ps_primary.charset = lf.lfCharSet;
+      m_settings.ps_primary.point = cf.iPointSize;
+      m_settings.ps_primary.italic = lf.lfItalic;
+      m_settings.ps_primary.bold = lf.lfWeight >= 700;
+      set_font_face ();
     }
   return 0;
 }
@@ -918,12 +847,6 @@ print_dialog::command (UINT id, UINT code)
 
     case IDC_FONT:
       return set_font ();
-
-    case IDC_LANG:
-      return lang_command (code);
-
-    case IDC_RECOMMEND_SIZE:
-      return recommend_size ();
 
     case IDC_HEADER:
       return history_command (id, code, IDC_ADD_HEADER, IDC_DELETE_HEADER);

@@ -30,30 +30,29 @@ print_settings::print_settings ()
   ps_footer_on = 1;
   ps_collate = 0;
   ps_ncopies = 1;
-  ps_recommend_size = 1;
-  ps_show_proportional = 1;
   ps_use_bitmap = 0;
 
   ps_print_range = RANGE_ALL;
   ps_range_start = -1;
   ps_range_end = -1;
 
-  bzero (&ps_font, sizeof ps_font);
-  init_faces ();
+  bzero (&ps_primary, sizeof ps_primary);
+  init_face ();
 }
 
+// 指定が無ければ画面の代表フォントに揃える。何もしなければ紙が画面と同じ面になる
 void
-print_settings::init_faces ()
+print_settings::init_face ()
 {
-  for (int i = 0; i < FONT_MAX; i++)
-    if (!*ps_font[i].face)
-      {
-        wcscpy (ps_font[i].face, FontSet::default_face (i, 1));
-        ps_font[i].charset = FontSet::default_charset (i);
-        ps_font[i].point = 100;
-        ps_font[i].bold = 0;
-        ps_font[i].italic = 0;
-      }
+  if (*ps_primary.face)
+    return;
+  const LOGFONTW &lf = app.text_font.primary ();
+  wcscpy (ps_primary.face,
+          *lf.lfFaceName ? lf.lfFaceName : FontSet::default_face (FONT_ASCII, 1));
+  ps_primary.charset = lf.lfCharSet;
+  ps_primary.point = 100;
+  ps_primary.bold = 0;
+  ps_primary.italic = 0;
 }
 
 /* 見出しの書式は CP932 のバイト列で持つ。設定へ出し入れするときだけ移す */
@@ -103,16 +102,13 @@ print_settings::load_conf ()
     ps_header_on = x ? 1 : 0;
   if (read_conf (cfgPrint, cfgFooterOn, x))
     ps_footer_on = x ? 1 : 0;
-  if (!read_conf (cfgPrint, cfgRecommendSize, ps_recommend_size))
-    ps_recommend_size = 1;
-  if (!read_conf (cfgPrint, cfgShowProportional, ps_show_proportional))
-    ps_show_proportional = 1;
   if (!read_conf (cfgPrint, cfgUseBitmap, ps_use_bitmap))
     ps_use_bitmap = 0;
-  for (int i = 0; i < FONT_MAX; i++)
-    if (!read_conf (cfgPrint, FontSet::regent (i), ps_font[i]))
-      *ps_font[i].face = 0;
-  init_faces ();
+  // 用字ごとに持っていた頃の設定は、欧文の枠のものを代表フォントとして引き継ぐ
+  if (!read_conf (cfgPrint, cfgPrimaryFont, ps_primary)
+      && !read_conf (cfgPrint, FontSet::regent (FONT_ASCII), ps_primary))
+    *ps_primary.face = 0;
+  init_face ();
 }
 
 void
@@ -130,11 +126,8 @@ print_settings::save_conf ()
   write_conf_str (cfgPrint, cfgFooter, ps_footer);
   write_conf (cfgPrint, cfgHeaderOn, ps_header_on);
   write_conf (cfgPrint, cfgFooterOn, ps_footer_on);
-  write_conf (cfgPrint, cfgRecommendSize, ps_recommend_size);
-  write_conf (cfgPrint, cfgShowProportional, ps_show_proportional);
   write_conf (cfgPrint, cfgUseBitmap, ps_use_bitmap);
-  for (int i = 0; i < FONT_MAX; i++)
-    write_conf (cfgPrint, FontSet::regent (i), ps_font[i]);
+  write_conf (cfgPrint, cfgPrimaryFont, ps_primary);
 
   flush_conf ();
 }
@@ -152,36 +145,30 @@ print_settings::calc_pxl (const printer_device &dev)
   ps_line_spacing_pxl = dev.pt2ypxl (ps_line_spacing_pt);
 }
 
-int CALLBACK
-print_settings::check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
-                                  DWORD, LPARAM lparam)
+/* 枠に充てる面は画面の設定と共通。枠に指定があればそれ、無ければこの印刷の代表
+   フォント、代表がその枠の字形を持たなければ枠ごとの既定 */
+void
+print_settings::resolve_font (LOGFONTW &lf, int slot) const
 {
-  *(int *)lparam = 1;
-  return 0;
+  FontSetParam param;
+  bzero (&param, sizeof param);
+  wcscpy (param.fs_primary.lfFaceName, ps_primary.face);
+  param.fs_primary.lfCharSet = ps_primary.charset;
+  for (int i = 0; i < FONT_MAX; i++)
+    param.fs_logfont[i] = app.text_font.slot_logfont (i);
+  FontSet::resolve_logfont (lf, param, slot);
 }
 
 HFONT
-print_settings::make_font (HDC hdc, int charset, int height, int width) const
+print_settings::make_font (int slot, int height, int width) const
 {
-  if (charset != FONT_ASCII)
-    {
-      int exists = 0;
-      EnumFontFamiliesW (hdc, ps_font[charset].face,
-                         FONTENUMPROCW (check_valid_font),
-                         LPARAM (&exists));
-      if (!exists)
-        charset = FONT_ASCII;
-    }
-
   LOGFONTW lf;
-  bzero (&lf, sizeof lf);
-  wcscpy (lf.lfFaceName, ps_font[charset].face);
+  resolve_font (lf, slot);
+  // 大きさと肉付きは、枠ごとではなく代表フォントのものに揃える
   lf.lfHeight = height;
   lf.lfWidth = width;
-  lf.lfCharSet = ps_font[charset].charset;
-  lf.lfItalic = ps_font[charset].italic;
-  if (ps_font[charset].bold)
-    lf.lfWeight = 700;
+  lf.lfItalic = ps_primary.italic;
+  lf.lfWeight = ps_primary.bold ? 700 : 0;
 
   return CreateFontIndirectW (&lf);
 }
@@ -542,7 +529,7 @@ void
 print_engine::init_font (HDC hdc)
 {
   for (int i = 0; i < FONT_MAX; i++)
-    pe_hfonts[i] = pe_settings.make_font (hdc, pe_dev, i);
+    pe_hfonts[i] = pe_settings.make_font (pe_dev, i);
 
   HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_ASCII]);
 
@@ -571,7 +558,7 @@ print_engine::init_font (HDC hdc)
       if (cx > pe_cell.cx)
         {
           DeleteObject (pe_hfonts[i]);
-          pe_hfonts[i] = pe_settings.make_font (hdc, pe_dev, i, pe_cell.cx);
+          pe_hfonts[i] = pe_settings.make_font (pe_dev, i, pe_cell.cx);
           SelectObject (hdc, pe_hfonts[i]);
           GetTextMetrics (hdc, &tm);
           cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
