@@ -788,23 +788,23 @@ POINT の位置のテキストの属性を多値で返します。
 ```text
 指定した言語のフォント設定を取得します。
 
-  LANG : フォント設定を変更する言語を指定します。
-         :ascii          : ASCII
-         :japanese       : 日本語
-         :latin          : ラテン文字
-         :cyrillic       : キリル文字
-         :greek          : ギリシャ語
-         :cn-simplified  : 中国語(簡体字)
-         :cn-traditional : 中国語(繁体字)
-         :ksc5601        : 韓国語
-         :georgian       : グルジア文字
+  LANG : フォント設定を取得する枠を指定します。
+         :default        : 代表フォント
+         :ascii          : 欧文
+         :japanese       : 和文
+         :cn-simplified  : 簡体字
+         :cn-traditional : 繁体字
+         :hangul         : ハングル
+
+         :latin :cyrillic :greek :georgian は :ascii の、:ksc5601 は
+         :hangul の別名です。
 
 使用例：
-  (get-text-font :ascii)
-  => (:face "Consolas" :size 14 :size-pixel-p nil)
+  (get-text-font :default)
+  => (:face "BIZ UDGothic" :size 14 :size-pixel-p nil)
 
   (get-text-font :japanese)
-  => (:face "ＭＳ ゴシック" :size 14 :size-pixel-p nil)
+  => (:face "BIZ UDGothic" :size 14 :size-pixel-p nil)
 
 備考：
   xyzzy 0.2.2.238 から利用可能です。
@@ -819,18 +819,17 @@ POINT の位置のテキストの属性を多値で返します。
 
 ```text
 フォント設定を取得します。
+先頭の :default が代表フォントです。指定の無い枠についても、実際に使っている
+フォントを返します。
 
 使用例：
   (get-text-fontset)
-  => ((:ascii :face "Consolas" :size 14 :size-pixel-p nil)
-      (:japanese :face "ＭＳ ゴシック" :size 14 :size-pixel-p nil)
-      (:latin :face "Courier New" :size 13 :size-pixel-p nil)
-      (:cyrillic :face "Courier New" :size 13 :size-pixel-p nil)
-      (:greek :face "Courier New" :size 13 :size-pixel-p nil)
-      (:cn-simplified :face "MS Hei" :size 14 :size-pixel-p nil)
-      (:cn-traditional :face "MingLiu" :size 14 :size-pixel-p nil)
-      (:ksc5601 :face "GulimChe" :size 14 :size-pixel-p nil)
-      (:georgian :face "BPG Courier New U" :size 14 :size-pixel-p nil))
+  => ((:default :face "BIZ UDGothic" :size 14 :size-pixel-p nil)
+      (:ascii :face "BIZ UDGothic" :size 14 :size-pixel-p nil)
+      (:japanese :face "BIZ UDGothic" :size 14 :size-pixel-p nil)
+      (:cn-simplified :face "Microsoft YaHei" :size 14 :size-pixel-p nil)
+      (:cn-traditional :face "Microsoft JhengHei" :size 14 :size-pixel-p nil)
+      (:hangul :face "Malgun Gothic" :size 14 :size-pixel-p nil))
 
 備考：
   xyzzy 0.2.2.238 から利用可能です。
@@ -1384,22 +1383,26 @@ insert / overwrite-char します。
 設定を変更した場合は t が、変更点がなかった場合は nil を返します。
 変更した設定はxyzzy.iniに保存されます。
 
-  LANG          : フォント設定を変更する言語を指定します。
-                  :ascii          : ASCII
-                  :japanese       : 日本語
-                  :latin          : ラテン文字
-                  :cyrillic       : キリル文字
-                  :greek          : ギリシャ語
-                  :cn-simplified  : 中国語(簡体字)
-                  :cn-traditional : 中国語(繁体字)
-                  :ksc5601        : 韓国語
-                  :georgian       : グルジア文字
-  :face         : フォント名を指定します。
+  LANG          : フォント設定を変更する枠を指定します。
+                  :default        : 代表フォント
+                  :ascii          : 欧文
+                  :japanese       : 和文
+                  :cn-simplified  : 簡体字
+                  :cn-traditional : 繁体字
+                  :hangul         : ハングル
+
+                  :latin :cyrillic :greek :georgian は :ascii の、
+                  :ksc5601 は :hangul の別名です。
+  :face         : フォント名を指定します。枠に対して :default を渡すと
+                  指定を外し、代表フォントに任せます。
   :size         : フォントサイズを指定します。
   :size-pixel-p : フォントサイズがピクセル単位なら t を指定します。
 
 使用例：
-  (set-text-font :ascii :size 10)
+  (set-text-font :default :size 10)
+  => t
+
+  (set-text-font :japanese :face :default)
   => t
 
 備考：
@@ -1419,12 +1422,18 @@ FONTSETで指定したフォントの設定を更新します。
 設定を変更した場合は t が、変更点がなかった場合は nil を返します。
 変更した設定はxyzzy.iniに保存されます。
 
+枠の :face に :default を渡すと、その枠の指定を外して代表フォントに任せます。
+代表フォント自身の :face を :default にすることはできません。
+
 使用例：
-  (set-text-fontset '((:ascii :face "Consolas" :size 20 :size-pixel-p t)
-                      (:japanese :face "ＭＳ ゴシック" :size 20 :size-pixel-p t)))
+  (set-text-fontset '((:default :face "Consolas" :size 20 :size-pixel-p t)
+                      (:japanese :face "BIZ UDGothic" :size 20 :size-pixel-p t)))
   => t
 
-  (set-text-fontset '((:ascii :size 16)))
+  (set-text-fontset '((:default :size 16)))
+  => t
+
+  (set-text-fontset '((:japanese :face :default)))
   => t
 
   (set-text-fontset (get-text-fontset))
