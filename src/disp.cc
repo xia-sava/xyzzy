@@ -384,10 +384,14 @@ class paint_chars_ctx
   RECT p_r;
   int p_right;
   const int p_cellw;
+  const int p_offset;
 public:
-  // SCALE は座標を引き伸ばしている倍率。横へ縮めて描くときに使う
-  paint_chars_ctx (int x, int y, const RECT &r, int scale = 1)
-       : p_x (x), p_y (y), p_cellw (scale * app.text_font.cell ().cx)
+  /* SCALE は座標を引き伸ばしている倍率。横へ縮めて描くときに使う。
+     OFFSET は一桁ぶんの寄せ量。二桁の字は二桁ぶんの幅に対して寄せるので、
+     桁数を掛ける */
+  paint_chars_ctx (int x, int y, const RECT &r, int scale = 1, int offset = 0)
+       : p_x (x), p_y (y), p_cellw (scale * app.text_font.cell ().cx),
+         p_offset (offset)
     {
       p_r.left = r.left;
       p_r.top = r.top;
@@ -407,7 +411,7 @@ public:
       else
         w[0] = ucs2_t (lc);
       p_r.right = min (int (p_r.left + p_cellw * ncell), p_right);
-      ExtTextOutW (hdc, p_x, p_y, flags, &p_r, w, n, 0);
+      ExtTextOutW (hdc, p_x + p_offset * ncell, p_y, flags, &p_r, w, n, 0);
       p_r.left = p_r.right;
       p_x += p_cellw * ncell;
     }
@@ -463,12 +467,32 @@ paint_western_chars (HDC hdc, int x, int y, int flags, const RECT &r,
   SelectObject (hdc, of);
 }
 
-// 主フォントは升目に収まる寸法で作られているので、走査ごとにまとめて描く。
-// 送り幅を桁数から与えるので、字形の幅そのものには依らない
+// 補助のフォントは升目に収まる保証が無いので、升目ごとに切り取って描く
+static inline void
+paint_cell_chars (HDC hdc, int x, int y, int flags, const RECT &r,
+                  const glyph_t *g, int len, const FontObject &f)
+{
+  HGDIOBJ of = SelectObject (hdc, f);
+  paint_chars_ctx ctx (x, y + f.offset ().y, r, 1, f.offset ().x);
+  paint_cells (hdc, ctx, flags, g, len);
+  SelectObject (hdc, of);
+}
+
+/* 主フォントは升目に収まる寸法で作られているので、走査ごとにまとめて描く。
+   送り幅を桁数から与えるので、字形の幅そのものには依らない。
+
+   ただし一回の ExtTextOut では字ごとに寄せ量を変えられない。寄せる必要がある
+   フォントは升目ごとに描く方へ回す。升目より狭いフォントを枠に置いたときだけ */
 static inline void
 paint_run_chars (HDC hdc, int x, int y, int flags, const RECT &r,
                  const glyph_t *g, int len, const FontObject &f)
 {
+  if (f.offset ().x)
+    {
+      paint_cell_chars (hdc, x, y, flags, r, g, len, f);
+      return;
+    }
+
   HGDIOBJ of = SelectObject (hdc, f);
   ucs2_t *w = (ucs2_t *)alloca (sizeof *w * (len + 1));
   INT *dx = (INT *)alloca (sizeof *dx * (len + 1));
@@ -481,18 +505,7 @@ paint_run_chars (HDC hdc, int x, int y, int flags, const RECT &r,
       dx[n++] = cellw * ncell;
       i += ncell;
     }
-  ExtTextOutW (hdc, x + f.offset ().x, y + f.offset ().y, flags, &r, w, n, dx);
-  SelectObject (hdc, of);
-}
-
-// 補助のフォントは升目に収まる保証が無いので、升目ごとに切り取って描く
-static inline void
-paint_cell_chars (HDC hdc, int x, int y, int flags, const RECT &r,
-                  const glyph_t *g, int len, const FontObject &f)
-{
-  HGDIOBJ of = SelectObject (hdc, f);
-  paint_chars_ctx ctx (x + f.offset ().x, y + f.offset ().y, r);
-  paint_cells (hdc, ctx, flags, g, len);
+  ExtTextOutW (hdc, x, y + f.offset ().y, flags, &r, w, n, dx);
   SelectObject (hdc, of);
 }
 
@@ -523,7 +536,7 @@ paint_narrowed_chars (HDC hdc, int x, int y, int flags, const RECT &r,
   rr.bottom = r.bottom;
 
   HGDIOBJ of = SelectObject (hdc, f);
-  paint_chars_ctx ctx ((x + f.offset ().x) * n, y + f.offset ().y, rr, n);
+  paint_chars_ctx ctx (x * n, y + f.offset ().y, rr, n, f.offset ().x * n);
   paint_cells (hdc, ctx, flags, g, len);
   SelectObject (hdc, of);
 
