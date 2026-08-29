@@ -345,8 +345,6 @@ struct write_region_param
   int error_open;
 };
 
-struct glyph_width;
-
 struct Buffer
 {
   static Buffer *b_blist;
@@ -818,8 +816,6 @@ struct Buffer
   int parse_fold_line (Point &point, const fold_parameter &param) const
     {return parse_fold_line (point, b_fold_columns, param);}
   void parse_fold_chunk (Chunk *) const;
-  int parse_fold_line (Point &, long, const glyph_width &,
-                       const fold_parameter &) const;
 
   struct update_fold_info
     {

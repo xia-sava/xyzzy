@@ -40,7 +40,6 @@ protected:
   void update_font_size ();
   int get_copies ();
   int recommend_size ();
-  void check_proportional_font () const;
   BOOL wndproc (UINT, WPARAM, LPARAM);
   static BOOL CALLBACK wndproc (HWND, UINT, WPARAM, LPARAM);
   void init_history (UINT, const WCHAR *);

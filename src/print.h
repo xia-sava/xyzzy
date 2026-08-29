@@ -124,19 +124,10 @@ public:
   void load_conf ();
   void save_conf ();
   void calc_pxl (const printer_device &);
-  HFONT make_font (HDC, int, int) const;
-  HFONT make_font (HDC hdc, const printer_device &dev, int charset) const
-    {return make_font (hdc, charset, -dev.pt2ypxl (ps_font[charset].point));}
-};
-
-struct glyph_width
-{
-  HDC hdc;
-  const HFONT *hfonts;
-  int height;
-  // 漢字をどの言語の字形で描くか
-  int lang;
-  short pixel[CHAR_LIMIT];
+  // width に 0 以外を渡すと、字がその平均幅に収まるよう横に潰される
+  HFONT make_font (HDC, int, int, int = 0) const;
+  HFONT make_font (HDC hdc, const printer_device &dev, int charset, int width = 0) const
+    {return make_font (hdc, charset, -dev.pt2ypxl (ps_font[charset].point), width);}
 };
 
 struct PaintCtx;
@@ -157,13 +148,11 @@ class print_engine
 
   SIZE pe_cell;
   SIZE pe_print_cell;
-  int pe_fixed_pitch;
   HFONT pe_hfonts[FONT_MAX];
   HFONT pe_surrogate_font;
   HFONT pe_replacement_font;
   POINT pe_offset[FONT_MAX];
   int pe_offset2x[FONT_MAX];
-  glyph_width pe_glyph_width;
 
   RECT pe_area;
   int pe_sep_pxl;
@@ -173,11 +162,6 @@ class print_engine
   POINT pe_footer;
   int pe_fold_columns;
   fold_parameter pe_fold_param;
-
-  int pe_digit_width;
-  int pe_linenum_width;
-  int pe_start_pixel;
-  int pe_copying_width;
 
   HBITMAP pe_hbm;
   void *pe_bits;
@@ -245,7 +229,6 @@ private:
   void paint_footer (HDC);
   int paint_fmt (HDC, const char *, int);
   void paint_string (HDC, int, int, const char *, int) const;
-  int get_extent (const char *, int) const;
 
   SYSTEMTIME &current_time ();
 

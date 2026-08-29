@@ -161,7 +161,7 @@ print_settings::check_valid_font (const ENUMLOGFONTW *, const NEWTEXTMETRICW *,
 }
 
 HFONT
-print_settings::make_font (HDC hdc, int charset, int height) const
+print_settings::make_font (HDC hdc, int charset, int height, int width) const
 {
   if (charset != FONT_ASCII)
     {
@@ -177,6 +177,7 @@ print_settings::make_font (HDC hdc, int charset, int height) const
   bzero (&lf, sizeof lf);
   wcscpy (lf.lfFaceName, ps_font[charset].face);
   lf.lfHeight = height;
+  lf.lfWidth = width;
   lf.lfCharSet = ps_font[charset].charset;
   lf.lfItalic = ps_font[charset].italic;
   if (ps_font[charset].bold)
@@ -561,39 +562,23 @@ print_engine::init_font (HDC hdc)
     DeleteObject (pe_replacement_font);
   pe_replacement_font = create_replacement_font (pe_cell);
 
-  pe_fixed_pitch = 1;
-
   for (int i = 0; i < FONT_MAX; i++)
     {
       SelectObject (hdc, pe_hfonts[i]);
       GetTextMetrics (hdc, &tm);
       int cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
+      // 升目からはみ出す枠は、平均幅を升目に合わせて横に潰す
+      if (cx > pe_cell.cx)
+        {
+          DeleteObject (pe_hfonts[i]);
+          pe_hfonts[i] = pe_settings.make_font (hdc, pe_dev, i, pe_cell.cx);
+          SelectObject (hdc, pe_hfonts[i]);
+          GetTextMetrics (hdc, &tm);
+          cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
+        }
       pe_offset[i].x = (pe_cell.cx - cx) / 2;
       pe_offset2x[i] = pe_cell.cx - cx;
       pe_offset[i].y = (pe_cell.cy - tm.tmHeight) / 2;
-      if (tm.tmPitchAndFamily & TMPF_FIXED_PITCH)
-        pe_fixed_pitch = 0;
-    }
-
-  if (!pe_fixed_pitch)
-    {
-      int i;
-      for (i = 0; i < FONT_MAX; i++)
-        pe_offset[i].x = pe_offset2x[i] = 0;
-
-      pe_glyph_width.hdc = hdc;
-      pe_glyph_width.hfonts = pe_hfonts;
-      pe_glyph_width.height = pe_print_cell.cy;
-      pe_glyph_width.lang = pe_bp->char_language ();
-      for (i = 0; i < numberof (pe_glyph_width.pixel); i++)
-        pe_glyph_width.pixel[i] = -1;
-      for (i = ' '; i < CC_DEL; i++)
-        get_glyph_width (i, pe_glyph_width);
-      for (i = 0; i < ' '; i++)
-        pe_glyph_width.pixel[i] = (get_glyph_width ('^', pe_glyph_width)
-                                   + get_glyph_width ('@' + i, pe_glyph_width));
-      pe_glyph_width.pixel[CC_DEL] = (get_glyph_width ('^', pe_glyph_width)
-                                      + get_glyph_width ('?' + i, pe_glyph_width));
     }
 
   SelectObject (hdc, of);
@@ -612,57 +597,37 @@ print_engine::init_area (HDC hdc)
                     - (pe_settings.ps_multi_column - 1) * pe_sep_pxl)
                    / pe_settings.ps_multi_column);
 
-  if (pe_fixed_pitch)
+  int max_chars;
+  pe_ech.cx = pe_page_width / pe_print_cell.cx;
+  if (!pe_settings.ps_fold_width)
     {
-      int max_chars;
-      pe_ech.cx = pe_page_width / pe_print_cell.cx;
-      if (!pe_settings.ps_fold_width)
-        {
-          pe_fold_columns = pe_ech.cx;
-          if (pe_settings.ps_print_linenum)
-            pe_fold_columns -= LINENUM_WIDTH + 1;
-          if (pe_fold_columns < 4)
-            return WIDTH_TOO_SMALL;
-          max_chars = pe_ech.cx;
-        }
-      else
-        {
-          pe_fold_columns = pe_settings.ps_fold_width;
-          if (pe_fold_columns < 4)
-            return FOLD_TOO_SMALL;
-          int extra = pe_settings.ps_print_linenum ? LINENUM_WIDTH + 1 : 0;
-          if (pe_ech.cx < extra + 4)
-            return WIDTH_TOO_SMALL;
-          max_chars = pe_fold_columns + extra;
-          if (max_chars > pe_ech.cx)
-            return FOLD_TOO_LARGE | (pe_ech.cx - extra);
-        }
-
-      int right_margin = (pe_settings.ps_text_margin_pxl.right
-                          - pe_dev.min_margin_pxl ().right);
-      if (pe_settings.ps_multi_column > 1
-          && pe_settings.ps_column_sep_pxl < right_margin)
-        right_margin = pe_settings.ps_column_sep_pxl;
-      int extend = ((pe_page_width + right_margin) / pe_print_cell.cx - max_chars) / 2;
-      pe_fold_param.extend_limit = max (0, min (pe_fold_param.extend_limit, extend));
+      pe_fold_columns = pe_ech.cx;
+      if (pe_settings.ps_print_linenum)
+        pe_fold_columns -= LINENUM_WIDTH + 1;
+      if (pe_fold_columns < 4)
+        return WIDTH_TOO_SMALL;
+      max_chars = pe_ech.cx;
     }
   else
     {
-      pe_linenum_width = 0;
-      pe_start_pixel = 0;
-      pe_copying_width = pe_page_width;
-      pe_digit_width = 0;
-      if (pe_settings.ps_print_linenum)
-        {
-          for (int i = '0'; i <= '9'; i++)
-            pe_digit_width = max (pe_digit_width, (int)pe_glyph_width.pixel[i]);
-          pe_linenum_width = pe_digit_width * LINENUM_WIDTH;
-          pe_start_pixel = pe_linenum_width + pe_glyph_width.pixel['m'];
-          pe_copying_width -= pe_start_pixel;
-        }
-      if (pe_copying_width / pe_print_cell.cx < 4)
+      pe_fold_columns = pe_settings.ps_fold_width;
+      if (pe_fold_columns < 4)
+        return FOLD_TOO_SMALL;
+      int extra = pe_settings.ps_print_linenum ? LINENUM_WIDTH + 1 : 0;
+      if (pe_ech.cx < extra + 4)
         return WIDTH_TOO_SMALL;
+      max_chars = pe_fold_columns + extra;
+      if (max_chars > pe_ech.cx)
+        return FOLD_TOO_LARGE | (pe_ech.cx - extra);
     }
+
+  int right_margin = (pe_settings.ps_text_margin_pxl.right
+                      - pe_dev.min_margin_pxl ().right);
+  if (pe_settings.ps_multi_column > 1
+      && pe_settings.ps_column_sep_pxl < right_margin)
+    right_margin = pe_settings.ps_column_sep_pxl;
+  int extend = ((pe_page_width + right_margin) / pe_print_cell.cx - max_chars) / 2;
+  pe_fold_param.extend_limit = max (0, min (pe_fold_param.extend_limit, extend));
 
   pe_ech.cy = (pe_area.bottom - pe_area.top
                + pe_settings.ps_line_spacing_pxl) / pe_print_cell.cy;
@@ -783,10 +748,7 @@ print_engine::next_line (Point &point) const
 {
   Chunk *cp = point.p_chunk;
   point_t opoint = point.p_point - point.p_offset;
-  if (pe_fixed_pitch)
-    pe_bp->parse_fold_line (point, pe_fold_columns, pe_fold_param);
-  else
-    pe_bp->parse_fold_line (point, pe_copying_width, pe_glyph_width, pe_fold_param);
+  pe_bp->parse_fold_line (point, pe_fold_columns, pe_fold_param);
   if (!point.p_chunk)
     {
       while (1)
@@ -847,25 +809,21 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
       ExtTextOutW (ctx.hdc, ctx.x, ctx.y, 0, 0, &c, 1, 0);
     }
   ctx.column++;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx
-            : get_glyph_width (cc, pe_glyph_width));
+  ctx.x += pe_print_cell.cx;
 }
 
 // 担当のフォントで描く。二桁の文字は二桁ぶんの幅に対して字を中央へ寄せる
 void
 print_engine::paint_char (PaintCtx &ctx, Char cc) const
 {
-  int l = charset_width (cc);
+  int l = char_width (cc);
   ucs2_t wc = ucs2_t (cc);
   int f = font_slot_of (cc, pe_bp->char_language ());
   SelectObject (ctx.hdc, pe_hfonts[f]);
   ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? pe_offset2x[f] : pe_offset[f].x),
                ctx.y + pe_offset[f].y, 0, 0, &wc, 1, 0);
   ctx.column += l;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx * l
-            : get_glyph_width (cc, pe_glyph_width));
+  ctx.x += pe_print_cell.cx * l;
 }
 
 // 対になったサロゲート。二桁を占める一文字として、専用のフォントで描く
@@ -878,14 +836,7 @@ print_engine::paint_surrogate_pair (PaintCtx &ctx, ucs4_t lc) const
   HGDIOBJ of = SelectObject (ctx.hdc, pe_surrogate_font);
   ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, w, 2, 0);
   ctx.column += 2;
-  if (pe_fixed_pitch)
-    ctx.x += pe_print_cell.cx * 2;
-  else
-    {
-      SIZE sz;
-      GetTextExtentPoint32W (ctx.hdc, w, 2, &sz);
-      ctx.x += sz.cx;
-    }
+  ctx.x += pe_print_cell.cx * 2;
   SelectObject (ctx.hdc, of);
 }
 
@@ -898,9 +849,7 @@ print_engine::paint_replacement (PaintCtx &ctx, Char cc) const
   ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, &wc, 1, 0);
   SelectObject (ctx.hdc, of);
   ctx.column++;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx
-            : get_glyph_width (cc, pe_glyph_width));
+  ctx.x += pe_print_cell.cx;
 }
 
 void
@@ -910,21 +859,12 @@ print_engine::paint_lucida (PaintCtx &ctx, Char cc) const
   static LOGFONTW lf = {0,0,0,0,0,0,0,0,0,0,0,0,0,LUCIDA_FACE_NAME};
   lf.lfHeight = pe_cell.cy;
   HGDIOBJ of = SelectObject (ctx.hdc, CreateFontIndirectW (&lf));
-  int o;
-  if (pe_fixed_pitch)
-    o = (LUCIDA_OFFSET (wc - UNICODE_SMLCDM_MIN)
-         * pe_cell.cy / LUCIDA_BASE_HEIGHT) + pe_print_cell.cx / 2;
-  else
-    {
-      const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
-      o = p->a >= 0 ? 0 : -p->a * pe_cell.cy / LUCIDA_BASE_HEIGHT;
-    }
+  int o = (LUCIDA_OFFSET (wc - UNICODE_SMLCDM_MIN)
+           * pe_cell.cy / LUCIDA_BASE_HEIGHT) + pe_print_cell.cx / 2;
   ExtTextOutW (ctx.hdc, ctx.x + o, ctx.y, 0, 0, &wc, 1, 0);
   DeleteObject (SelectObject (ctx.hdc, of));
   ctx.column++;
-  ctx.x += (pe_fixed_pitch
-            ? pe_print_cell.cx
-            : get_glyph_width (cc, pe_glyph_width));
+  ctx.x += pe_print_cell.cx;
 }
 
 int
@@ -949,31 +889,16 @@ print_engine::paint_line (HDC hdc, int x, int y, Point &cur_point, long &linenum
         {
           char b[16];
           sprintf (b, "%*d ", LINENUM_WIDTH, linenum % 1000000);
-          if (pe_fixed_pitch)
-            for (int i = 0; i < LINENUM_WIDTH + 1; i++)
-              paint_ascii (ctx, b[i]);
-          else
-            {
-              for (int i = 0; i < LINENUM_WIDTH + 1; i++)
-                {
-                  ctx.x = x + pe_digit_width * i;
-                  paint_ascii (ctx, b[i]);
-                }
-              ctx.x = x + pe_start_pixel;
-            }
+          for (int i = 0; i < LINENUM_WIDTH + 1; i++)
+            paint_ascii (ctx, b[i]);
         }
       linenum++;
     }
   else
     {
       if (hdc && pe_settings.ps_print_linenum)
-        {
-          if (pe_fixed_pitch)
-            for (int i = 0; i < LINENUM_WIDTH + 1; i++)
-              paint_ascii (ctx, ' ');
-          else
-            ctx.x = x + pe_start_pixel;
-        }
+        for (int i = 0; i < LINENUM_WIDTH + 1; i++)
+          paint_ascii (ctx, ' ');
     }
 
   if (form_feed_p (point))
@@ -1060,21 +985,6 @@ print_engine::paint_string (HDC hdc, int x, int y, const char *s, int l) const
 }
 
 int
-print_engine::get_extent (const char *s, int l) const
-{
-  int cx = 0;
-  for (const u_char *p = (const u_char *)s, *pe = p + l; p < pe;)
-    {
-      int c = *p++;
-      if (SJISP (c) && p != pe)
-        cx += get_glyph_width (s2w_char ((c << 8) | *p++), pe_glyph_width);
-      else
-        cx += get_glyph_width (s2w_char (c), pe_glyph_width);
-    }
-  return cx;
-}
-
-int
 print_engine::paint_fmt (HDC hdc, const char *fmt, int y)
 {
   if (!*fmt)
@@ -1089,12 +999,8 @@ print_engine::paint_fmt (HDC hdc, const char *fmt, int y)
   b[1] = left ? left : buf;
   b[2] = (right && right >= b[1]) ? right : b[1] + strlen (b[1]);
   b[3] = b[2] + strlen (b[2]);
-  if (pe_fixed_pitch)
-    for (int i = 0; i < 3; i++)
-      width[i] = (b[i + 1] - b[i]) * pe_print_cell.cx;
-  else
-    for (int i = 0; i < 3; i++)
-      width[i] = get_extent (b[i], b[i + 1] - b[i]);
+  for (int i = 0; i < 3; i++)
+    width[i] = (b[i + 1] - b[i]) * pe_print_cell.cx;
   x[0] = pe_area.left;
   x[2] = pe_area.right - width[2];
   x[1] = (x[0] + width[0] + x[2] - width[1]) / 2;
@@ -1134,7 +1040,6 @@ print_engine::paint (HDC hdc_print, int save)
 
   int omode = SetBkMode (hdc, TRANSPARENT);
   HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_JP]);
-  pe_glyph_width.hdc = hdc;
 
   paint_header (hdc);
   paint_footer (hdc);
@@ -1196,7 +1101,6 @@ int
 print_engine::skip_page (HDC hdc, Point &point, long &linenum)
 {
   HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_JP]);
-  pe_glyph_width.hdc = hdc;
   for (int col = 0; col < pe_settings.ps_multi_column; col++)
     for (int line = 0; line < pe_ech.cy; line++)
       if (paint_line (0, 0, 0, point, linenum))
@@ -1971,36 +1875,4 @@ print_engine::page_cache::save (const Point &point, int linenum, int page)
   pi->linenum = linenum;
 
   return 1;
-}
-
-int
-get_glyph_width (Char cc, const glyph_width &gw)
-{
-  if (cc >= CHAR_LIMIT)
-    return 0;
-  if (gw.pixel[cc] >= 0)
-    return gw.pixel[cc];
-
-  SIZE sz;
-  ucs2_t wc = ucs2_t (cc);
-  if (cc < 0x80)
-    {
-      WCHAR c = WCHAR (cc);
-      SelectObject (gw.hdc, gw.hfonts[FONT_ASCII]);
-      GetTextExtentPoint32W (gw.hdc, &c, 1, &sz);
-    }
-  else if (cc >= UNICODE_SMLCDM_MIN && cc <= UNICODE_SMLCDM_MAX)
-    {
-      const lucida_spacing *p = &lucida_spacing_table[wc - UNICODE_SMLCDM_MIN];
-      sz.cx = p->a >= 0 ? p->a * 2 + p->b : LUCIDA_SPACING * 2 + p->b;
-      sz.cx = sz.cx * gw.height / LUCIDA_BASE_HEIGHT;
-    }
-  else
-    {
-      SelectObject (gw.hdc, gw.hfonts[font_slot_of (cc, gw.lang)]);
-      GetTextExtentPoint32W (gw.hdc, &wc, 1, &sz);
-    }
-
-  const_cast <short *> (gw.pixel)[cc] = (short)sz.cx;
-  return sz.cx;
 }

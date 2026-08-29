@@ -314,12 +314,9 @@ print_dialog::get_result (int save)
       || m_settings.ps_multi_column > print_settings::COLUMN_MAX)
     return notice (IDC_MULTI_COLUMN, IDS_MULTI_COLUMN);
 
-  if (IsWindowEnabled (GetDlgItem (m_hwnd, IDC_FOLD)))
-    {
-      m_settings.ps_fold_width = GetDlgItemInt (m_hwnd, IDC_FOLD, &f, 0);
-      if (!f || m_settings.ps_fold_width < 0)
-        return notice (IDC_FOLD, IDS_FOLD);
-    }
+  m_settings.ps_fold_width = GetDlgItemInt (m_hwnd, IDC_FOLD, &f, 0);
+  if (!f || m_settings.ps_fold_width < 0)
+    return notice (IDC_FOLD, IDS_FOLD);
 
   if (!check_margin_text (IDC_LEFT, m_settings.ps_text_margin_mm.left,
                           m_dev.min_margin_mm ().left,
@@ -448,7 +445,6 @@ print_dialog::init_dialog (HWND)
 
   init_margin (1);
   add_lang ();
-  check_proportional_font ();
 
   set_margin (IDC_LINE_SPACING, IDC_LINE_SPACING_SPIN,
               m_settings.ps_line_spacing_pt, 0, MAX_LINE_SPACING,
@@ -634,23 +630,6 @@ print_dialog::update_font_size ()
       m_settings.ps_font[i].point = m_settings.ps_font[FONT_ASCII].point;
 }
 
-void
-print_dialog::check_proportional_font () const
-{
-  int fixed = 1;
-  for (int i = 0; i < FONT_MAX; i++)
-    {
-      HGDIOBJ of = SelectObject (m_dev, m_settings.make_font (m_dev, m_dev, i));
-      TEXTMETRIC tm;
-      GetTextMetrics (m_dev, &tm);
-      DeleteObject (SelectObject (m_dev, of));
-      if (tm.tmPitchAndFamily & TMPF_FIXED_PITCH)
-        fixed = 0;
-    }
-  EnableWindow (GetDlgItem (m_hwnd, IDC_FOLD), fixed);
-  EnableWindow (GetDlgItem (m_hwnd, IDC_FOLD_STATIC), fixed);
-}
-
 int
 print_dialog::recommend_size ()
 {
@@ -705,7 +684,6 @@ print_dialog::set_font ()
       m_settings.ps_font[lang].bold = lf.lfWeight >= 700;
       update_font_size ();
       set_font_face (lang);
-      check_proportional_font ();
     }
   return 0;
 }
@@ -721,7 +699,6 @@ print_dialog::print_setup ()
   m_dev.get_dev_copies (m_settings);
   update_ncopies ();
   init_margin (0);
-  check_proportional_font ();
   return 1;
 }
 

@@ -56,7 +56,6 @@ void format_message (message_code, ...);
 int format_yes_or_no_p (message_code, ...);
 char *print_key_sequence (char *, char *, Char);
 void ding (int);
-int get_glyph_width (Char, const struct glyph_width &);
 
 /* environ.cc */
 void init_environ ();
