@@ -122,10 +122,10 @@ public:
   void load_conf ();
   void save_conf ();
   void calc_pxl (const printer_device &);
-  // width に 0 以外を渡すと、字がその平均幅に収まるよう横に潰される
-  HFONT make_font (int, int, int = 0) const;
-  HFONT make_font (const printer_device &dev, int slot, int width = 0) const
-    {return make_font (slot, -dev.pt2ypxl (ps_primary.point), width);}
+  void make_logfont (LOGFONTW &, int, int) const;
+  void make_logfont (LOGFONTW &lf, const printer_device &dev, int slot) const
+    {make_logfont (lf, slot, -dev.pt2ypxl (ps_primary.point));}
+  HFONT make_font (int, int) const;
 };
 
 struct PaintCtx;
@@ -146,11 +146,9 @@ class print_engine
 
   SIZE pe_cell;
   SIZE pe_print_cell;
-  HFONT pe_hfonts[FONT_MAX];
+  FontObject pe_fonts[FONT_MAX];
   HFONT pe_surrogate_font;
   HFONT pe_replacement_font;
-  POINT pe_offset[FONT_MAX];
-  int pe_offset2x[FONT_MAX];
 
   RECT pe_area;
   int pe_sep_pxl;
@@ -213,6 +211,9 @@ private:
 
   int record_page (int, const Point &, int, int);
   void cleanup ();
+
+  // 二桁を占める字を、二桁ぶんの幅に対して中央へ寄せる量
+  int offset2x (int slot) const {return pe_cell.cx - pe_fonts[slot].size ().cx;}
 
   int next_line (Point &) const;
   int form_feed_p (const Point &) const;

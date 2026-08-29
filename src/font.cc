@@ -328,6 +328,56 @@ FontObject::calc_offset (const SIZE &sz)
   fo_offset.y = (sz.cy - fo_size.cy) / 2;
 }
 
+/* 枠ごとのフォントを作り、升目に収まるよう整える。升目の寸法は欧文の枠を描く
+   フォントで決まる。代表フォントではない。欧文の枠に指定が無ければ代表フォントが
+   そこへ入るので、そのときは代表フォントが基準になる。
+
+   収まらない枠は、recommend_size なら字の形を保ったまま高さを下げ、そうでなければ
+   平均幅を升目に合わせて横に潰す。画面と印刷はここを共有する */
+void
+create_font_set (HDC hdc, FontObject *fonts, const LOGFONTW *logfont,
+                 int recommend_size, SIZE &size)
+{
+  if (!recommend_size)
+    for (int i = 0; i < FONT_MAX; i++)
+      {
+        fonts[i].create (logfont[i]);
+        fonts[i].get_metrics (hdc);
+      }
+  else
+    {
+      fonts[FONT_ASCII].create (logfont[FONT_ASCII]);
+      fonts[FONT_ASCII].get_metrics (hdc);
+
+      for (int i = 1; i < FONT_MAX; i++)
+        for (int h = fonts[FONT_ASCII].size ().cy; h > 0; h--)
+          {
+            LOGFONTW lf (logfont[i]);
+            // 高さの符号は、字の高さと升目の高さのどちらを指すかを決める
+            lf.lfHeight = logfont[i].lfHeight < 0 ? -h : h;
+            lf.lfWidth = 0;
+            fonts[i].create (lf);
+            fonts[i].get_metrics (hdc);
+            if (fonts[i].size ().cx <= fonts[FONT_ASCII].size ().cx)
+              break;
+          }
+    }
+
+  size = fonts[FONT_ASCII].size ();
+
+  for (int i = 0; i < FONT_MAX; i++)
+    if (fonts[i].size ().cx > size.cx)
+      {
+        LOGFONTW lf (logfont[i]);
+        lf.lfWidth = size.cx;
+        fonts[i].create (lf);
+        fonts[i].get_metrics (hdc);
+      }
+
+  for (int i = 0; i < FONT_MAX; i++)
+    fonts[i].calc_offset (size);
+}
+
 const bool
 FontObject::update (LOGFONTW &lf, const lisp keys, const bool recommend_size_p)
 {
@@ -581,45 +631,7 @@ FontSet::create (const FontSetParam &param)
       resolve_logfont (logfont[i], param, i);
     }
 
-  if (!fs_recommend_size)
-    {
-      for (int i = 0; i < FONT_MAX; i++)
-        fs_font[i].create (logfont[i]);
-
-      for (int i = 0; i < FONT_MAX; i++)
-        fs_font[i].get_metrics (hdc);
-    }
-  else
-    {
-      /* 升目の幅は ASCII を描くフォントで決まるので、大きさを任せる基準も欧文の
-         枠にする。代表フォントではない。欧文の枠に指定が無ければ代表フォントが
-         そこへ入るので、そのときは代表フォントが基準になる */
-      fs_font[FONT_ASCII].create (logfont[FONT_ASCII]);
-      fs_font[FONT_ASCII].get_metrics (hdc);
-
-      for (int i = 1; i < FONT_MAX; i++)
-        for (int h = fs_font[FONT_ASCII].size ().cy; h > 0; h--)
-          {
-            LOGFONTW lf (logfont[i]);
-            lf.lfHeight = h;
-            lf.lfWidth = 0;
-            fs_font[i].create (lf);
-            fs_font[i].get_metrics (hdc);
-            if (fs_font[i].size ().cx <= fs_font[FONT_ASCII].size ().cx)
-              break;
-          }
-    }
-
-  fs_size = fs_font[FONT_ASCII].size ();
-
-  for (int i = 0; i < FONT_MAX; i++)
-    if (fs_font[i].size ().cx > fs_size.cx)
-      {
-        LOGFONTW lf (logfont[i]);
-        lf.lfWidth = fs_size.cx;
-        fs_font[i].create (lf);
-        fs_font[i].get_metrics (hdc);
-      }
+  create_font_set (hdc, fs_font, logfont, fs_recommend_size, fs_size);
 
   ReleaseDC (0, hdc);
 
@@ -629,9 +641,6 @@ FontSet::create (const FontSetParam &param)
   fs_line_width = fs_size.cy / 12;
   if (!fs_line_width)
     fs_line_width = 1;
-
-  for (int i = 0; i < FONT_MAX; i++)
-    fs_font[i].calc_offset (fs_size);
 
   measure_wide_glyphs ();
   update_char_columns ();

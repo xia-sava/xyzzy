@@ -159,17 +159,22 @@ print_settings::resolve_font (LOGFONTW &lf, int slot) const
   FontSet::resolve_logfont (lf, param, slot);
 }
 
-HFONT
-print_settings::make_font (int slot, int height, int width) const
+void
+print_settings::make_logfont (LOGFONTW &lf, int slot, int height) const
 {
-  LOGFONTW lf;
   resolve_font (lf, slot);
   // 大きさと肉付きは、枠ごとではなく代表フォントのものに揃える
   lf.lfHeight = height;
-  lf.lfWidth = width;
+  lf.lfWidth = 0;
   lf.lfItalic = ps_primary.italic;
   lf.lfWeight = ps_primary.bold ? 700 : 0;
+}
 
+HFONT
+print_settings::make_font (int slot, int height) const
+{
+  LOGFONTW lf;
+  make_logfont (lf, slot, height);
   return CreateFontIndirectW (&lf);
 }
 
@@ -489,19 +494,11 @@ print_engine::print_engine (Buffer *bp, const printer_device &dev,
      : pe_bp (bp), pe_dev (dev), pe_settings (settings),
        pe_surrogate_font (0), pe_replacement_font (0), pe_hbm (0)
 {
-  for (int i = 0; i < FONT_MAX; i++)
-    pe_hfonts[i] = 0;
 }
 
 void
 print_engine::cleanup ()
 {
-  for (int i = 0; i < FONT_MAX; i++)
-    if (pe_hfonts[i])
-      {
-        DeleteObject (pe_hfonts[i]);
-        pe_hfonts[i] = 0;
-      }
   if (pe_surrogate_font)
     {
       DeleteObject (pe_surrogate_font);
@@ -528,15 +525,13 @@ print_engine::~print_engine ()
 void
 print_engine::init_font (HDC hdc)
 {
+  LOGFONTW logfont[FONT_MAX];
   for (int i = 0; i < FONT_MAX; i++)
-    pe_hfonts[i] = pe_settings.make_font (pe_dev, i);
+    pe_settings.make_logfont (logfont[i], pe_dev, i);
 
-  HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_ASCII]);
-
-  TEXTMETRIC tm;
-  GetTextMetrics (hdc, &tm);
-  pe_cell.cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
-  pe_cell.cy = tm.tmHeight;
+  // 升目に収まらない字の扱いは画面の設定に従う
+  create_font_set (hdc, pe_fonts, logfont,
+                   app.text_font.recommend_size_p (), pe_cell);
 
   pe_print_cell = pe_cell;
   pe_print_cell.cy += pe_settings.ps_line_spacing_pxl;
@@ -548,27 +543,6 @@ print_engine::init_font (HDC hdc)
   if (pe_replacement_font)
     DeleteObject (pe_replacement_font);
   pe_replacement_font = create_replacement_font (pe_cell);
-
-  for (int i = 0; i < FONT_MAX; i++)
-    {
-      SelectObject (hdc, pe_hfonts[i]);
-      GetTextMetrics (hdc, &tm);
-      int cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
-      // 升目からはみ出す枠は、平均幅を升目に合わせて横に潰す
-      if (cx > pe_cell.cx)
-        {
-          DeleteObject (pe_hfonts[i]);
-          pe_hfonts[i] = pe_settings.make_font (pe_dev, i, pe_cell.cx);
-          SelectObject (hdc, pe_hfonts[i]);
-          GetTextMetrics (hdc, &tm);
-          cx = ascii_mean_width (hdc, tm.tmAveCharWidth);
-        }
-      pe_offset[i].x = (pe_cell.cx - cx) / 2;
-      pe_offset2x[i] = pe_cell.cx - cx;
-      pe_offset[i].y = (pe_cell.cy - tm.tmHeight) / 2;
-    }
-
-  SelectObject (hdc, of);
 }
 
 int
@@ -792,7 +766,7 @@ print_engine::paint_ascii (PaintCtx &ctx, Char cc) const
   if (cc != ' ')
     {
       WCHAR c = cc < 0x80 ? WCHAR (cc) : 0;
-      SelectObject (ctx.hdc, pe_hfonts[FONT_ASCII]);
+      SelectObject (ctx.hdc, pe_fonts[FONT_ASCII]);
       ExtTextOutW (ctx.hdc, ctx.x, ctx.y, 0, 0, &c, 1, 0);
     }
   ctx.column++;
@@ -806,9 +780,9 @@ print_engine::paint_char (PaintCtx &ctx, Char cc) const
   int l = char_width (cc);
   ucs2_t wc = ucs2_t (cc);
   int f = font_slot_of (cc, pe_bp->char_language ());
-  SelectObject (ctx.hdc, pe_hfonts[f]);
-  ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? pe_offset2x[f] : pe_offset[f].x),
-               ctx.y + pe_offset[f].y, 0, 0, &wc, 1, 0);
+  SelectObject (ctx.hdc, pe_fonts[f]);
+  ExtTextOutW (ctx.hdc, ctx.x + (l == 2 ? offset2x (f) : pe_fonts[f].offset ().x),
+               ctx.y + pe_fonts[f].offset ().y, 0, 0, &wc, 1, 0);
   ctx.column += l;
   ctx.x += pe_print_cell.cx * l;
 }
@@ -821,7 +795,7 @@ print_engine::paint_surrogate_pair (PaintCtx &ctx, ucs4_t lc) const
   w[0] = utf16_ucs4_to_pair_high (lc);
   w[1] = utf16_ucs4_to_pair_low (lc);
   HGDIOBJ of = SelectObject (ctx.hdc, pe_surrogate_font);
-  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, w, 2, 0);
+  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_fonts[FONT_ASCII].offset ().y, 0, 0, w, 2, 0);
   ctx.column += 2;
   ctx.x += pe_print_cell.cx * 2;
   SelectObject (ctx.hdc, of);
@@ -833,7 +807,7 @@ print_engine::paint_replacement (PaintCtx &ctx, Char cc) const
 {
   ucs2_t wc = ucs2_t (cc);
   HGDIOBJ of = SelectObject (ctx.hdc, pe_replacement_font);
-  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_offset[FONT_ASCII].y, 0, 0, &wc, 1, 0);
+  ExtTextOutW (ctx.hdc, ctx.x, ctx.y + pe_fonts[FONT_ASCII].offset ().y, 0, 0, &wc, 1, 0);
   SelectObject (ctx.hdc, of);
   ctx.column++;
   ctx.x += pe_print_cell.cx;
@@ -1026,7 +1000,7 @@ print_engine::paint (HDC hdc_print, int save)
     }
 
   int omode = SetBkMode (hdc, TRANSPARENT);
-  HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_JP]);
+  HGDIOBJ of = SelectObject (hdc, pe_fonts[FONT_JP]);
 
   paint_header (hdc);
   paint_footer (hdc);
@@ -1087,7 +1061,7 @@ print_engine::current_time ()
 int
 print_engine::skip_page (HDC hdc, Point &point, long &linenum)
 {
-  HGDIOBJ of = SelectObject (hdc, pe_hfonts[FONT_JP]);
+  HGDIOBJ of = SelectObject (hdc, pe_fonts[FONT_JP]);
   for (int col = 0; col < pe_settings.ps_multi_column; col++)
     for (int line = 0; line < pe_ech.cy; line++)
       if (paint_line (0, 0, 0, point, linenum))

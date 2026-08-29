@@ -194,6 +194,11 @@ HFONT create_replacement_font (const SIZE &cell);
 // 和文のフォントで全角の送りに近い値を返すことがあるので、それには頼れない
 int ascii_mean_width (HDC hdc, int fallback);
 
+// 枠ごとのフォントを作り、升目に収まるよう整える。升目の寸法を size へ返す。
+// recommend_size なら収まらない枠の高さを下げ、そうでなければ横に潰す
+void create_font_set (HDC hdc, FontObject *fonts, const LOGFONTW *logfont,
+                      int recommend_size, SIZE &size);
+
 int get_font_height (HWND hwnd);
 bool font_exist_p (const HDC hdc, const WCHAR *face, BYTE charset);
 
