@@ -50,16 +50,15 @@ public:
     }
 };
 
-#define FONT_ASCII          0
+// フォントの枠。符号位置だけでは描くフォントが決まらないものにだけ枠を与える。
+// 漢字は同じ符号位置に言語ごとの字形があり、ハングルはフォントリンクで出る字形の
+// 幅が GetCharWidth32W に現れない。それ以外の用字は欧文の枠が受け持つ
+#define FONT_ASCII          0   // 欧文。ラテン・キリル・ギリシャ・ジョージアなど
 #define FONT_JP             1
-#define FONT_LATIN          2
-#define FONT_CYRILLIC       3
-#define FONT_GREEK          4
-#define FONT_CN_SIMPLIFIED  5
-#define FONT_CN_TRADITIONAL 6
-#define FONT_HANGUL         7
-#define FONT_GEORGIAN       8
-#define FONT_MAX            9
+#define FONT_CN_SIMPLIFIED  2
+#define FONT_CN_TRADITIONAL 3
+#define FONT_HANGUL         4
+#define FONT_MAX            5
 
 // 半角の升目に並べている文字を、フォントが全角の字形しか持たないときにどう扱うか
 enum
@@ -98,6 +97,9 @@ protected:
   static const UINT fs_lang_id[];
   static const lisp *const fs_lang_key[];
   static const WCHAR *const fs_regent[];
+  // 用字ごとにフォントを分けていた頃の鍵を、今の枠へ写す
+  struct langalias {const lisp *key; int slot;};
+  static const langalias fs_lang_alias[];
   // disp が入っていなければ alt を使う。Windows の版によって、入っている
   // フォントが違うため
   struct fontface {const WCHAR *disp, *alt, *print; int charset;};
@@ -159,15 +161,7 @@ public:
   static int default_charset (int n) {return fs_default_face[n].charset;}
   static UINT lang_id (int n) {return fs_lang_id[n];}
   static const lisp lang_key (int n) {return *fs_lang_key[n];}
-  static const int lang_key_index (lisp llang)
-    {
-      for (int i = 0; i < FONT_MAX; i++)
-        {
-          if (lang_key (i) == llang)
-            return i;
-        }
-      return -1;
-    }
+  static int lang_key_index (lisp llang);
 };
 
 // 符号位置を、それを描くフォントの枠へ対応づける。漢字はどの言語の字形で描くか

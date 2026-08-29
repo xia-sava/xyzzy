@@ -1469,6 +1469,7 @@ static symbols kwd[] =
   DEFKWD2 (cn-simplified),
   DEFKWD2 (cn-traditional),
   DEFKWD2 (georgian),
+  DEFKWD2 (hangul),
   DEFKWD2 (face),
   DEFKWD2 (size-pixel-p),
   DEFKWD2 (code),

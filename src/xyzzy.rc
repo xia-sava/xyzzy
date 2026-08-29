@@ -260,12 +260,12 @@ BEGIN
                     UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,255,114,9,
                     14
     GROUPBOX        "フォント",IDC_STATIC,7,134,130,87
-    LTEXT           "文字セット(&K):",IDC_STATIC,13,147,46,8
+    LTEXT           "文字の種類(&K):",IDC_STATIC,13,147,46,8
     COMBOBOX        IDC_LANG,59,145,74,119,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
     EDITTEXT        IDC_FACE,13,167,83,14,ES_AUTOHSCROLL | ES_READONLY
     PUSHBUTTON      "変更(&F)...",IDC_FONT,99,167,33,14
-    CONTROL         "ASCII以外のサイズはお任せ(&J)",IDC_RECOMMEND_SIZE,
+    CONTROL         "欧文以外のサイズはお任せ(&J)",IDC_RECOMMEND_SIZE,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,192,106,10
     CONTROL         "プロポーショナルフォントも表示(&@)",IDC_PROPORTIONAL,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,205,112,10
@@ -427,7 +427,7 @@ STYLE WS_CHILD | WS_CAPTION
 CAPTION "フォント"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
-    LTEXT           "文字セット(&H):",IDC_STATIC,7,8,47,8
+    LTEXT           "文字の種類(&H):",IDC_STATIC,7,8,47,8
     COMBOBOX        IDC_LANG,53,6,71,123,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
     LTEXT           "フォント(&F):",IDC_STATIC,7,27,38,8
@@ -440,7 +440,7 @@ BEGIN
     GROUPBOX        "サンプル",IDC_STATIC,7,100,117,54
     CONTROL         "",IDC_SAMPLE,"Button",BS_OWNERDRAW | WS_DISABLED,9,114,
                     113,38
-    CONTROL         "ASCII以外のサイズはお任せ(&R)",IDC_RECOMMEND_SIZE,
+    CONTROL         "欧文以外のサイズはお任せ(&R)",IDC_RECOMMEND_SIZE,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,160,113,10
     CONTROL         "サイズはピクセルで(&P)",IDC_SIZE_PIXEL,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,172,87,10
@@ -871,22 +871,18 @@ BEGIN
     IDS_START_PAGE          "開始ページの入力が間違っています"
     IDS_END_PAGE            "終了ページの入力が間違っています"
     IDS_MAX_PAGE_TOO_LARGE  "開始ページがでかすぎ"
-    IDS_LANG_ASCII          "ASCII"
-    IDS_LANG_JAPANESE       "日本語"
-    IDS_LANG_LATIN          "ラテン文字"
-    IDS_LANG_CYRILLIC       "キリル文字"
-    IDS_LANG_GREEK          "ギリシャ語"
-    IDS_LANG_CN_SIMPLIFIED  "中国語(簡体字)"
-    IDS_LANG_CN_TRADITIONAL "中国語(繁体字)"
+    IDS_LANG_WESTERN        "欧文"
+    IDS_LANG_JAPANESE       "和文"
+    IDS_LANG_CN_SIMPLIFIED  "簡体字"
+    IDS_LANG_CN_TRADITIONAL "繁体字"
 END
 
 STRINGTABLE DISCARDABLE 
 BEGIN
-    IDS_LANG_KSC5601        "韓国語"
+    IDS_LANG_HANGUL         "ハングル"
     IDS_WRONG_NCOPIES       "部数は1～%d以下です"
     IDS_CANNOT_START_PRINT  "印刷が開始できません"
     IDS_CREATE_BM_FAILED    "ビットマップが作成できません"
-    IDS_LANG_GEORGIAN       "グルジア文字"
     IDS_HEADER_OFFSET_TOO_LARGE "ヘッダが本文にめり込みます"
     IDS_FOOTER_OFFSET_TOO_LARGE "フッタが本文にめり込みます"
 END

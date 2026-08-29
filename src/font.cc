@@ -4,54 +4,51 @@
 
 const UINT FontSet::fs_lang_id[] =
 {
-  IDS_LANG_ASCII,
+  IDS_LANG_WESTERN,
   IDS_LANG_JAPANESE,
-  IDS_LANG_LATIN,
-  IDS_LANG_CYRILLIC,
-  IDS_LANG_GREEK,
   IDS_LANG_CN_SIMPLIFIED,
   IDS_LANG_CN_TRADITIONAL,
-  IDS_LANG_KSC5601,
-  IDS_LANG_GEORGIAN,
+  IDS_LANG_HANGUL,
 };
 
 const lisp *const FontSet::fs_lang_key[] =
 {
   &Kascii,
   &Kjapanese,
-  &Klatin,
-  &Kcyrillic,
-  &Kgreek,
   &Kcn_simplified,
   &Kcn_traditional,
-  &Kksc5601,
-  &Kgeorgian,
+  &Khangul,
 };
 
+// 枠ごとの設定を記録する ini のキー。文字集合の名前で書かれてきたものを引き継ぐ
 const WCHAR *const FontSet::fs_regent[] =
 {
   L"Ascii",
   L"Japanese",
-  L"Latin",
-  L"Cyrillic",
-  L"Greek",
   L"GB2312",
   L"BIG5",
   L"KSC5601",
-  L"Georgian",
 };
 
+// 用字ごとにフォントを分けていた頃の鍵。欧文の枠が受け持つようになった
+const FontSet::langalias FontSet::fs_lang_alias[] =
+{
+  {&Klatin,    FONT_ASCII},
+  {&Kcyrillic, FONT_ASCII},
+  {&Kgreek,    FONT_ASCII},
+  {&Kgeorgian, FONT_ASCII},
+  {&Kksc5601,  FONT_HANGUL},
+};
+
+// ＭＳ ゴシックは漢字とハングルの字形を持たないものについても全角の幅を答えるので、
+// フォントリンクで出る字形が升目からはみ出さない。字形を持つフォントが無いときの受け皿
 const FontSet::fontface FontSet::fs_default_face[] =
 {
   {L"BIZ UDGothic", L"ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
   {L"BIZ UDGothic", L"ＭＳ ゴシック", 0, SHIFTJIS_CHARSET},
-  {L"Courier New", 0},
-  {L"Courier New", 0},
-  {L"Courier New", 0},
   {L"Microsoft YaHei", L"SimSun", 0, GB2312_CHARSET},
-  {L"Microsoft JhengHei", L"MingLiu", 0, CHINESEBIG5_CHARSET},
-  {L"Malgun Gothic", L"GulimChe", 0, HANGEUL_CHARSET},
-  {L"BPG Courier New U", L"Sylfaen"},
+  {L"Microsoft JhengHei", L"ＭＳ ゴシック", 0, CHINESEBIG5_CHARSET},
+  {L"Malgun Gothic", L"ＭＳ ゴシック", 0, HANGEUL_CHARSET},
 };
 
 // 挙げた順に、実際に入っているものを使う
@@ -67,6 +64,18 @@ FontSet::default_face (int n, int print)
   const WCHAR *face = font_exist_p (hdc, f.disp, f.charset) ? f.disp : f.alt;
   ReleaseDC (0, hdc);
   return face;
+}
+
+int
+FontSet::lang_key_index (lisp llang)
+{
+  for (int i = 0; i < FONT_MAX; i++)
+    if (lang_key (i) == llang)
+      return i;
+  for (int i = 0; i < numberof (fs_lang_alias); i++)
+    if (*fs_lang_alias[i].key == llang)
+      return fs_lang_alias[i].slot;
+  return -1;
 }
 
 // 漢字は同じ字が日本・中国・台湾・韓国で共通の符号位置になる。どの字形で描くかは
@@ -122,19 +131,15 @@ font_slot_of (Char cc, int lang)
     return FONT_ASCII;
 
   if (cc < 0x0250)              // ラテン補助・ラテン拡張 A/B
-    return latin_symbol_p (cc) ? FONT_JP : FONT_LATIN;
+    return latin_symbol_p (cc) ? FONT_JP : FONT_ASCII;
   if (cc < 0x0370)              // IPA 拡張・修飾文字・結合分音記号
     return FONT_JP;
-  if (cc < 0x0400)              // ギリシャ
-    return FONT_GREEK;
-  if (cc < 0x0530)              // キリル
-    return FONT_CYRILLIC;
-  if (cc >= 0x10a0 && cc < 0x1100)
-    return FONT_GEORGIAN;
-  if (cc >= 0x1e00 && cc < 0x1f00)  // ラテン拡張追加
-    return FONT_LATIN;
-  if (cc >= 0x1f00 && cc < 0x2000)  // ギリシャ拡張
-    return FONT_GREEK;
+  if (cc < 0x0530)              // ギリシャ・キリル
+    return FONT_ASCII;
+  if (cc >= 0x10a0 && cc < 0x1100)  // ジョージア
+    return FONT_ASCII;
+  if (cc >= 0x1e00 && cc < 0x2000)  // ラテン拡張追加・ギリシャ拡張
+    return FONT_ASCII;
 
   // ハングル。字母・互換字母・音節
   if (cc >= 0x1100 && cc < 0x1200
@@ -599,8 +604,7 @@ FontSet::measure_wide_glyphs () const
 static int
 half_width_slot_p (int slot)
 {
-  return (slot == FONT_LATIN || slot == FONT_CYRILLIC
-          || slot == FONT_GREEK || slot == FONT_GEORGIAN);
+  return slot == FONT_ASCII;
 }
 
 // 一桁の升目に置く字を担当のフォントが全角で描くなら、二桁として扱う。

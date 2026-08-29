@@ -1011,10 +1011,8 @@ kbd_queue::kbd_encoding_font ()
           return app.text_font.font (FONT_CN_SIMPLIFIED);
 
         case CP_CYRILLIC:
-          return app.text_font.font (FONT_CYRILLIC);
-
         case CP_GREEK:
-          return app.text_font.font (FONT_GREEK);
+          return app.text_font.font (FONT_ASCII);
         }
       break;
 
@@ -1036,7 +1034,7 @@ kbd_queue::kbd_encoding_font ()
           return app.text_font.font (FONT_CN_TRADITIONAL);
         }
     }
-  return app.text_font.font (FONT_LATIN);
+  return app.text_font.font (FONT_ASCII);
 }
 
 
